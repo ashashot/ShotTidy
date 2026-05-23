@@ -1,0 +1,13 @@
+# Секреты — НИКОГДА не коммитить
+Secrets.xcconfig
+
+# Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.pbxuser
+*.perspectivev3
+.DS_Store
+
+# SwiftPM
+.build/

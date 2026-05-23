@@ -6,8 +6,38 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		DE327FF82FC1B9400090FC80 /* ShotTidyShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DE327FF62FC1B9400090FC80 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DE327FB92FC1B4160090FC80 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DE327FED2FC1B9400090FC80;
+			remoteInfo = ShotTidyShare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		DE327FFD2FC1B9400090FC80 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				DE327FF82FC1B9400090FC80 /* ShotTidyShare.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		DE327F002FC1B0000090FC80 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		DE327FC12FC1B4160090FC80 /* ShotTidy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShotTidy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotTidyShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -18,6 +48,21 @@
 			);
 			target = DE327FC02FC1B4160090FC80 /* ShotTidy */;
 		};
+		DE327FFC2FC1B9400090FC80 /* Exceptions for "ShotTidyShare" folder in "ShotTidyShare" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DE327FED2FC1B9400090FC80 /* ShotTidyShare */;
+		};
+		DE327FFF2FC1BA940090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidyShare" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AppGroupManager.swift,
+				"UIImage+Extensions.swift",
+			);
+			target = DE327FED2FC1B9400090FC80 /* ShotTidyShare */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -25,14 +70,30 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				DE327FCE2FC1B4170090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidy" target */,
+				DE327FFF2FC1BA940090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidyShare" target */,
 			);
 			path = ShotTidy;
+			sourceTree = "<group>";
+		};
+		DE327FEF2FC1B9400090FC80 /* ShotTidyShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DE327FFC2FC1B9400090FC80 /* Exceptions for "ShotTidyShare" folder in "ShotTidyShare" target */,
+			);
+			path = ShotTidyShare;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		DE327FBE2FC1B4160090FC80 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE327FEB2FC1B9400090FC80 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -46,7 +107,9 @@
 			isa = PBXGroup;
 			children = (
 				DE327FC32FC1B4160090FC80 /* ShotTidy */,
+				DE327FEF2FC1B9400090FC80 /* ShotTidyShare */,
 				DE327FC22FC1B4160090FC80 /* Products */,
+				DE327F002FC1B0000090FC80 /* Secrets.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -54,6 +117,7 @@
 			isa = PBXGroup;
 			children = (
 				DE327FC12FC1B4160090FC80 /* ShotTidy.app */,
+				DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -68,10 +132,12 @@
 				DE327FBD2FC1B4160090FC80 /* Sources */,
 				DE327FBE2FC1B4160090FC80 /* Frameworks */,
 				DE327FBF2FC1B4160090FC80 /* Resources */,
+				DE327FFD2FC1B9400090FC80 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				DE327FF72FC1B9400090FC80 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				DE327FC32FC1B4160090FC80 /* ShotTidy */,
@@ -82,6 +148,28 @@
 			productName = ShotTidy;
 			productReference = DE327FC12FC1B4160090FC80 /* ShotTidy.app */;
 			productType = "com.apple.product-type.application";
+		};
+		DE327FED2FC1B9400090FC80 /* ShotTidyShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE327FF92FC1B9400090FC80 /* Build configuration list for PBXNativeTarget "ShotTidyShare" */;
+			buildPhases = (
+				DE327FEA2FC1B9400090FC80 /* Sources */,
+				DE327FEB2FC1B9400090FC80 /* Frameworks */,
+				DE327FEC2FC1B9400090FC80 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				DE327FEF2FC1B9400090FC80 /* ShotTidyShare */,
+			);
+			name = ShotTidyShare;
+			packageProductDependencies = (
+			);
+			productName = ShotTidyShare;
+			productReference = DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -94,6 +182,9 @@
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					DE327FC02FC1B4160090FC80 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					DE327FED2FC1B9400090FC80 = {
 						CreatedOnToolsVersion = 26.5;
 					};
 				};
@@ -113,12 +204,20 @@
 			projectRoot = "";
 			targets = (
 				DE327FC02FC1B4160090FC80 /* ShotTidy */,
+				DE327FED2FC1B9400090FC80 /* ShotTidyShare */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		DE327FBF2FC1B4160090FC80 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE327FEC2FC1B9400090FC80 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -135,11 +234,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DE327FEA2FC1B9400090FC80 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DE327FF72FC1B9400090FC80 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DE327FED2FC1B9400090FC80 /* ShotTidyShare */;
+			targetProxy = DE327FF62FC1B9400090FC80 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		DE327FD02FC1B4170090FC80 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = DE327F002FC1B0000090FC80 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -174,6 +289,7 @@
 		};
 		DE327FD12FC1B4170090FC80 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = DE327F002FC1B0000090FC80 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -327,6 +443,64 @@
 			};
 			name = Release;
 		};
+		DE327FFA2FC1B9400090FC80 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShotTidyShare/ShotTidyShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FK4KSS322U;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShotTidyShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShotTidyShare;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = mbx.ShotTidy.ShotTidyShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DE327FFB2FC1B9400090FC80 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShotTidyShare/ShotTidyShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FK4KSS322U;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShotTidyShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShotTidyShare;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = mbx.ShotTidy.ShotTidyShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -344,6 +518,15 @@
 			buildConfigurations = (
 				DE327FD02FC1B4170090FC80 /* Debug */,
 				DE327FD12FC1B4170090FC80 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE327FF92FC1B9400090FC80 /* Build configuration list for PBXNativeTarget "ShotTidyShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE327FFA2FC1B9400090FC80 /* Debug */,
+				DE327FFB2FC1B9400090FC80 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -2,17 +2,11 @@
 //  Item.swift
 //  ShotTidy
 //
-//  Created by mwork on 5/23/26.
+//  Этот файл больше не используется.
+//  Основная модель: Screenshot.swift
+//
+//  Оставлен пустым для совместимости с Xcode project file.
+//  Можно удалить через Xcode: правый клик → Delete.
 //
 
 import Foundation
-import SwiftData
-
-@Model
-final class Item {
-    var timestamp: Date
-    
-    init(timestamp: Date) {
-        self.timestamp = timestamp
-    }
-}

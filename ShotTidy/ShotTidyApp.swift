@@ -2,30 +2,33 @@
 //  ShotTidyApp.swift
 //  ShotTidy
 //
-//  Created by mwork on 5/23/26.
-//
 
 import SwiftUI
 import SwiftData
 
 @main
 struct ShotTidyApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
+    var sharedModelContainer: ModelContainer = {
+        let schema = Schema([Screenshot.self])
+
+        // Пробуем CloudKit, при ошибке — локально
+        if let container = try? ModelContainer(
+            for: schema,
+            configurations: [ModelConfiguration(schema: schema, cloudKitDatabase: .automatic)]
+        ) { return container }
+
+        if let container = try? ModelContainer(
+            for: schema,
+            configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)]
+        ) { return container }
+
+        fatalError("Не удалось создать ModelContainer")
     }()
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            CatalogView()
         }
         .modelContainer(sharedModelContainer)
     }
