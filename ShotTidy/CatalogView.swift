@@ -15,7 +15,6 @@ struct CatalogView: View {
     @State private var selectedCategory: String? = nil
     @State private var showImport        = false
     @State private var selectedScreenshot: Screenshot? = nil
-    @State private var debugMessage      = ""
 
     private let columns = [GridItem(.adaptive(minimum: 160), spacing: 12)]
 
@@ -44,24 +43,12 @@ struct CatalogView: View {
                             .font(.title3)
                     }
                 }
-                // Кнопка ручной проверки — для отладки
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         processPendingImages()
                     } label: {
                         Image(systemName: "arrow.clockwise")
                     }
-                }
-            }
-            // Отладочный баннер
-            .safeAreaInset(edge: .bottom) {
-                if !debugMessage.isEmpty {
-                    Text(debugMessage)
-                        .font(.caption)
-                        .padding(8)
-                        .frame(maxWidth: .infinity)
-                        .background(Color.blue.opacity(0.15))
-                        .onTapGesture { debugMessage = "" }
                 }
             }
             .sheet(isPresented: $showImport) { ImportView() }
@@ -85,28 +72,17 @@ struct CatalogView: View {
 
     private func processPendingImages() {
         let urls = AppGroupManager.pendingImageURLs()
-
-        guard !urls.isEmpty else {
-            let dir = AppGroupManager.pendingImagesDir?.path ?? "nil"
-            debugMessage = "Файлов нет · \(dir)"
-            return
-        }
-
-        debugMessage = "Найдено \(urls.count) файл(ов)…"
+        guard !urls.isEmpty else { return }
 
         for url in urls {
             // Сначала удаляем файл — чтобы не обработать дважды
             guard let data = try? Data(contentsOf: url) else {
                 AppGroupManager.deletePendingImage(at: url)
-                debugMessage = "Не удалось прочитать файл"
                 continue
             }
             AppGroupManager.deletePendingImage(at: url)
 
-            guard let image = UIImage(data: data) else {
-                debugMessage = "Не удалось создать UIImage"
-                continue
-            }
+            guard let image = UIImage(data: data) else { continue }
 
             // Создаём запись
             let screenshot = Screenshot()
@@ -122,8 +98,6 @@ struct CatalogView: View {
             // Сохраняем сразу — иначе запись может не появиться в @Query
             try? modelContext.save()
 
-            debugMessage = "Скриншот добавлен, анализирую…"
-
             Task {
                 do {
                     let analysis = try await OpenAIAPIClient.shared.analyzeScreenshot(image)
@@ -135,12 +109,10 @@ struct CatalogView: View {
                     screenshot.analyzedAt = Date()
                     screenshot.analysisStatus = .done
                     try? modelContext.save()
-                    debugMessage = "✅ \(analysis.appName ?? "Готово")"
                 } catch {
                     screenshot.analysisStatus = .failed
                     screenshot.errorMessage = error.localizedDescription
                     try? modelContext.save()
-                    debugMessage = "❌ \(error.localizedDescription)"
                 }
             }
         }
@@ -229,13 +201,6 @@ struct CatalogView: View {
                     .padding(.horizontal, 24).padding(.vertical, 12)
                     .background(.blue).foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            // Отладка App Group
-            if !debugMessage.isEmpty {
-                Text(debugMessage)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 8)
             }
         }
     }
