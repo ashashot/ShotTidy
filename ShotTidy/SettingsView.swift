@@ -7,9 +7,6 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
-    @State private var apiKeyInput: String = ""
-    @State private var showAPIKey: Bool = false
-    @State private var savedAnimation: Bool = false
 
     @Environment(\.modelContext) private var modelContext
     @Query private var allItems: [CatalogItem]
@@ -20,49 +17,6 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // MARK: - API Key
-                Section {
-                    HStack {
-                        if showAPIKey {
-                            TextField("sk-...", text: $apiKeyInput)
-                                .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
-                                .font(.system(.body, design: .monospaced))
-                        } else {
-                            SecureField("sk-...", text: $apiKeyInput)
-                                .autocorrectionDisabled()
-                                .font(.system(.body, design: .monospaced))
-                        }
-                        Button {
-                            showAPIKey.toggle()
-                        } label: {
-                            Image(systemName: showAPIKey ? "eye.slash" : "eye")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Button {
-                        let trimmed = apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
-                        KeychainManager.shared.openAIAPIKey = trimmed.isEmpty ? nil : trimmed
-                        withAnimation { savedAnimation = true }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            withAnimation { savedAnimation = false }
-                        }
-                    } label: {
-                        HStack {
-                            Text(savedAnimation ? "Saved ✓" : "Save Key")
-                                .foregroundStyle(savedAnimation ? .green : .blue)
-                            Spacer()
-                        }
-                    }
-                    .disabled(apiKeyInput.isEmpty)
-
-                } header: {
-                    Text("OpenAI API Key")
-                } footer: {
-                    Text("Get your key at platform.openai.com. Stored securely in Keychain.")
-                }
-
                 // MARK: - Statistics
                 Section("Data") {
                     HStack {
@@ -104,11 +58,8 @@ struct SettingsView: View {
                 Button("Delete All", role: .destructive) { deleteAll() }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("All catalog items and saved screenshots will be deleted. The API key will remain.")
+                Text("All catalog items and saved screenshots will be deleted.")
             }
-        }
-        .onAppear {
-            apiKeyInput = KeychainManager.shared.openAIAPIKey ?? ""
         }
     }
 

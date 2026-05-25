@@ -9,6 +9,16 @@ import SwiftData
 @main
 struct ShotTidyApp: App {
 
+    init() {
+        // Sync the API key from Config (Secrets.xcconfig → Info.plist)
+        // into the App Group so the Share Extension can read it without
+        // needing its own Info.plist entry.
+        let key = Config.openAIKey
+        if !key.isEmpty {
+            AppGroupManager.apiKey = key
+        }
+    }
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Screenshot.self,

@@ -1,9 +1,9 @@
 //
-//  OpenAIAPIClient.swift
-//  ShotTidy
+//  ShareAPIClient.swift
+//  ShotTidyShare
 //
-//  Screenshot analysis via GPT-4o Vision.
-//  Returns a list of structured items (DraftItem) across various categories.
+//  Self-contained OpenAI GPT-4o Vision client for the Share Extension.
+//  Returns [PendingDraftItem] — no dependency on the main app's models.
 //
 
 import Foundation
@@ -11,62 +11,51 @@ import UIKit
 
 // MARK: - Errors
 
-enum OpenAIError: LocalizedError {
-    case noAPIKey
+enum ShareAPIError: LocalizedError {
     case invalidImage
-    case httpError(Int, String)
-    case refused(String)          // content: null + refusal field
-    case emptyResponse            // content: null without refusal
-    case decodingFailed(String)
     case networkError(Error)
+    case invalidAPIKey
+    case rateLimited
+    case httpError(Int)
+    case refused
+    case emptyResponse
+    case decodingFailed
 
     var errorDescription: String? {
         switch self {
-        case .noAPIKey:
-            return "API key is not configured. Go to Settings and enter your OpenAI key."
         case .invalidImage:
-            return "Failed to process the image."
-        case .httpError(let code, _):
-            if code == 401 { return "Invalid API key. Check your key in Settings." }
-            if code == 429 { return "OpenAI rate limit exceeded. Please wait a moment." }
-            return "Server error (\(code)). Please try again."
-        case .refused:
-            return "GPT-4o could not analyze this screenshot. Try a different image."
-        case .emptyResponse:
-            return "Empty response from the API. Please try again."
-        case .decodingFailed(let detail):
-            return "Failed to parse the response: \(detail)"
+            return "Could not process the image."
         case .networkError(let err):
             return "Network error: \(err.localizedDescription)"
+        case .invalidAPIKey:
+            return "Invalid API key.\nOpen ShotTidy → Settings to check your key."
+        case .rateLimited:
+            return "Too many requests to OpenAI. Please wait a moment."
+        case .httpError(let code):
+            return "Server error (\(code)). Please try again."
+        case .refused:
+            return "GPT-4o could not analyze this screenshot."
+        case .emptyResponse:
+            return "Empty response from OpenAI. Please try again."
+        case .decodingFailed:
+            return "Could not parse the AI response. Please try again."
         }
     }
 }
 
 // MARK: - Client
 
-final class OpenAIAPIClient {
+final class ShareAPIClient {
 
-    static let shared = OpenAIAPIClient()
+    static let shared = ShareAPIClient()
     private init() {}
 
     private let endpoint = URL(string: "https://api.openai.com/v1/chat/completions")!
 
-    // MARK: - Analyze screenshot -> [DraftItem]
-
-    func analyzeScreenshot(
-        _ image: UIImage,
-        screenshotId: UUID? = nil
-    ) async throws -> [DraftItem] {
-
-        let apiKey = Config.openAIKey
-        guard !apiKey.isEmpty else {
-            throw OpenAIError.noAPIKey
-        }
-
-        // "auto" — OpenAI chooses low/high automatically; safer for the content filter
-        let resized = image.resized(toMaxDimension: 1024)
+    func analyze(image: UIImage, apiKey: String) async throws -> [PendingDraftItem] {
+        let resized = resize(image, maxDimension: 1024)
         guard let imageData = resized.jpegData(compressionQuality: 0.75) else {
-            throw OpenAIError.invalidImage
+            throw ShareAPIError.invalidImage
         }
         let base64 = imageData.base64EncodedString()
 
@@ -103,36 +92,35 @@ final class OpenAIAPIClient {
         do {
             (data, response) = try await URLSession.shared.data(for: request)
         } catch {
-            throw OpenAIError.networkError(error)
+            throw ShareAPIError.networkError(error)
         }
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
-            let bodyStr = String(data: data, encoding: .utf8) ?? ""
-            throw OpenAIError.httpError(http.statusCode, bodyStr)
+            if http.statusCode == 401 { throw ShareAPIError.invalidAPIKey }
+            if http.statusCode == 429 { throw ShareAPIError.rateLimited }
+            throw ShareAPIError.httpError(http.statusCode)
         }
 
-        return try parseItems(from: data, screenshotId: screenshotId)
+        return try parseItems(from: data)
     }
 
     // MARK: - Parse
 
-    private func parseItems(from data: Data, screenshotId: UUID?) throws -> [DraftItem] {
+    private func parseItems(from data: Data) throws -> [PendingDraftItem] {
         guard
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             let choices = json["choices"] as? [[String: Any]],
             let message = choices.first?["message"] as? [String: Any]
         else {
-            throw OpenAIError.decodingFailed("Unexpected API response format")
+            throw ShareAPIError.decodingFailed
         }
 
-        // Handle refusal (content: null + refusal field)
         if let refusal = message["refusal"] as? String, !refusal.isEmpty {
-            throw OpenAIError.refused(refusal)
+            throw ShareAPIError.refused
         }
 
-        // content may be null if the model refused without an explicit refusal field
         guard let content = message["content"] as? String else {
-            throw OpenAIError.emptyResponse
+            throw ShareAPIError.emptyResponse
         }
 
         guard
@@ -140,29 +128,39 @@ final class OpenAIAPIClient {
             let contentJson = try? JSONSerialization.jsonObject(with: contentData) as? [String: Any],
             let items = contentJson["items"] as? [[String: Any]]
         else {
-            // Try to extract something from content for diagnostics
-            let preview = String(content.prefix(120))
-            throw OpenAIError.decodingFailed("Expected an items array. Got: \(preview)")
+            throw ShareAPIError.decodingFailed
         }
 
-        return items.compactMap { dict -> DraftItem? in
+        return items.compactMap { dict -> PendingDraftItem? in
             guard
-                let categoryStr = dict["category"] as? String,
-                let category = ItemCategory(rawValue: categoryStr),
+                let category = dict["category"] as? String,
                 let title = dict["title"] as? String,
                 !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             else { return nil }
 
-            return DraftItem(
-                category: category,
+            return PendingDraftItem(
+                categoryKey: category,
                 title: title,
                 subtitle: dict["subtitle"] as? String ?? "",
                 link: dict["link"] as? String ?? "",
                 extra1: dict["extra1"] as? String ?? "",
                 extra2: dict["extra2"] as? String ?? "",
-                notes: dict["notes"] as? String ?? "",
-                sourceScreenshotId: screenshotId
+                notes: dict["notes"] as? String ?? ""
             )
+        }
+    }
+
+    // MARK: - Image resize
+
+    private func resize(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+        let maxSide = max(size.width, size.height)
+        guard maxSide > maxDimension else { return image }
+        let scale = maxDimension / maxSide
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
         }
     }
 
