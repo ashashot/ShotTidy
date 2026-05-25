@@ -127,7 +127,10 @@ final class ImportViewModel {
             ctx.insert(draft.toCatalogItem())
         }
         try? ctx.save()
-        resetAfterConfirmation()
+        // Намеренно НЕ вызываем resetAfterConfirmation() здесь.
+        // Очистка draftItems происходит в onDismiss у ImportView — ПОСЛЕ того,
+        // как sheet полностью анимировал закрытие и ConfirmationView уже не рендерится.
+        // Вызов reset здесь → draftItems = [] пока ForEach ещё активен → index out of range.
     }
 
     // MARK: - Сброс

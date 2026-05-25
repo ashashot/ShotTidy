@@ -8,16 +8,23 @@
 
 import SwiftUI
 
+/// Обёртка-идентификатор для индекса редактируемого черновика.
+/// Нужна для .sheet(item:), чтобы SwiftUI передавал данные атомарно
+/// и не выполнял closure контента раньше, чем индекс будет установлен.
+private struct DraftEditContext: Identifiable {
+    let id: Int  // глобальный индекс в viewModel.draftItems
+}
+
 struct ConfirmationView: View {
     // @Bindable нужен чтобы получать биндинги ($viewModel.draftItems[i])
     @Bindable var viewModel: ImportViewModel
     var onSaved: () -> Void
 
     @Environment(\.dismiss) private var dismiss
-    /// Индекс редактируемого черновика
-    @State private var editingIndex: Int? = nil
-    /// Отдельный флаг для isPresented — не зависит от editingIndex во время анимации
-    @State private var showEditSheet = false
+    /// Контекст редактирования: устанавливается → sheet открывается → сбрасывается при закрытии.
+    /// Единый источник правды: .sheet(item:) гарантирует, что контент строится
+    /// только когда editingContext != nil, исключая race condition.
+    @State private var editingContext: DraftEditContext? = nil
 
     private var selectedCount: Int {
         viewModel.draftItems.filter { $0.isSelected && $0.isValid }.count
@@ -84,8 +91,9 @@ struct ConfirmationView: View {
                                     DraftItemRow(
                                         item: $viewModel.draftItems[index],
                                         onEdit: {
-                                            editingIndex = index
-                                            showEditSheet = true
+                                            // Один шаг → sheet открывается только
+                                            // когда item != nil, без race condition
+                                            editingContext = DraftEditContext(id: index)
                                         }
                                     )
                                 }
@@ -118,14 +126,11 @@ struct ConfirmationView: View {
                 }
             }
             // Sheet редактора.
-            // showEditSheet — флаг анимации; editingIndex обнуляется только в onDismiss
-            // (после завершения анимации), чтобы содержимое не исчезало во время закрытия.
-            .sheet(isPresented: $showEditSheet, onDismiss: {
-                editingIndex = nil
-            }) {
-                if let idx = editingIndex {
-                    DraftItemEditView(item: $viewModel.draftItems[idx])
-                }
+            // .sheet(item:) гарантирует атомарность: SwiftUI строит DraftItemEditView
+            // только когда editingContext != nil, и автоматически сбрасывает его в nil
+            // при закрытии — без отдельного флага и без race condition.
+            .sheet(item: $editingContext) { ctx in
+                DraftItemEditView(item: $viewModel.draftItems[ctx.id])
             }
         }
     }
