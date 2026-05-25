@@ -2,8 +2,8 @@
 //  DraftItem.swift
 //  ShotTidy
 //
-//  Черновик элемента до подтверждения пользователем.
-//  Используется в экране подтверждения после AI-анализа.
+//  A draft item pending user confirmation.
+//  Used on the confirmation screen after AI analysis.
 //
 
 import Foundation
@@ -22,14 +22,14 @@ struct DraftItem: Identifiable, Equatable {
 
     var sourceScreenshotId: UUID? = nil
 
-    // MARK: - Валидация
+    // MARK: - Validation
     var isValid: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var displayTitle: String {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Без названия" : trimmed
+        return trimmed.isEmpty ? "Untitled" : trimmed
     }
 
     var displaySubtitle: String {
@@ -37,7 +37,7 @@ struct DraftItem: Identifiable, Equatable {
         return trimmed.isEmpty ? category.localizedName : trimmed
     }
 
-    // MARK: - Конвертация в CatalogItem
+    // MARK: - Convert to CatalogItem
     func toCatalogItem() -> CatalogItem {
         CatalogItem(
             category: category,

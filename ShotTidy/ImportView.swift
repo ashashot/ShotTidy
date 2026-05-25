@@ -2,7 +2,7 @@
 //  ImportView.swift
 //  ShotTidy
 //
-//  Экран импорта скриншотов из галереи → AI-анализ → подтверждение.
+//  Screenshot import screen: gallery → AI analysis → confirmation.
 //
 
 import SwiftUI
@@ -14,9 +14,9 @@ struct ImportView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var viewModel = ImportViewModel()
-    // @State — стабильное хранилище для sheet-binding.
-    // Устанавливается в true только ПОСЛЕ завершения await analyzeImages(),
-    // гарантируя что draftItems уже заполнены при первом рендере ConfirmationView.
+    // @State — stable storage for the sheet binding.
+    // Set to true only AFTER analyzeImages() completes,
+    // guaranteeing that draftItems are populated on ConfirmationView's first render.
     @State private var showConfirmation = false
 
     var body: some View {
@@ -30,23 +30,23 @@ struct ImportView: View {
                     previewView
                 }
             }
-            .navigationTitle("Импорт скриншотов")
+            .navigationTitle("Import Screenshots")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Закрыть") {
+                    Button("Close") {
                         viewModel.fullReset()
                         dismiss()
                     }
                 }
                 if !viewModel.selectedImages.isEmpty && !viewModel.isAnalyzing {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Анализировать") { startAnalysis() }
+                        Button("Analyze") { startAnalysis() }
                             .fontWeight(.semibold)
                     }
                 }
             }
-            .alert("Ошибка анализа", isPresented: Binding(
+            .alert("Analysis Error", isPresented: Binding(
                 get: { viewModel.analysisError != nil },
                 set: { if !$0 { viewModel.analysisError = nil } }
             )) {
@@ -54,9 +54,9 @@ struct ImportView: View {
             } message: {
                 Text(viewModel.analysisError ?? "")
             }
-            // $showConfirmation — стабильный @State binding.
-            // dismiss() внутри ConfirmationView корректно ставит isPresented=false
-            // через этот binding, onDismiss вызывается ПОСЛЕ завершения анимации.
+            // $showConfirmation — stable @State binding.
+            // dismiss() inside ConfirmationView correctly sets isPresented=false
+            // via this binding; onDismiss is called AFTER the animation completes.
             .sheet(isPresented: $showConfirmation, onDismiss: {
                 viewModel.resetAfterConfirmation()
             }) {
@@ -71,20 +71,20 @@ struct ImportView: View {
         }
     }
 
-    // MARK: - Запуск анализа
+    // MARK: - Start analysis
 
     private func startAnalysis() {
         Task {
             await viewModel.analyzeImages()
-            // Открываем ConfirmationView только ЗДЕСЬ, после await —
-            // в этой точке draftItems гарантированно заполнены
+            // Open ConfirmationView only HERE, after await —
+            // at this point draftItems are guaranteed to be populated
             if !viewModel.draftItems.isEmpty {
                 showConfirmation = true
             }
         }
     }
 
-    // MARK: - Prompt View
+    // MARK: - Picker prompt view
 
     private var pickerPromptView: some View {
         VStack(spacing: 28) {
@@ -95,10 +95,10 @@ struct ImportView: View {
                     .font(.system(size: 64, weight: .light))
                     .foregroundStyle(.blue.opacity(0.8))
 
-                Text("Выберите скриншоты")
+                Text("Select Screenshots")
                     .font(.title2.bold())
 
-                Text("AI проанализирует изображения\nи предложит добавить данные в каталог")
+                Text("AI will analyze the images\nand suggest adding data to the catalog")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -109,7 +109,7 @@ struct ImportView: View {
                 maxSelectionCount: 10,
                 matching: .images
             ) {
-                Label("Открыть Фото", systemImage: "photo.on.rectangle")
+                Label("Open Photos", systemImage: "photo.on.rectangle")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
@@ -126,11 +126,11 @@ struct ImportView: View {
         }
     }
 
-    // MARK: - Preview Grid
+    // MARK: - Preview grid
 
     private var previewView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Превью выбранных изображений
+            // Preview of selected images
             ScrollView {
                 LazyVGrid(
                     columns: [GridItem(.adaptive(minimum: 100), spacing: 4)],
@@ -148,20 +148,21 @@ struct ImportView: View {
                 .padding(4)
             }
 
-            // Нижняя панель
+            // Bottom panel
             VStack(spacing: 12) {
-                Text("\(viewModel.selectedImages.count) \(pluralImages(viewModel.selectedImages.count)) выбрано")
+                let count = viewModel.selectedImages.count
+                Text("\(count) \(count == 1 ? "screenshot" : "screenshots") selected")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
                 HStack(spacing: 12) {
-                    // Изменить выбор
+                    // Change selection
                     PhotosPicker(
                         selection: $viewModel.selectedPickerItems,
                         maxSelectionCount: 10,
                         matching: .images
                     ) {
-                        Text("Изменить")
+                        Text("Change")
                             .font(.subheadline.weight(.medium))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
@@ -173,11 +174,11 @@ struct ImportView: View {
                         Task { await viewModel.loadSelectedImages() }
                     }
 
-                    // Анализировать
+                    // Analyze
                     Button {
                         startAnalysis()
                     } label: {
-                        Label("Анализировать", systemImage: "sparkles")
+                        Label("Analyze", systemImage: "sparkles")
                             .font(.subheadline.weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
@@ -192,7 +193,7 @@ struct ImportView: View {
         }
     }
 
-    // MARK: - Analyzing View
+    // MARK: - Analyzing view
 
     private var analyzingView: some View {
         VStack(spacing: 32) {
@@ -218,26 +219,16 @@ struct ImportView: View {
                 }
 
                 VStack(spacing: 6) {
-                    Text("Анализирую скриншоты...")
+                    Text("Analyzing screenshots...")
                         .font(.headline)
 
-                    Text("Изображение \(viewModel.progressCurrent) из \(viewModel.progressTotal)")
+                    Text("Image \(viewModel.progressCurrent) of \(viewModel.progressTotal)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             }
 
             Spacer()
-        }
-    }
-
-    // MARK: - Helpers
-
-    private func pluralImages(_ count: Int) -> String {
-        switch count % 10 {
-        case 1 where count % 100 != 11: return "скриншот"
-        case 2...4 where count % 100 < 10 || count % 100 > 20: return "скриншота"
-        default: return "скриншотов"
         }
     }
 }

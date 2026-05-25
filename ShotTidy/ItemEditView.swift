@@ -2,7 +2,7 @@
 //  ItemEditView.swift
 //  ShotTidy
 //
-//  Экран добавления/редактирования элемента каталога.
+//  Screen for adding or editing a catalog item.
 //
 
 import SwiftUI
@@ -40,7 +40,7 @@ struct ItemEditView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // Заголовок (обязательное)
+                // Title (required)
                 Section {
                     TextField(schema.titlePlaceholder, text: $title, axis: .vertical)
                         .lineLimit(3, reservesSpace: false)
@@ -48,12 +48,12 @@ struct ItemEditView: View {
                     Text(schema.titleLabel)
                 } footer: {
                     if title.isEmpty {
-                        Text("Обязательное поле")
+                        Text("Required field")
                             .foregroundStyle(.red)
                     }
                 }
 
-                // Подзаголовок
+                // Subtitle
                 if let label = schema.subtitleLabel {
                     Section(label) {
                         TextField(schema.subtitlePlaceholder ?? "", text: $subtitle, axis: .vertical)
@@ -61,7 +61,7 @@ struct ItemEditView: View {
                     }
                 }
 
-                // Ссылка
+                // Link
                 if let label = schema.linkLabel {
                     Section(label) {
                         TextField(schema.linkPlaceholder ?? "https://...", text: $link)
@@ -71,21 +71,21 @@ struct ItemEditView: View {
                     }
                 }
 
-                // Доп. поле 1
+                // Extra field 1
                 if let label = schema.extra1Label {
                     Section(label) {
                         TextField(schema.extra1Placeholder ?? "", text: $extra1)
                     }
                 }
 
-                // Доп. поле 2
+                // Extra field 2
                 if let label = schema.extra2Label {
                     Section(label) {
                         TextField(schema.extra2Placeholder ?? "", text: $extra2)
                     }
                 }
 
-                // Заметки
+                // Notes
                 if let label = schema.notesLabel {
                     Section(label) {
                         TextField(schema.notesPlaceholder ?? label, text: $notes, axis: .vertical)
@@ -93,14 +93,14 @@ struct ItemEditView: View {
                     }
                 }
             }
-            .navigationTitle(isEditing ? "Редактировать" : "Добавить")
+            .navigationTitle(isEditing ? "Edit" : "Add")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Сохранить") {
+                    Button("Save") {
                         save()
                         dismiss()
                     }

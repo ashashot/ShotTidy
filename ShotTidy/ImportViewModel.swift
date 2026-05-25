@@ -2,7 +2,7 @@
 //  ImportViewModel.swift
 //  ShotTidy
 //
-//  ViewModel для импорта и AI-анализа скриншотов.
+//  ViewModel for importing and AI-analyzing screenshots.
 //
 
 import SwiftUI
@@ -13,25 +13,25 @@ import SwiftData
 @MainActor
 final class ImportViewModel {
 
-    // MARK: - Фото
+    // MARK: - Photos
     var selectedPickerItems: [PhotosPickerItem] = []
     var selectedImages: [UIImage] = []
 
-    // MARK: - Состояние анализа
+    // MARK: - Analysis state
     var isAnalyzing = false
     var analysisError: String? = nil
     var progressCurrent = 0
     var progressTotal = 0
-    /// Предупреждения (отказы отдельных скриншотов, не фатальные)
+    /// Warnings (individual screenshot failures, non-fatal)
     var warnings: [String] = []
 
-    // MARK: - Черновики (результат анализа, до подтверждения)
+    // MARK: - Drafts (analysis result, pending confirmation)
     var draftItems: [DraftItem] = []
 
-    // MARK: - Контекст SwiftData (инжектируется из View)
+    // MARK: - SwiftData context (injected from View)
     var modelContext: ModelContext?
 
-    // MARK: - Загрузка изображений из PhotosPicker
+    // MARK: - Load images from PhotosPicker
 
     func loadSelectedImages() async {
         selectedImages = []
@@ -43,7 +43,7 @@ final class ImportViewModel {
         }
     }
 
-    // MARK: - Анализ
+    // MARK: - Analysis
 
     func analyzeImages() async {
         guard !selectedImages.isEmpty else { return }
@@ -59,7 +59,7 @@ final class ImportViewModel {
         for (index, image) in selectedImages.enumerated() {
             progressCurrent = index + 1
 
-            // Сохраняем скриншот как резервную копию
+            // Save the screenshot as a backup copy
             let screenshot = Screenshot()
             screenshot.originalFileName = "screenshot_\(index + 1).jpg"
             screenshot.createdAt = Date()
@@ -87,17 +87,17 @@ final class ImportViewModel {
 
                 switch err {
                 case .refused, .emptyResponse:
-                    // Отказ — не фатально, просто пропускаем этот скриншот
-                    let name = screenshot.originalFileName ?? "скриншот \(index + 1)"
+                    // Refusal is non-fatal — just skip this screenshot
+                    let name = screenshot.originalFileName ?? "screenshot \(index + 1)"
                     warnings.append("\(name): \(err.localizedDescription)")
                 case .noAPIKey:
-                    // Фатально — прерываем весь анализ
+                    // Fatal — abort the entire analysis
                     analysisError = err.localizedDescription
                     isAnalyzing = false
                     try? ctx.save()
                     return
                 default:
-                    // Сетевые/HTTP ошибки — показываем только если ничего не извлекли
+                    // Network / HTTP errors — only show if nothing was extracted
                     if draftItems.isEmpty && index == selectedImages.count - 1 {
                         analysisError = err.localizedDescription
                     }
@@ -114,11 +114,11 @@ final class ImportViewModel {
         }
 
         isAnalyzing = false
-        // showConfirmation убран из ViewModel — управляется @State в ImportView
-        // чтобы sheet открывался ровно ПОСЛЕ завершения async-функции, без race-condition
+        // showConfirmation is removed from ViewModel — controlled via @State in ImportView
+        // so the sheet opens exactly AFTER the async function completes, without a race condition
     }
 
-    // MARK: - Сохранение подтверждённых элементов
+    // MARK: - Save confirmed items
 
     func saveSelectedDrafts() {
         guard let ctx = modelContext else { return }
@@ -127,13 +127,13 @@ final class ImportViewModel {
             ctx.insert(draft.toCatalogItem())
         }
         try? ctx.save()
-        // Намеренно НЕ вызываем resetAfterConfirmation() здесь.
-        // Очистка draftItems происходит в onDismiss у ImportView — ПОСЛЕ того,
-        // как sheet полностью анимировал закрытие и ConfirmationView уже не рендерится.
-        // Вызов reset здесь → draftItems = [] пока ForEach ещё активен → index out of range.
+        // Intentionally NOT calling resetAfterConfirmation() here.
+        // Clearing draftItems happens in onDismiss of ImportView — AFTER the sheet
+        // has fully animated closed and ConfirmationView is no longer rendering.
+        // Calling reset here → draftItems = [] while ForEach is still active → index out of range.
     }
 
-    // MARK: - Сброс
+    // MARK: - Reset
 
     func resetAfterConfirmation() {
         draftItems = []

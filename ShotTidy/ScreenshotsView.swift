@@ -2,7 +2,7 @@
 //  ScreenshotsView.swift
 //  ShotTidy
 //
-//  Раздел «Скриншоты» — резервная копия исходных изображений.
+//  "Screenshots" tab — backup copy of source images.
 //
 
 import SwiftUI
@@ -28,9 +28,9 @@ struct ScreenshotsView: View {
             Group {
                 if screenshots.isEmpty {
                     ContentUnavailableView(
-                        "Нет скриншотов",
+                        "No Screenshots",
                         systemImage: "photo.stack",
-                        description: Text("Импортируйте скриншоты для анализа.\nОни сохраняются здесь как источник данных.")
+                        description: Text("Import screenshots for analysis.\nThey are saved here as the data source.")
                     )
                 } else {
                     ScrollView {
@@ -41,7 +41,7 @@ struct ScreenshotsView: View {
                                     extractedCount: extractedCount(for: screenshot)
                                 )
                                 .contextMenu {
-                                    Button("Удалить", role: .destructive) {
+                                    Button("Delete", role: .destructive) {
                                         modelContext.delete(screenshot)
                                     }
                                 }
@@ -50,7 +50,7 @@ struct ScreenshotsView: View {
                     }
                 }
             }
-            .navigationTitle("Скриншоты")
+            .navigationTitle("Screenshots")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -63,7 +63,7 @@ struct ScreenshotsView: View {
                 }
                 if !screenshots.isEmpty {
                     ToolbarItem(placement: .topBarLeading) {
-                        Text("\(screenshots.count) шт.")
+                        Text("\(screenshots.count) items")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -103,7 +103,7 @@ private struct ScreenshotCell: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            // Миниатюра
+            // Thumbnail
             Group {
                 if let data = screenshot.thumbnailData, let img = UIImage(data: data) {
                     Image(uiImage: img)
@@ -123,7 +123,7 @@ private struct ScreenshotCell: View {
             .aspectRatio(1, contentMode: .fill)
             .clipped()
 
-            // Бейдж с числом извлечённых элементов
+            // Badge with number of extracted items
             if extractedCount > 0 {
                 Text("\(extractedCount)")
                     .font(.system(size: 11, weight: .bold))

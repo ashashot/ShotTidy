@@ -2,8 +2,8 @@
 //  OpenAIAPIClient.swift
 //  ShotTidy
 //
-//  Анализ скриншотов через GPT-4o Vision.
-//  Возвращает список структурированных элементов (DraftItem) разных категорий.
+//  Screenshot analysis via GPT-4o Vision.
+//  Returns a list of structured items (DraftItem) across various categories.
 //
 
 import Foundation
@@ -16,28 +16,28 @@ enum OpenAIError: LocalizedError {
     case invalidImage
     case httpError(Int, String)
     case refused(String)          // content: null + refusal field
-    case emptyResponse            // content: null без refusal
+    case emptyResponse            // content: null without refusal
     case decodingFailed(String)
     case networkError(Error)
 
     var errorDescription: String? {
         switch self {
         case .noAPIKey:
-            return "API-ключ не настроен. Перейдите в Настройки и введите ключ OpenAI."
+            return "API key is not configured. Go to Settings and enter your OpenAI key."
         case .invalidImage:
-            return "Не удалось обработать изображение."
+            return "Failed to process the image."
         case .httpError(let code, _):
-            if code == 401 { return "Неверный API-ключ. Проверьте ключ в Настройках." }
-            if code == 429 { return "Превышен лимит запросов OpenAI. Подождите немного." }
-            return "Ошибка сервера (\(code)). Попробуйте ещё раз."
+            if code == 401 { return "Invalid API key. Check your key in Settings." }
+            if code == 429 { return "OpenAI rate limit exceeded. Please wait a moment." }
+            return "Server error (\(code)). Please try again."
         case .refused:
-            return "GPT-4o не смог проанализировать этот скриншот. Попробуйте другое изображение."
+            return "GPT-4o could not analyze this screenshot. Try a different image."
         case .emptyResponse:
-            return "Пустой ответ от API. Попробуйте ещё раз."
+            return "Empty response from the API. Please try again."
         case .decodingFailed(let detail):
-            return "Ошибка разбора ответа: \(detail)"
+            return "Failed to parse the response: \(detail)"
         case .networkError(let err):
-            return "Ошибка сети: \(err.localizedDescription)"
+            return "Network error: \(err.localizedDescription)"
         }
     }
 }
@@ -59,11 +59,11 @@ final class OpenAIAPIClient {
     ) async throws -> [DraftItem] {
 
         let apiKey = KeychainManager.shared.openAIAPIKey ?? Config.openAIKey
-        guard !apiKey.isEmpty, apiKey != "ВСТАВЬ_СЮДА_НОВЫЙ_КЛЮЧ" else {
+        guard !apiKey.isEmpty, apiKey != "INSERT_YOUR_KEY_HERE" else {
             throw OpenAIError.noAPIKey
         }
 
-        // "auto" — OpenAI сам выбирает low/high; безопаснее для контент-фильтра
+        // "auto" — OpenAI chooses low/high automatically; safer for the content filter
         let resized = image.resized(toMaxDimension: 1024)
         guard let imageData = resized.jpegData(compressionQuality: 0.75) else {
             throw OpenAIError.invalidImage
@@ -122,15 +122,15 @@ final class OpenAIAPIClient {
             let choices = json["choices"] as? [[String: Any]],
             let message = choices.first?["message"] as? [String: Any]
         else {
-            throw OpenAIError.decodingFailed("Неожиданный формат ответа API")
+            throw OpenAIError.decodingFailed("Unexpected API response format")
         }
 
-        // Обрабатываем отказ (content: null + refusal)
+        // Handle refusal (content: null + refusal field)
         if let refusal = message["refusal"] as? String, !refusal.isEmpty {
             throw OpenAIError.refused(refusal)
         }
 
-        // content может быть null если модель отказала без явного refusal
+        // content may be null if the model refused without an explicit refusal field
         guard let content = message["content"] as? String else {
             throw OpenAIError.emptyResponse
         }
@@ -140,9 +140,9 @@ final class OpenAIAPIClient {
             let contentJson = try? JSONSerialization.jsonObject(with: contentData) as? [String: Any],
             let items = contentJson["items"] as? [[String: Any]]
         else {
-            // Пробуем вытащить хоть что-то из content для диагностики
+            // Try to extract something from content for diagnostics
             let preview = String(content.prefix(120))
-            throw OpenAIError.decodingFailed("Ожидался массив items. Получено: \(preview)")
+            throw OpenAIError.decodingFailed("Expected an items array. Got: \(preview)")
         }
 
         return items.compactMap { dict -> DraftItem? in

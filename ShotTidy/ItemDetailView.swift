@@ -2,7 +2,7 @@
 //  ItemDetailView.swift
 //  ShotTidy
 //
-//  Детальный просмотр элемента каталога.
+//  Detailed view for a catalog item.
 //
 
 import SwiftUI
@@ -22,7 +22,7 @@ struct ItemDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
 
-                // Категориальный бейдж
+                // Category badge
                 HStack(spacing: 6) {
                     Image(systemName: item.category.icon)
                         .font(.system(size: 13, weight: .semibold))
@@ -35,44 +35,44 @@ struct ItemDetailView: View {
                 .background(item.category.color)
                 .clipShape(Capsule())
 
-                // Поля
+                // Fields
                 VStack(alignment: .leading, spacing: 10) {
                     DetailField(label: schema.titleLabel, value: item.title)
 
                     if let v = item.subtitle, !v.isEmpty {
-                        DetailField(label: schema.subtitleLabel ?? "Детали", value: v)
+                        DetailField(label: schema.subtitleLabel ?? "Details", value: v)
                     }
                     if let v = item.link, !v.isEmpty {
                         DetailField(
-                            label: schema.linkLabel ?? "Ссылка",
+                            label: schema.linkLabel ?? "Link",
                             value: v,
                             isLink: !schema.isLinkEmail,
                             isEmail: schema.isLinkEmail
                         )
                     }
                     if let v = item.extra1, !v.isEmpty {
-                        DetailField(label: schema.extra1Label ?? "Дополнительно", value: v)
+                        DetailField(label: schema.extra1Label ?? "Extra", value: v)
                     }
                     if let v = item.extra2, !v.isEmpty {
-                        DetailField(label: schema.extra2Label ?? "Дополнительно 2", value: v)
+                        DetailField(label: schema.extra2Label ?? "Extra 2", value: v)
                     }
                     if let v = item.notes, !v.isEmpty {
-                        DetailField(label: schema.notesLabel ?? "Заметки", value: v, multiline: true)
+                        DetailField(label: schema.notesLabel ?? "Notes", value: v, multiline: true)
                     }
                 }
 
-                // Статус "Выполнено" для задач и покупок
+                // Completion toggle for tasks and shopping
                 if item.category == .tasks || item.category == .shopping {
-                    Toggle(item.category == .tasks ? "Выполнено" : "Куплено",
+                    Toggle(item.category == .tasks ? "Completed" : "Purchased",
                            isOn: $item.isCompleted)
                         .padding()
                         .background(Color(.secondarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
-                // Метаданные
+                // Metadata
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Добавлено: \(item.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                    Text("Added: \(item.createdAt.formatted(date: .abbreviated, time: .shortened))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -86,9 +86,9 @@ struct ItemDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button("Редактировать") { showEdit = true }
+                    Button("Edit") { showEdit = true }
                     Divider()
-                    Button("Удалить", role: .destructive) { showDeleteAlert = true }
+                    Button("Delete", role: .destructive) { showDeleteAlert = true }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -97,14 +97,14 @@ struct ItemDetailView: View {
         .sheet(isPresented: $showEdit) {
             ItemEditView(category: item.category, item: item)
         }
-        .alert("Удалить запись?", isPresented: $showDeleteAlert) {
-            Button("Удалить", role: .destructive) {
+        .alert("Delete item?", isPresented: $showDeleteAlert) {
+            Button("Delete", role: .destructive) {
                 modelContext.delete(item)
                 dismiss()
             }
-            Button("Отмена", role: .cancel) {}
+            Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Запись будет удалена из каталога.")
+            Text("This item will be removed from the catalog.")
         }
     }
 }

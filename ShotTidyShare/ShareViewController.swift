@@ -20,9 +20,9 @@ final class ShareViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        // Frame-based layout — работает в любом контексте
+        // Frame-based layout — works in any context
         statusLabel.frame = CGRect(x: 20, y: 0, width: view.bounds.width - 40, height: view.bounds.height)
-        statusLabel.text = "⏳ Сохраняем скриншот…"
+        statusLabel.text = "⏳ Saving screenshot…"
         statusLabel.textAlignment = .center
         statusLabel.numberOfLines = 0
         statusLabel.textColor = UIColor.label
@@ -37,27 +37,27 @@ final class ShareViewController: UIViewController {
     private func processImages() {
         guard let items = extensionContext?.inputItems as? [NSExtensionItem],
               !items.isEmpty else {
-            complete(status: "❌ Нет данных (inputItems пуст)")
+            complete(status: "❌ No data (inputItems is empty)")
             return
         }
 
         let providers = items.flatMap { $0.attachments ?? [] }
         guard !providers.isEmpty else {
-            complete(status: "❌ Нет attachments")
+            complete(status: "❌ No attachments")
             return
         }
 
         let group   = DispatchGroup()
         var saved   = 0
-        var lastErr = "неизвестная ошибка"
+        var lastErr = "unknown error"
 
         for provider in providers {
-            // Пробуем все возможные форматы изображений
+            // Try all supported image formats
             let types = ["public.jpeg", "public.png", "public.heic",
                          "public.tiff", "public.image", "com.compuserve.gif"]
 
             guard let typeID = types.first(where: { provider.hasItemConformingToTypeIdentifier($0) }) else {
-                lastErr = "провайдер не содержит изображение"
+                lastErr = "provider does not contain an image"
                 continue
             }
 
@@ -74,7 +74,7 @@ final class ShareViewController: UIViewController {
                     return
                 }
 
-                // Конвертируем в JPEG если нужно
+                // Convert to JPEG if needed
                 let jpegData: Data
                 if let img = UIImage(data: data), let jpeg = img.jpegData(compressionQuality: 0.85) {
                     jpegData = jpeg
@@ -93,10 +93,10 @@ final class ShareViewController: UIViewController {
 
         group.notify(queue: .main) { [weak self] in
             if saved > 0 {
-                let word = saved == 1 ? "скриншот сохранён" : "скриншота сохранено"
-                self?.complete(status: "✅ \(saved) \(word)\nОткройте ShotTidy для анализа")
+                let word = saved == 1 ? "screenshot saved" : "screenshots saved"
+                self?.complete(status: "✅ \(saved) \(word)\nOpen ShotTidy to analyze")
             } else {
-                self?.complete(status: "❌ Ошибка: \(lastErr)")
+                self?.complete(status: "❌ Error: \(lastErr)")
             }
         }
     }

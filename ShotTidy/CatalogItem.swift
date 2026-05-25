@@ -2,8 +2,8 @@
 //  CatalogItem.swift
 //  ShotTidy
 //
-//  Универсальная SwiftData модель для всех категорий каталога.
-//  Все поля Optional или имеют значение по умолчанию — требование CloudKit.
+//  Universal SwiftData model for all catalog categories.
+//  All fields are Optional or have default values — required by CloudKit.
 //
 
 import Foundation
@@ -12,24 +12,24 @@ import SwiftData
 @Model
 final class CatalogItem {
 
-    // MARK: - Идентификаторы
+    // MARK: - Identifiers
     var id: UUID = UUID()
     var categoryRaw: String = ""
 
-    // MARK: - Основные поля (гибкая схема, семантика зависит от категории)
-    var title: String = ""          // Главное поле: название, текст, имя
-    var subtitle: String? = nil     // Второстепенное: цена, адрес, перевод, автор
-    var link: String? = nil         // URL: ссылка, email, карты
-    var extra1: String? = nil       // Доп. поле 1: магазин, город, платформа, язык
-    var extra2: String? = nil       // Доп. поле 2: валюта, страна, жанр, год
-    var notes: String? = nil        // Заметки, описание, шаги
+    // MARK: - Main fields (flexible schema, semantics depend on category)
+    var title: String = ""          // Primary field: name, text, person name
+    var subtitle: String? = nil     // Secondary: price, address, translation, author
+    var link: String? = nil         // URL: link, email, maps
+    var extra1: String? = nil       // Extra field 1: store, city, platform, language
+    var extra2: String? = nil       // Extra field 2: currency, country, genre, year
+    var notes: String? = nil        // Notes, description, steps
 
-    // MARK: - Метаданные
-    var sourceScreenshotId: UUID? = nil   // Скриншот-источник
+    // MARK: - Metadata
+    var sourceScreenshotId: UUID? = nil   // Source screenshot
     var createdAt: Date = Date()
-    var isCompleted: Bool = false         // Куплено / посещено / прочитано / выполнено
+    var isCompleted: Bool = false         // Purchased / visited / read / completed
 
-    // MARK: - Init (удобный)
+    // MARK: - Convenience init
     init(
         category: ItemCategory,
         title: String,

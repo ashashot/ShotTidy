@@ -15,19 +15,19 @@ struct ShotTidyApp: App {
             CatalogItem.self,
         ])
 
-        // Сначала пробуем CloudKit (метаданные CatalogItem синхронизируются)
+        // First try CloudKit (CatalogItem metadata is synced)
         if let container = try? ModelContainer(
             for: schema,
             configurations: [ModelConfiguration(schema: schema, cloudKitDatabase: .automatic)]
         ) { return container }
 
-        // Fallback — только локальное хранилище
+        // Fallback — local storage only
         if let container = try? ModelContainer(
             for: schema,
             configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)]
         ) { return container }
 
-        fatalError("Не удалось создать ModelContainer")
+        fatalError("Failed to create ModelContainer")
     }()
 
     var body: some Scene {

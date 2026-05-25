@@ -20,7 +20,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // MARK: - API Ключ
+                // MARK: - API Key
                 Section {
                     HStack {
                         if showAPIKey {
@@ -50,7 +50,7 @@ struct SettingsView: View {
                         }
                     } label: {
                         HStack {
-                            Text(savedAnimation ? "Сохранено ✓" : "Сохранить ключ")
+                            Text(savedAnimation ? "Saved ✓" : "Save Key")
                                 .foregroundStyle(savedAnimation ? .green : .blue)
                             Spacer()
                         }
@@ -58,33 +58,33 @@ struct SettingsView: View {
                     .disabled(apiKeyInput.isEmpty)
 
                 } header: {
-                    Text("OpenAI API-ключ")
+                    Text("OpenAI API Key")
                 } footer: {
-                    Text("Получите ключ на platform.openai.com. Хранится в защищённом Keychain.")
+                    Text("Get your key at platform.openai.com. Stored securely in Keychain.")
                 }
 
-                // MARK: - Статистика
-                Section("Данные") {
+                // MARK: - Statistics
+                Section("Data") {
                     HStack {
-                        Label("Записей в каталоге", systemImage: "list.bullet")
+                        Label("Catalog items", systemImage: "list.bullet")
                         Spacer()
                         Text("\(allItems.count)")
                             .foregroundStyle(.secondary)
                     }
                     HStack {
-                        Label("Скриншотов сохранено", systemImage: "photo.stack")
+                        Label("Screenshots saved", systemImage: "photo.stack")
                         Spacer()
                         Text("\(screenshots.count)")
                             .foregroundStyle(.secondary)
                     }
 
-                    Button("Удалить все данные", role: .destructive) {
+                    Button("Delete All Data", role: .destructive) {
                         showDeleteAlert = true
                     }
                 }
 
-                // MARK: - О приложении
-                Section("О приложении") {
+                // MARK: - About
+                Section("About") {
                     HStack {
                         Text("ShotTidy")
                         Spacer()
@@ -92,19 +92,19 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                     HStack {
-                        Label("Модель AI", systemImage: "cpu")
+                        Label("AI Model", systemImage: "cpu")
                         Spacer()
                         Text("GPT-4o Vision")
                             .foregroundStyle(.secondary)
                     }
                 }
             }
-            .navigationTitle("Настройки")
-            .alert("Удалить все данные?", isPresented: $showDeleteAlert) {
-                Button("Удалить всё", role: .destructive) { deleteAll() }
-                Button("Отмена", role: .cancel) {}
+            .navigationTitle("Settings")
+            .alert("Delete All Data?", isPresented: $showDeleteAlert) {
+                Button("Delete All", role: .destructive) { deleteAll() }
+                Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Все записи каталога и сохранённые скриншоты будут удалены. API-ключ останется.")
+                Text("All catalog items and saved screenshots will be deleted. The API key will remain.")
             }
         }
         .onAppear {

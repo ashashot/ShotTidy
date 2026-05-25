@@ -2,7 +2,7 @@
 //  ItemCategory.swift
 //  ShotTidy
 //
-//  Категории каталога с описанием полей для каждой из них.
+//  Catalog categories with field descriptions for each one.
 //
 
 import SwiftUI
@@ -26,19 +26,19 @@ enum ItemCategory: String, CaseIterable, Codable, Hashable {
 
     var localizedName: String {
         switch self {
-        case .shopping:         return "Покупки"
-        case .places:           return "Места"
-        case .appsServices:     return "Приложения и Сервисы"
-        case .languageLearning: return "Изучение языков"
-        case .prompts:          return "Промты"
-        case .health:           return "Здоровье"
-        case .recipes:          return "Рецепты"
-        case .books:            return "Книги"
-        case .movies:           return "Фильмы и Сериалы"
-        case .quotes:           return "Цитаты"
-        case .articles:         return "Статьи"
-        case .contacts:         return "Контакты"
-        case .tasks:            return "Задачи"
+        case .shopping:         return "Shopping"
+        case .places:           return "Places"
+        case .appsServices:     return "Apps & Services"
+        case .languageLearning: return "Language Learning"
+        case .prompts:          return "Prompts"
+        case .health:           return "Health"
+        case .recipes:          return "Recipes"
+        case .books:            return "Books"
+        case .movies:           return "Movies & TV Shows"
+        case .quotes:           return "Quotes"
+        case .articles:         return "Articles"
+        case .contacts:         return "Contacts"
+        case .tasks:            return "Tasks"
         }
     }
 
@@ -100,121 +100,121 @@ enum ItemCategory: String, CaseIterable, Codable, Hashable {
         switch self {
         case .shopping:
             return FieldSchema(
-                titleLabel: "Название товара", titlePlaceholder: "Например: Nike Air Max 270",
-                subtitleLabel: "Цена", subtitlePlaceholder: "Например: 12 990",
-                linkLabel: "Ссылка", linkPlaceholder: "https://...",
-                extra1Label: "Магазин", extra1Placeholder: "Wildberries / Ozon / Amazon",
-                extra2Label: "Валюта", extra2Placeholder: "RUB / USD / EUR",
-                notesLabel: "Заметки", notesPlaceholder: "Дополнительная информация"
+                titleLabel: "Product Name", titlePlaceholder: "e.g. Nike Air Max 270",
+                subtitleLabel: "Price", subtitlePlaceholder: "e.g. 99.99",
+                linkLabel: "Link", linkPlaceholder: "https://...",
+                extra1Label: "Store", extra1Placeholder: "Amazon / eBay / Etsy",
+                extra2Label: "Currency", extra2Placeholder: "USD / EUR / GBP",
+                notesLabel: "Notes", notesPlaceholder: "Additional information"
             )
         case .places:
             return FieldSchema(
-                titleLabel: "Название места", titlePlaceholder: "Кафе Пушкин / Музей Эрмитаж",
-                subtitleLabel: "Адрес", subtitlePlaceholder: "Тверской бульвар, 26А",
-                linkLabel: "Ссылка / Карты", linkPlaceholder: "https://maps.apple.com/...",
-                extra1Label: "Город", extra1Placeholder: "Москва",
-                extra2Label: "Страна", extra2Placeholder: "Россия",
-                notesLabel: "Заметки", notesPlaceholder: "Режим работы, описание..."
+                titleLabel: "Place Name", titlePlaceholder: "Café Paris / Louvre Museum",
+                subtitleLabel: "Address", subtitlePlaceholder: "123 Main St",
+                linkLabel: "Link / Maps", linkPlaceholder: "https://maps.apple.com/...",
+                extra1Label: "City", extra1Placeholder: "New York",
+                extra2Label: "Country", extra2Placeholder: "USA",
+                notesLabel: "Notes", notesPlaceholder: "Opening hours, description..."
             )
         case .appsServices:
             return FieldSchema(
-                titleLabel: "Название", titlePlaceholder: "Notion / Figma / Telegram",
-                subtitleLabel: "Описание", subtitlePlaceholder: "Краткое описание сервиса",
-                linkLabel: "Ссылка", linkPlaceholder: "https://...",
-                extra1Label: "Платформа", extra1Placeholder: "iOS / Android / Web / macOS",
-                extra2Label: "Категория", extra2Placeholder: "Продуктивность / Дизайн",
-                notesLabel: "Заметки", notesPlaceholder: "Что понравилось / зачем нужно"
+                titleLabel: "Name", titlePlaceholder: "Notion / Figma / Telegram",
+                subtitleLabel: "Description", subtitlePlaceholder: "Brief description of the service",
+                linkLabel: "Link", linkPlaceholder: "https://...",
+                extra1Label: "Platform", extra1Placeholder: "iOS / Android / Web / macOS",
+                extra2Label: "Category", extra2Placeholder: "Productivity / Design",
+                notesLabel: "Notes", notesPlaceholder: "What I liked / why I need it"
             )
         case .languageLearning:
             return FieldSchema(
-                titleLabel: "Слово / Фраза / Текст", titlePlaceholder: "Слово или выражение для изучения",
-                subtitleLabel: "Перевод", subtitlePlaceholder: "Перевод на русский",
+                titleLabel: "Word / Phrase / Text", titlePlaceholder: "Word or phrase to learn",
+                subtitleLabel: "Translation", subtitlePlaceholder: "Translation",
                 linkLabel: nil, linkPlaceholder: nil,
-                extra1Label: "Язык", extra1Placeholder: "Английский / Испанский",
-                extra2Label: "Пример использования", extra2Placeholder: "I need to leverage my skills",
-                notesLabel: "Контекст", notesPlaceholder: "Откуда взято, дополнительные примеры"
+                extra1Label: "Language", extra1Placeholder: "English / Spanish",
+                extra2Label: "Usage Example", extra2Placeholder: "I need to leverage my skills",
+                notesLabel: "Context", notesPlaceholder: "Source, additional examples"
             )
         case .prompts:
             return FieldSchema(
-                titleLabel: "Текст промта", titlePlaceholder: "Act as a professional...",
-                subtitleLabel: "Назначение", subtitlePlaceholder: "Для чего используется",
+                titleLabel: "Prompt Text", titlePlaceholder: "Act as a professional...",
+                subtitleLabel: "Purpose", subtitlePlaceholder: "What it is used for",
                 linkLabel: nil, linkPlaceholder: nil,
-                extra1Label: "AI-инструмент", extra1Placeholder: "ChatGPT / Claude / Midjourney",
+                extra1Label: "AI Tool", extra1Placeholder: "ChatGPT / Claude / Midjourney",
                 extra2Label: nil, extra2Placeholder: nil,
-                notesLabel: "Заметки", notesPlaceholder: "Результаты, улучшения"
+                notesLabel: "Notes", notesPlaceholder: "Results, improvements"
             )
         case .health:
             return FieldSchema(
-                titleLabel: "Рекомендация / Информация", titlePlaceholder: "Текст о здоровье",
-                subtitleLabel: "Тип", subtitlePlaceholder: "Лекарство / Упражнение / Диета",
+                titleLabel: "Tip / Information", titlePlaceholder: "Health-related text",
+                subtitleLabel: "Type", subtitlePlaceholder: "Medication / Exercise / Diet",
                 linkLabel: nil, linkPlaceholder: nil,
-                extra1Label: "Источник", extra1Placeholder: "Врач / Приложение / Статья",
+                extra1Label: "Source", extra1Placeholder: "Doctor / App / Article",
                 extra2Label: nil, extra2Placeholder: nil,
-                notesLabel: "Дополнительно", notesPlaceholder: "Дозировка, противопоказания..."
+                notesLabel: "Additional", notesPlaceholder: "Dosage, contraindications..."
             )
         case .recipes:
             return FieldSchema(
-                titleLabel: "Название блюда", titlePlaceholder: "Борщ / Паста карбонара",
-                subtitleLabel: "Ингредиенты", subtitlePlaceholder: "Список ингредиентов",
-                linkLabel: "Ссылка на рецепт", linkPlaceholder: "https://...",
-                extra1Label: "Время приготовления", extra1Placeholder: "30 минут",
-                extra2Label: "Кухня", extra2Placeholder: "Русская / Итальянская",
-                notesLabel: "Шаги приготовления", notesPlaceholder: "1. Нарезать... 2. Обжарить..."
+                titleLabel: "Dish Name", titlePlaceholder: "Pasta Carbonara / Caesar Salad",
+                subtitleLabel: "Ingredients", subtitlePlaceholder: "List of ingredients",
+                linkLabel: "Recipe Link", linkPlaceholder: "https://...",
+                extra1Label: "Cooking Time", extra1Placeholder: "30 min",
+                extra2Label: "Cuisine", extra2Placeholder: "Italian / Mexican",
+                notesLabel: "Steps", notesPlaceholder: "1. Chop... 2. Fry..."
             )
         case .books:
             return FieldSchema(
-                titleLabel: "Название книги", titlePlaceholder: "Мастер и Маргарита",
-                subtitleLabel: "Автор", subtitlePlaceholder: "Михаил Булгаков",
-                linkLabel: "Купить / Читать", linkPlaceholder: "https://...",
-                extra1Label: "Жанр", extra1Placeholder: "Роман / Нон-фикшн / Биография",
-                extra2Label: "Год", extra2Placeholder: "2024",
-                notesLabel: "Заметки", notesPlaceholder: "Впечатления, цитаты..."
+                titleLabel: "Book Title", titlePlaceholder: "The Great Gatsby",
+                subtitleLabel: "Author", subtitlePlaceholder: "F. Scott Fitzgerald",
+                linkLabel: "Buy / Read", linkPlaceholder: "https://...",
+                extra1Label: "Genre", extra1Placeholder: "Novel / Non-fiction / Biography",
+                extra2Label: "Year", extra2Placeholder: "2024",
+                notesLabel: "Notes", notesPlaceholder: "Impressions, quotes..."
             )
         case .movies:
             return FieldSchema(
-                titleLabel: "Название", titlePlaceholder: "Начало / Succession",
-                subtitleLabel: "Платформа", subtitlePlaceholder: "Netflix / Кинопоиск / IVI",
-                linkLabel: "Смотреть", linkPlaceholder: "https://...",
-                extra1Label: "Жанр", extra1Placeholder: "Триллер / Комедия / Документальный",
-                extra2Label: "Год", extra2Placeholder: "2024",
-                notesLabel: "Заметки", notesPlaceholder: "Почему хочу посмотреть..."
+                titleLabel: "Title", titlePlaceholder: "Inception / Succession",
+                subtitleLabel: "Platform", subtitlePlaceholder: "Netflix / HBO / Apple TV+",
+                linkLabel: "Watch", linkPlaceholder: "https://...",
+                extra1Label: "Genre", extra1Placeholder: "Thriller / Comedy / Documentary",
+                extra2Label: "Year", extra2Placeholder: "2024",
+                notesLabel: "Notes", notesPlaceholder: "Why I want to watch it..."
             )
         case .quotes:
             return FieldSchema(
-                titleLabel: "Цитата", titlePlaceholder: "Текст цитаты",
-                subtitleLabel: "Автор", subtitlePlaceholder: "Имя автора",
-                linkLabel: "Источник", linkPlaceholder: "Книга / Статья / URL",
+                titleLabel: "Quote", titlePlaceholder: "Quote text",
+                subtitleLabel: "Author", subtitlePlaceholder: "Author name",
+                linkLabel: "Source", linkPlaceholder: "Book / Article / URL",
                 extra1Label: nil, extra1Placeholder: nil,
                 extra2Label: nil, extra2Placeholder: nil,
-                notesLabel: "Заметки", notesPlaceholder: "Почему важна эта цитата"
+                notesLabel: "Notes", notesPlaceholder: "Why this quote matters"
             )
         case .articles:
             return FieldSchema(
-                titleLabel: "Заголовок статьи", titlePlaceholder: "Название статьи",
-                subtitleLabel: "Источник / Издание", subtitlePlaceholder: "Habr / Medium / TechCrunch",
-                linkLabel: "Ссылка", linkPlaceholder: "https://...",
-                extra1Label: "Тема", extra1Placeholder: "Технологии / Наука / Бизнес",
+                titleLabel: "Article Title", titlePlaceholder: "Article headline",
+                subtitleLabel: "Source / Publication", subtitlePlaceholder: "Medium / TechCrunch / Wired",
+                linkLabel: "Link", linkPlaceholder: "https://...",
+                extra1Label: "Topic", extra1Placeholder: "Technology / Science / Business",
                 extra2Label: nil, extra2Placeholder: nil,
-                notesLabel: "Краткое содержание", notesPlaceholder: "Основные мысли статьи"
+                notesLabel: "Summary", notesPlaceholder: "Key points of the article"
             )
         case .contacts:
             return FieldSchema(
-                titleLabel: "Имя", titlePlaceholder: "Иван Петров",
-                subtitleLabel: "Телефон", subtitlePlaceholder: "+7 900 000-00-00",
+                titleLabel: "Name", titlePlaceholder: "John Smith",
+                subtitleLabel: "Phone", subtitlePlaceholder: "+1 (555) 000-0000",
                 linkLabel: "Email", linkPlaceholder: "email@example.com",
-                extra1Label: "Компания", extra1Placeholder: "Название компании",
-                extra2Label: "Должность", extra2Placeholder: "CEO / Дизайнер / Разработчик",
-                notesLabel: "Заметки", notesPlaceholder: "Где познакомились, о чём говорили",
+                extra1Label: "Company", extra1Placeholder: "Company name",
+                extra2Label: "Position", extra2Placeholder: "CEO / Designer / Developer",
+                notesLabel: "Notes", notesPlaceholder: "Where we met, what we discussed",
                 isLinkEmail: true
             )
         case .tasks:
             return FieldSchema(
-                titleLabel: "Задача", titlePlaceholder: "Описание задачи",
-                subtitleLabel: "Срок", subtitlePlaceholder: "25 мая / до конца недели",
+                titleLabel: "Task", titlePlaceholder: "Task description",
+                subtitleLabel: "Due Date", subtitlePlaceholder: "May 25 / end of week",
                 linkLabel: nil, linkPlaceholder: nil,
-                extra1Label: "Приоритет", extra1Placeholder: "Высокий / Средний / Низкий",
+                extra1Label: "Priority", extra1Placeholder: "High / Medium / Low",
                 extra2Label: nil, extra2Placeholder: nil,
-                notesLabel: "Детали", notesPlaceholder: "Дополнительные детали задачи"
+                notesLabel: "Details", notesPlaceholder: "Additional task details"
             )
         }
     }

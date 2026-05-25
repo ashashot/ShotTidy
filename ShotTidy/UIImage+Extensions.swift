@@ -2,13 +2,13 @@
 //  UIImage+Extensions.swift
 //  ShotTidy
 //
-//  Расширения UIImage, используемые во всём приложении.
+//  UIImage extensions used throughout the app.
 //
 
 import UIKit
 
 extension UIImage {
-    /// Масштабирует изображение до максимального размера по большей стороне.
+    /// Scales the image down so that its longest side does not exceed maxDim.
     func resized(toMaxDimension maxDim: CGFloat) -> UIImage {
         let size = self.size
         guard size.width > maxDim || size.height > maxDim else { return self }

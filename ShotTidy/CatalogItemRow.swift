@@ -2,7 +2,7 @@
 //  CatalogItemRow.swift
 //  ShotTidy
 //
-//  Строка элемента в списке категории.
+//  Row for a catalog item in the category list.
 //
 
 import SwiftUI
@@ -14,7 +14,7 @@ struct CatalogItemRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
-                // Чекбокс для задач/покупок
+                // Checkbox for tasks and shopping items
                 if item.category == .tasks || item.category == .shopping {
                     Image(systemName: item.isCompleted
                           ? "checkmark.circle.fill" : "circle")

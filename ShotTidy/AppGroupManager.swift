@@ -2,8 +2,8 @@
 //  AppGroupManager.swift
 //  ShotTidy
 //
-//  Общий контейнер между основным приложением и Share Extension.
-//  Добавь этот файл в оба таргета: ShotTidy и ShotTidyShare.
+//  Shared container between the main app and the Share Extension.
+//  Add this file to both targets: ShotTidy and ShotTidyShare.
 //
 
 import Foundation
@@ -12,19 +12,19 @@ import UIKit
 enum AppGroupManager {
     static let groupID = "group.mbx.ShotTidy"
 
-    /// URL общего контейнера App Group
+    /// URL of the shared App Group container
     static var containerURL: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupID)
     }
 
-    /// Папка с изображениями, ожидающими анализа
+    /// Directory for images pending analysis
     static var pendingImagesDir: URL? {
         containerURL?.appendingPathComponent("PendingImages", isDirectory: true)
     }
 
-    // MARK: - Write (вызывается из Share Extension)
+    // MARK: - Write (called from the Share Extension)
 
-    /// Сохранить изображение в очередь для анализа
+    /// Save an image to the analysis queue
     @discardableResult
     static func savePendingImage(_ data: Data) throws -> URL {
         guard let dir = pendingImagesDir else {
@@ -40,9 +40,9 @@ enum AppGroupManager {
         return fileURL
     }
 
-    // MARK: - Read (вызывается из основного приложения)
+    // MARK: - Read (called from the main app)
 
-    /// Список URL всех ожидающих изображений
+    /// URLs of all pending images
     static func pendingImageURLs() -> [URL] {
         guard let dir = pendingImagesDir,
               FileManager.default.fileExists(atPath: dir.path) else { return [] }
@@ -53,7 +53,7 @@ enum AppGroupManager {
         )) ?? []
     }
 
-    /// Удалить обработанный файл
+    /// Delete a processed file
     static func deletePendingImage(at url: URL) {
         try? FileManager.default.removeItem(at: url)
     }
@@ -63,6 +63,6 @@ enum AppGroupError: LocalizedError {
     case containerUnavailable
 
     var errorDescription: String? {
-        "Общий контейнер App Group недоступен. Проверь настройку group.mbx.ShotTidy."
+        "The App Group shared container is unavailable. Check the group.mbx.ShotTidy configuration."
     }
 }

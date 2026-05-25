@@ -2,35 +2,35 @@
 //  ConfirmationView.swift
 //  ShotTidy
 //
-//  Экран подтверждения перед сохранением извлечённых элементов.
-//  Пользователь может отметить/снять, отредактировать или удалить каждый элемент.
+//  Confirmation screen before saving extracted items.
+//  The user can check/uncheck, edit, or delete each item.
 //
 
 import SwiftUI
 
-/// Обёртка-идентификатор для индекса редактируемого черновика.
-/// Нужна для .sheet(item:), чтобы SwiftUI передавал данные атомарно
-/// и не выполнял closure контента раньше, чем индекс будет установлен.
+/// An identifier wrapper for the index of the draft being edited.
+/// Required for .sheet(item:) so SwiftUI passes data atomically
+/// and does not build the sheet content before the index is set.
 private struct DraftEditContext: Identifiable {
-    let id: Int  // глобальный индекс в viewModel.draftItems
+    let id: Int  // global index in viewModel.draftItems
 }
 
 struct ConfirmationView: View {
-    // @Bindable нужен чтобы получать биндинги ($viewModel.draftItems[i])
+    // @Bindable is needed to get bindings ($viewModel.draftItems[i])
     @Bindable var viewModel: ImportViewModel
     var onSaved: () -> Void
 
     @Environment(\.dismiss) private var dismiss
-    /// Контекст редактирования: устанавливается → sheet открывается → сбрасывается при закрытии.
-    /// Единый источник правды: .sheet(item:) гарантирует, что контент строится
-    /// только когда editingContext != nil, исключая race condition.
+    /// Edit context: set → sheet opens → reset on close.
+    /// Single source of truth: .sheet(item:) guarantees that content is built
+    /// only when editingContext != nil, eliminating race conditions.
     @State private var editingContext: DraftEditContext? = nil
 
     private var selectedCount: Int {
         viewModel.draftItems.filter { $0.isSelected && $0.isValid }.count
     }
 
-    // Группировка: список (категория, [глобальные индексы в draftItems])
+    // Grouping: list of (category, [global indices in draftItems])
     private var groupedItems: [(ItemCategory, [Int])] {
         ItemCategory.allCases.compactMap { category in
             let indices = viewModel.draftItems.indices.filter { i in
@@ -45,25 +45,25 @@ struct ConfirmationView: View {
             Group {
                 if viewModel.draftItems.isEmpty {
                     ContentUnavailableView(
-                        "Нет данных",
+                        "No Data",
                         systemImage: "tray",
-                        description: Text("AI не смог извлечь структурированные данные из скриншотов")
+                        description: Text("AI could not extract structured data from the screenshots")
                     )
                 } else {
                     List {
-                        // Пояснение
+                        // Hint
                         Section {
                             HStack(spacing: 10) {
                                 Image(systemName: "info.circle.fill")
                                     .foregroundStyle(.blue)
-                                Text("Проверьте данные. Снимите галочку с лишнего или нажмите ✏️ для правки.")
+                                Text("Review the data. Uncheck unnecessary items or tap ✏️ to edit.")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
                             .listRowBackground(Color.blue.opacity(0.07))
                         }
 
-                        // Предупреждения (пропущенные скриншоты)
+                        // Warnings (skipped screenshots)
                         if !viewModel.warnings.isEmpty {
                             Section {
                                 ForEach(viewModel.warnings, id: \.self) { warning in
@@ -79,20 +79,20 @@ struct ConfirmationView: View {
                                 }
                                 .listRowBackground(Color.orange.opacity(0.07))
                             } header: {
-                                Text("Пропущено (\(viewModel.warnings.count))")
+                                Text("Skipped (\(viewModel.warnings.count))")
                                     .foregroundStyle(.orange)
                             }
                         }
 
-                        // Группы по категориям
+                        // Groups by category
                         ForEach(groupedItems, id: \.0) { category, indices in
                             Section {
                                 ForEach(indices, id: \.self) { index in
                                     DraftItemRow(
                                         item: $viewModel.draftItems[index],
                                         onEdit: {
-                                            // Один шаг → sheet открывается только
-                                            // когда item != nil, без race condition
+                                            // Single step → sheet opens only
+                                            // when item != nil, without a race condition
                                             editingContext = DraftEditContext(id: index)
                                         }
                                     )
@@ -108,27 +108,27 @@ struct ConfirmationView: View {
                     .listStyle(.insetGrouped)
                 }
             }
-            .navigationTitle("Подтверждение")
+            .navigationTitle("Confirmation")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
                         viewModel.saveSelectedDrafts()
                         onSaved()
                     } label: {
-                        Text("Сохранить (\(selectedCount))")
+                        Text("Save (\(selectedCount))")
                             .fontWeight(.semibold)
                     }
                     .disabled(selectedCount == 0)
                 }
             }
-            // Sheet редактора.
-            // .sheet(item:) гарантирует атомарность: SwiftUI строит DraftItemEditView
-            // только когда editingContext != nil, и автоматически сбрасывает его в nil
-            // при закрытии — без отдельного флага и без race condition.
+            // Edit sheet.
+            // .sheet(item:) guarantees atomicity: SwiftUI builds DraftItemEditView
+            // only when editingContext != nil, and automatically resets it to nil
+            // on close — no extra flag needed and no race condition.
             .sheet(item: $editingContext) { ctx in
                 DraftItemEditView(item: $viewModel.draftItems[ctx.id])
             }
@@ -153,7 +153,7 @@ struct ConfirmationView: View {
     }
 
     private func deleteItems(offsets: IndexSet, globalIndices: [Int]) {
-        // Переводим локальные смещения в глобальные индексы, удаляем с конца
+        // Convert local offsets to global indices, remove from the end
         let toRemove = offsets
             .map { localOffset in globalIndices[localOffset] }
             .sorted(by: >)
@@ -171,7 +171,7 @@ struct DraftItemRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Чекбокс
+            // Checkbox
             Button {
                 item.isSelected.toggle()
             } label: {
@@ -182,7 +182,7 @@ struct DraftItemRow: View {
             }
             .buttonStyle(.plain)
 
-            // Контент
+            // Content
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.displayTitle)
                     .font(.system(size: 15, weight: .medium))
@@ -205,7 +205,7 @@ struct DraftItemRow: View {
 
             Spacer()
 
-            // Кнопка редактирования
+            // Edit button
             Button {
                 onEdit()
             } label: {
@@ -231,16 +231,16 @@ struct DraftItemEditView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // Смена категории
-                Section("Категория") {
-                    Picker("Категория", selection: $item.category) {
+                // Category picker
+                Section("Category") {
+                    Picker("Category", selection: $item.category) {
                         ForEach(ItemCategory.allCases, id: \.self) { cat in
                             Label(cat.localizedName, systemImage: cat.icon).tag(cat)
                         }
                     }
                 }
 
-                // Основные поля
+                // Main fields
                 Section(schema.titleLabel) {
                     TextField(schema.titlePlaceholder, text: $item.title, axis: .vertical)
                         .lineLimit(4, reservesSpace: false)
@@ -281,11 +281,11 @@ struct DraftItemEditView: View {
                     }
                 }
             }
-            .navigationTitle("Редактировать")
+            .navigationTitle("Edit")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") { dismiss() }
+                    Button("Done") { dismiss() }
                         .fontWeight(.semibold)
                 }
             }

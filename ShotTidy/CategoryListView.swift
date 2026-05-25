@@ -2,7 +2,7 @@
 //  CategoryListView.swift
 //  ShotTidy
 //
-//  Список элементов внутри одной категории.
+//  List of items within a single category.
 //
 
 import SwiftUI
@@ -46,7 +46,7 @@ struct CategoryListView: View {
                 ContentUnavailableView(
                     category.localizedName,
                     systemImage: category.icon,
-                    description: Text("Нет записей.\nДобавьте через импорт скриншотов или кнопку «+»")
+                    description: Text("No items.\nAdd via screenshot import or the «+» button")
                 )
             } else {
                 List {
@@ -63,7 +63,7 @@ struct CategoryListView: View {
                         }
                     }
                 }
-                .searchable(text: $searchText, prompt: "Поиск в «\(category.localizedName)»")
+                .searchable(text: $searchText, prompt: "Search in \(category.localizedName)")
             }
         }
         .navigationTitle(category.localizedName)

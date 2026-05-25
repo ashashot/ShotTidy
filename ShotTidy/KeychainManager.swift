@@ -2,7 +2,7 @@
 //  KeychainManager.swift
 //  ShotTidy
 //
-//  Безопасное хранение OpenAI API-ключа в Keychain.
+//  Secure storage for the OpenAI API key in Keychain.
 //
 
 import Foundation
@@ -22,7 +22,7 @@ final class KeychainManager {
     func saveAPIKey(_ key: String) -> Bool {
         let data = Data(key.utf8)
 
-        // Сначала попробуем обновить существующий
+        // Try updating the existing entry first
         let updateQuery: [CFString: Any] = [
             kSecClass:       kSecClassGenericPassword,
             kSecAttrService: service,
@@ -32,7 +32,7 @@ final class KeychainManager {
         let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributes as CFDictionary)
 
         if updateStatus == errSecItemNotFound {
-            // Добавляем новый
+            // Add a new entry
             let addQuery: [CFString: Any] = [
                 kSecClass:       kSecClassGenericPassword,
                 kSecAttrService: service,
@@ -84,9 +84,9 @@ final class KeychainManager {
         getAPIKey() != nil
     }
 
-    // MARK: - Computed (удобный доступ)
+    // MARK: - Computed property (convenient access)
 
-    /// Геттер/сеттер для OpenAI API-ключа
+    /// Getter/setter for the OpenAI API key
     var openAIAPIKey: String? {
         get { getAPIKey() }
         set {

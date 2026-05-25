@@ -2,8 +2,8 @@
 //  Screenshot.swift
 //  ShotTidy
 //
-//  SwiftData модель для хранения скриншотов-источников (резервная копия).
-//  Все поля Optional или с дефолтом — требование CloudKit.
+//  SwiftData model for storing source screenshots (backup copy).
+//  All fields are Optional or have defaults — required by CloudKit.
 //
 
 import Foundation
@@ -25,7 +25,7 @@ final class Screenshot {
 
     var id: UUID = UUID()
 
-    /// Миниатюра (хранится в external storage — не нагружает БД)
+    /// Thumbnail stored in external storage — does not bloat the database
     @Attribute(.externalStorage)
     var thumbnailData: Data? = nil
 
@@ -33,13 +33,13 @@ final class Screenshot {
     var createdAt: Date = Date()
     var analyzedAt: Date? = nil
 
-    /// Статус анализа
+    /// Analysis status
     var analysisStatusRaw: String = AnalysisStatus.pending.rawValue
 
-    /// Сколько элементов каталога было извлечено из этого скриншота
+    /// Number of catalog items extracted from this screenshot
     var extractedItemsCount: Int = 0
 
-    /// Сообщение об ошибке анализа
+    /// Analysis error message
     var errorMessage: String? = nil
 
     // MARK: - Computed

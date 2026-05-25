@@ -2,7 +2,7 @@
 //  MainTabView.swift
 //  ShotTidy
 //
-//  Корневая навигация: Каталог | Скриншоты | Настройки
+//  Root navigation: Catalog | Screenshots | Settings
 //
 
 import SwiftUI
@@ -12,22 +12,22 @@ struct MainTabView: View {
 
     var body: some View {
         TabView {
-            // MARK: Каталог
+            // MARK: Catalog
             CategoriesView(showImport: $showImport)
                 .tabItem {
-                    Label("Каталог", systemImage: "square.grid.2x2.fill")
+                    Label("Catalog", systemImage: "square.grid.2x2.fill")
                 }
 
-            // MARK: Скриншоты
+            // MARK: Screenshots
             ScreenshotsView(showImport: $showImport)
                 .tabItem {
-                    Label("Скриншоты", systemImage: "photo.stack.fill")
+                    Label("Screenshots", systemImage: "photo.stack.fill")
                 }
 
-            // MARK: Настройки
+            // MARK: Settings
             SettingsView()
                 .tabItem {
-                    Label("Настройки", systemImage: "gear")
+                    Label("Settings", systemImage: "gear")
                 }
         }
         .sheet(isPresented: $showImport) {

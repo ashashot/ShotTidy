@@ -2,7 +2,7 @@
 //  CategoryCardView.swift
 //  ShotTidy
 //
-//  Карточка категории в сетке главного экрана.
+//  Category card in the main screen grid.
 //
 
 import SwiftUI
@@ -14,7 +14,7 @@ struct CategoryCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
-                // Иконка
+                // Icon
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(category.color.opacity(0.15))
@@ -26,7 +26,7 @@ struct CategoryCardView: View {
 
                 Spacer()
 
-                // Счётчик
+                // Counter
                 if count > 0 {
                     Text("\(count)")
                         .font(.system(size: 13, weight: .semibold))
@@ -45,11 +45,11 @@ struct CategoryCardView: View {
                 .multilineTextAlignment(.leading)
 
             if count == 0 {
-                Text("Нет записей")
+                Text("No items")
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
             } else {
-                Text(count == 1 ? "1 запись" : "\(count) записей")
+                Text(count == 1 ? "1 item" : "\(count) items")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }

@@ -2,7 +2,7 @@
 //  CategoriesView.swift
 //  ShotTidy
 //
-//  Главный экран — сетка категорий каталога.
+//  Main screen — catalog category grid.
 //
 
 import SwiftUI
@@ -14,7 +14,7 @@ struct CategoriesView: View {
 
     private let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
-    // Категории + количество элементов в каждой
+    // Categories with item counts
     private var categoryCounts: [(ItemCategory, Int)] {
         ItemCategory.allCases.map { category in
             let count = allItems.filter { $0.categoryRaw == category.rawValue }.count
@@ -40,7 +40,7 @@ struct CategoriesView: View {
                 .padding(.bottom, 24)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Каталог")
+            .navigationTitle("Catalog")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
