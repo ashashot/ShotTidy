@@ -13,6 +13,9 @@ struct ScreenshotDetailView: View {
 
     @Query private var linkedItems: [CatalogItem]
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var showDeleteAlert = false
 
     init(screenshot: Screenshot) {
         self.screenshot = screenshot
@@ -78,11 +81,28 @@ struct ScreenshotDetailView: View {
         .navigationTitle("Screenshot")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .principal) {
                 Text("\(linkedItems.count) \(linkedItems.count == 1 ? "item" : "items")")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showDeleteAlert = true
+                } label: {
+                    Image(systemName: "trash")
+                        .foregroundStyle(.red)
+                }
+            }
+        }
+        .alert("Delete Screenshot?", isPresented: $showDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                modelContext.delete(screenshot)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The screenshot backup will be removed. Catalog items extracted from it will not be affected.")
         }
     }
 }
