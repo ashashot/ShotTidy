@@ -2,207 +2,242 @@
 //  ImportView.swift
 //  ShotTidy
 //
-//  Импорт скриншотов из галереи и их AI-анализ.
+//  Экран импорта скриншотов из галереи → AI-анализ → подтверждение.
 //
 
 import SwiftUI
-import SwiftData
 import PhotosUI
+import SwiftData
 
 struct ImportView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selectedItems: [PhotosPickerItem] = []
-    @State private var pendingImages: [(UIImage, String)] = []  // (image, filename)
-    @State private var isProcessing = false
-    @State private var progress: Double = 0
-    @State private var currentStep = ""
-    @State private var errorMessage: String?
-    @State private var doneCount = 0
+    @State private var viewModel = ImportViewModel()
+    // @State — стабильное хранилище для sheet-binding.
+    // Устанавливается в true только ПОСЛЕ завершения await analyzeImages(),
+    // гарантируя что draftItems уже заполнены при первом рендере ConfirmationView.
+    @State private var showConfirmation = false
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-
-                if isProcessing {
-                    processingView
-                } else if pendingImages.isEmpty {
-                    pickerPrompt
+            VStack(spacing: 0) {
+                if viewModel.isAnalyzing {
+                    analyzingView
+                } else if viewModel.selectedImages.isEmpty {
+                    pickerPromptView
                 } else {
-                    previewGrid
+                    previewView
                 }
             }
-            .padding()
             .navigationTitle("Импорт скриншотов")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Отмена") { dismiss() }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Закрыть") {
+                        viewModel.fullReset()
+                        dismiss()
+                    }
                 }
-                if !pendingImages.isEmpty && !isProcessing {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Анализировать") {
-                            Task { await analyzeAll() }
-                        }
-                        .fontWeight(.semibold)
+                if !viewModel.selectedImages.isEmpty && !viewModel.isAnalyzing {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Анализировать") { startAnalysis() }
+                            .fontWeight(.semibold)
                     }
                 }
             }
-            .alert("Ошибка", isPresented: .constant(errorMessage != nil)) {
-                Button("OK") { errorMessage = nil }
+            .alert("Ошибка анализа", isPresented: Binding(
+                get: { viewModel.analysisError != nil },
+                set: { if !$0 { viewModel.analysisError = nil } }
+            )) {
+                Button("OK") { viewModel.analysisError = nil }
             } message: {
-                Text(errorMessage ?? "")
+                Text(viewModel.analysisError ?? "")
+            }
+            // $showConfirmation — стабильный @State binding.
+            // dismiss() внутри ConfirmationView корректно ставит isPresented=false
+            // через этот binding, onDismiss вызывается ПОСЛЕ завершения анимации.
+            .sheet(isPresented: $showConfirmation, onDismiss: {
+                viewModel.resetAfterConfirmation()
+            }) {
+                ConfirmationView(viewModel: viewModel) {
+                    showConfirmation = false
+                    dismiss()
+                }
+            }
+        }
+        .onAppear {
+            viewModel.modelContext = modelContext
+        }
+    }
+
+    // MARK: - Запуск анализа
+
+    private func startAnalysis() {
+        Task {
+            await viewModel.analyzeImages()
+            // Открываем ConfirmationView только ЗДЕСЬ, после await —
+            // в этой точке draftItems гарантированно заполнены
+            if !viewModel.draftItems.isEmpty {
+                showConfirmation = true
             }
         }
     }
 
-    // MARK: - Views
+    // MARK: - Prompt View
 
-    private var pickerPrompt: some View {
-        VStack(spacing: 20) {
+    private var pickerPromptView: some View {
+        VStack(spacing: 28) {
             Spacer()
 
-            Image(systemName: "photo.stack")
-                .font(.system(size: 64))
-                .foregroundStyle(.blue.opacity(0.7))
+            VStack(spacing: 12) {
+                Image(systemName: "photo.badge.plus")
+                    .font(.system(size: 64, weight: .light))
+                    .foregroundStyle(.blue.opacity(0.8))
 
-            Text("Выберите скриншоты")
-                .font(.title2)
-                .fontWeight(.semibold)
+                Text("Выберите скриншоты")
+                    .font(.title2.bold())
 
-            Text("Выберите один или несколько скриншотов из галереи для анализа и добавления в каталог")
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
+                Text("AI проанализирует изображения\nи предложит добавить данные в каталог")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
 
             PhotosPicker(
-                selection: $selectedItems,
-                maxSelectionCount: 20,
-                matching: .screenshots
+                selection: $viewModel.selectedPickerItems,
+                maxSelectionCount: 10,
+                matching: .images
             ) {
-                Label("Открыть галерею", systemImage: "photo.on.rectangle")
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
+                Label("Открыть Фото", systemImage: "photo.on.rectangle")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
                     .background(.blue)
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
             }
-            .onChange(of: selectedItems) { _, items in
-                Task { await loadImages(from: items) }
+            .padding(.horizontal, 32)
+            .onChange(of: viewModel.selectedPickerItems) { _, _ in
+                Task { await viewModel.loadSelectedImages() }
             }
 
             Spacer()
         }
     }
 
-    private var previewGrid: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("\(pendingImages.count) скриншотов выбрано")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+    // MARK: - Preview Grid
 
+    private var previewView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Превью выбранных изображений
             ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 8) {
-                    ForEach(pendingImages.indices, id: \.self) { i in
-                        Image(uiImage: pendingImages[i].0)
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 100), spacing: 4)],
+                    spacing: 4
+                ) {
+                    ForEach(Array(viewModel.selectedImages.enumerated()), id: \.offset) { _, img in
+                        Image(uiImage: img)
                             .resizable()
                             .scaledToFill()
-                            .frame(height: 100)
+                            .frame(height: 110)
+                            .clipped()
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                 }
+                .padding(4)
             }
 
-            // Кнопка добавить ещё
-            PhotosPicker(
-                selection: $selectedItems,
-                maxSelectionCount: 20,
-                matching: .screenshots
-            ) {
-                Label("Изменить выбор", systemImage: "plus.circle")
+            // Нижняя панель
+            VStack(spacing: 12) {
+                Text("\(viewModel.selectedImages.count) \(pluralImages(viewModel.selectedImages.count)) выбрано")
                     .font(.subheadline)
-            }
-            .onChange(of: selectedItems) { _, items in
-                Task { await loadImages(from: items) }
-            }
-        }
-    }
-
-    private var processingView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            ProgressView(value: progress)
-                .progressViewStyle(.linear)
-                .tint(.blue)
-
-            VStack(spacing: 8) {
-                Text(currentStep)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-
-                Text("\(doneCount) из \(pendingImages.count) проанализировано")
-                    .font(.caption)
                     .foregroundStyle(.secondary)
+
+                HStack(spacing: 12) {
+                    // Изменить выбор
+                    PhotosPicker(
+                        selection: $viewModel.selectedPickerItems,
+                        maxSelectionCount: 10,
+                        matching: .images
+                    ) {
+                        Text("Изменить")
+                            .font(.subheadline.weight(.medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color(.secondarySystemBackground))
+                            .foregroundStyle(.primary)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .onChange(of: viewModel.selectedPickerItems) { _, _ in
+                        Task { await viewModel.loadSelectedImages() }
+                    }
+
+                    // Анализировать
+                    Button {
+                        startAnalysis()
+                    } label: {
+                        Label("Анализировать", systemImage: "sparkles")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(.blue)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+            }
+            .padding()
+            .background(Color(.systemBackground))
+        }
+    }
+
+    // MARK: - Analyzing View
+
+    private var analyzingView: some View {
+        VStack(spacing: 32) {
+            Spacer()
+
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .stroke(Color(.systemFill), lineWidth: 4)
+                        .frame(width: 72, height: 72)
+                    Circle()
+                        .trim(from: 0, to: viewModel.progressTotal > 0
+                              ? CGFloat(viewModel.progressCurrent) / CGFloat(viewModel.progressTotal)
+                              : 0)
+                        .stroke(.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                        .frame(width: 72, height: 72)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeInOut(duration: 0.4), value: viewModel.progressCurrent)
+
+                    Image(systemName: "sparkles")
+                        .font(.title2)
+                        .foregroundStyle(.blue)
+                }
+
+                VStack(spacing: 6) {
+                    Text("Анализирую скриншоты...")
+                        .font(.headline)
+
+                    Text("Изображение \(viewModel.progressCurrent) из \(viewModel.progressTotal)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
         }
     }
 
-    // MARK: - Logic
+    // MARK: - Helpers
 
-    private func loadImages(from items: [PhotosPickerItem]) async {
-        pendingImages = []
-        for item in items {
-            if let data = try? await item.loadTransferable(type: Data.self),
-               let image = UIImage(data: data) {
-                let filename = "\(UUID().uuidString).jpg"
-                pendingImages.append((image, filename))
-            }
+    private func pluralImages(_ count: Int) -> String {
+        switch count % 10 {
+        case 1 where count % 100 != 11: return "скриншот"
+        case 2...4 where count % 100 < 10 || count % 100 > 20: return "скриншота"
+        default: return "скриншотов"
         }
-    }
-
-    private func analyzeAll() async {
-        guard !pendingImages.isEmpty else { return }
-        isProcessing = true
-        doneCount = 0
-        progress = 0
-
-        for (index, (image, filename)) in pendingImages.enumerated() {
-            currentStep = "Анализ \(index + 1) из \(pendingImages.count)..."
-
-            let screenshot = Screenshot()
-            screenshot.originalFileName = filename
-            screenshot.createdAt = Date()
-            screenshot.analysisStatus = .analyzing
-
-            // Сохраняем миниатюру
-            let thumb = image.resized(toMaxDimension: 400)
-            screenshot.thumbnailData = thumb.jpegData(compressionQuality: 0.8)
-
-            modelContext.insert(screenshot)
-
-            do {
-                let analysis = try await OpenAIAPIClient.shared.analyzeScreenshot(image)
-                screenshot.appName    = analysis.appName
-                screenshot.category   = analysis.category
-                screenshot.summary    = analysis.summary
-                screenshot.mainIdea   = analysis.mainIdea
-                screenshot.tags       = analysis.tags ?? []
-                screenshot.analyzedAt = Date()
-                screenshot.analysisStatus = .done
-            } catch {
-                screenshot.analysisStatus = .failed
-                screenshot.errorMessage = error.localizedDescription
-            }
-
-            doneCount += 1
-            progress = Double(doneCount) / Double(pendingImages.count)
-        }
-
-        isProcessing = false
-        dismiss()
     }
 }
-

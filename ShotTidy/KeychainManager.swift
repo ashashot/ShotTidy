@@ -83,4 +83,18 @@ final class KeychainManager {
     var hasAPIKey: Bool {
         getAPIKey() != nil
     }
+
+    // MARK: - Computed (удобный доступ)
+
+    /// Геттер/сеттер для OpenAI API-ключа
+    var openAIAPIKey: String? {
+        get { getAPIKey() }
+        set {
+            if let key = newValue, !key.isEmpty {
+                saveAPIKey(key)
+            } else {
+                deleteAPIKey()
+            }
+        }
+    }
 }

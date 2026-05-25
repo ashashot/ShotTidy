@@ -3,20 +3,11 @@
 //  ShotTidy
 //
 //  Анализ скриншотов через GPT-4o Vision.
+//  Возвращает список структурированных элементов (DraftItem) разных категорий.
 //
 
 import Foundation
 import UIKit
-
-// MARK: - Models
-
-struct ScreenshotAnalysis: Decodable {
-    let appName:  String?
-    let category: String?
-    let summary:  String?
-    let tags:     [String]?
-    let mainIdea: String?
-}
 
 // MARK: - Errors
 
@@ -24,6 +15,8 @@ enum OpenAIError: LocalizedError {
     case noAPIKey
     case invalidImage
     case httpError(Int, String)
+    case refused(String)          // content: null + refusal field
+    case emptyResponse            // content: null без refusal
     case decodingFailed(String)
     case networkError(Error)
 
@@ -33,10 +26,16 @@ enum OpenAIError: LocalizedError {
             return "API-ключ не настроен. Перейдите в Настройки и введите ключ OpenAI."
         case .invalidImage:
             return "Не удалось обработать изображение."
-        case .httpError(let code, let body):
-            return "Ошибка HTTP \(code): \(body)"
+        case .httpError(let code, _):
+            if code == 401 { return "Неверный API-ключ. Проверьте ключ в Настройках." }
+            if code == 429 { return "Превышен лимит запросов OpenAI. Подождите немного." }
+            return "Ошибка сервера (\(code)). Попробуйте ещё раз."
+        case .refused:
+            return "GPT-4o не смог проанализировать этот скриншот. Попробуйте другое изображение."
+        case .emptyResponse:
+            return "Пустой ответ от API. Попробуйте ещё раз."
         case .decodingFailed(let detail):
-            return "Не удалось разобрать ответ: \(detail)"
+            return "Ошибка разбора ответа: \(detail)"
         case .networkError(let err):
             return "Ошибка сети: \(err.localizedDescription)"
         }
@@ -52,39 +51,29 @@ final class OpenAIAPIClient {
 
     private let endpoint = URL(string: "https://api.openai.com/v1/chat/completions")!
 
-    // MARK: - Analyze
+    // MARK: - Analyze screenshot -> [DraftItem]
 
-    func analyzeScreenshot(_ image: UIImage) async throws -> ScreenshotAnalysis {
-        // 1. API ключ из Config.swift
-        let apiKey = Config.openAIKey
+    func analyzeScreenshot(
+        _ image: UIImage,
+        screenshotId: UUID? = nil
+    ) async throws -> [DraftItem] {
+
+        let apiKey = KeychainManager.shared.openAIAPIKey ?? Config.openAIKey
         guard !apiKey.isEmpty, apiKey != "ВСТАВЬ_СЮДА_НОВЫЙ_КЛЮЧ" else {
             throw OpenAIError.noAPIKey
         }
 
-        // 2. Сжимаем изображение до 512px (экономия токенов)
-        let resized = image.resized(toMaxDimension: 512)
+        // "auto" — OpenAI сам выбирает low/high; безопаснее для контент-фильтра
+        let resized = image.resized(toMaxDimension: 1024)
         guard let imageData = resized.jpegData(compressionQuality: 0.75) else {
             throw OpenAIError.invalidImage
         }
         let base64 = imageData.base64EncodedString()
 
-        // 3. Формируем запрос
-        let prompt = """
-        Analyze this screenshot and return ONLY a JSON object with these fields:
-        {
-          "appName": "<app or service name, or null if unknown>",
-          "category": "<one of: UI Design | Development | Productivity | Social | Finance | Education | Entertainment | Other>",
-          "summary": "<1-2 sentences describing what is shown>",
-          "tags": ["<tag1>", "<tag2>", "<tag3>"],
-          "mainIdea": "<one short phrase — the core concept>"
-        }
-        No markdown, no extra text — pure JSON only.
-        """
-
         let body: [String: Any] = [
             "model": "gpt-4o",
             "response_format": ["type": "json_object"],
-            "max_tokens": 400,
+            "max_tokens": 2000,
             "messages": [[
                 "role": "user",
                 "content": [
@@ -92,12 +81,12 @@ final class OpenAIAPIClient {
                         "type": "image_url",
                         "image_url": [
                             "url": "data:image/jpeg;base64,\(base64)",
-                            "detail": "low"
+                            "detail": "auto"
                         ]
                     ],
                     [
                         "type": "text",
-                        "text": prompt
+                        "text": Self.analysisPrompt
                     ]
                 ]
             ]]
@@ -108,9 +97,8 @@ final class OpenAIAPIClient {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        request.timeoutInterval = 30
+        request.timeoutInterval = 60
 
-        // 4. Выполняем запрос
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await URLSession.shared.data(for: request)
@@ -118,30 +106,101 @@ final class OpenAIAPIClient {
             throw OpenAIError.networkError(error)
         }
 
-        // 5. Проверяем HTTP статус
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
-            let body = String(data: data, encoding: .utf8) ?? "no body"
-            throw OpenAIError.httpError(http.statusCode, body)
+            let bodyStr = String(data: data, encoding: .utf8) ?? ""
+            throw OpenAIError.httpError(http.statusCode, bodyStr)
         }
 
-        // 6. Парсим ответ OpenAI → извлекаем content
+        return try parseItems(from: data, screenshotId: screenshotId)
+    }
+
+    // MARK: - Parse
+
+    private func parseItems(from data: Data, screenshotId: UUID?) throws -> [DraftItem] {
         guard
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             let choices = json["choices"] as? [[String: Any]],
-            let message = choices.first?["message"] as? [String: Any],
-            let content = message["content"] as? String,
-            let contentData = content.data(using: .utf8)
+            let message = choices.first?["message"] as? [String: Any]
         else {
-            let raw = String(data: data, encoding: .utf8) ?? ""
-            throw OpenAIError.decodingFailed(raw)
+            throw OpenAIError.decodingFailed("Неожиданный формат ответа API")
         }
 
-        // 7. Декодируем ScreenshotAnalysis из content
-        do {
-            return try JSONDecoder().decode(ScreenshotAnalysis.self, from: contentData)
-        } catch {
-            throw OpenAIError.decodingFailed(error.localizedDescription)
+        // Обрабатываем отказ (content: null + refusal)
+        if let refusal = message["refusal"] as? String, !refusal.isEmpty {
+            throw OpenAIError.refused(refusal)
+        }
+
+        // content может быть null если модель отказала без явного refusal
+        guard let content = message["content"] as? String else {
+            throw OpenAIError.emptyResponse
+        }
+
+        guard
+            let contentData = content.data(using: .utf8),
+            let contentJson = try? JSONSerialization.jsonObject(with: contentData) as? [String: Any],
+            let items = contentJson["items"] as? [[String: Any]]
+        else {
+            // Пробуем вытащить хоть что-то из content для диагностики
+            let preview = String(content.prefix(120))
+            throw OpenAIError.decodingFailed("Ожидался массив items. Получено: \(preview)")
+        }
+
+        return items.compactMap { dict -> DraftItem? in
+            guard
+                let categoryStr = dict["category"] as? String,
+                let category = ItemCategory(rawValue: categoryStr),
+                let title = dict["title"] as? String,
+                !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else { return nil }
+
+            return DraftItem(
+                category: category,
+                title: title,
+                subtitle: dict["subtitle"] as? String ?? "",
+                link: dict["link"] as? String ?? "",
+                extra1: dict["extra1"] as? String ?? "",
+                extra2: dict["extra2"] as? String ?? "",
+                notes: dict["notes"] as? String ?? "",
+                sourceScreenshotId: screenshotId
+            )
         }
     }
-}
 
+    // MARK: - Prompt
+
+    static let analysisPrompt = """
+    Please look at this screenshot and extract any useful information you can see.
+    Return a JSON object with an "items" array containing the extracted data.
+
+    Each item in the array should have these fields (use empty string "" for missing values):
+    {
+      "category": one of the category keys listed below,
+      "title": the main text or name,
+      "subtitle": secondary information,
+      "link": a URL if present, otherwise "",
+      "extra1": a third relevant field,
+      "extra2": a fourth relevant field,
+      "notes": any additional details
+    }
+
+    Category keys and how to fill the fields:
+    - "shopping"         — title=product name, subtitle=price, link=product URL, extra1=store name, extra2=currency
+    - "places"           — title=place name, subtitle=address, link=maps URL, extra1=city, extra2=country
+    - "appsServices"     — title=app/service name, subtitle=description, link=website, extra1=platform, extra2=category
+    - "languageLearning" — title=word or phrase, subtitle=translation, extra1=language, extra2=example
+    - "prompts"          — title=prompt text, subtitle=use case, extra1=AI tool
+    - "health"           — title=health tip or info, subtitle=type, extra1=source
+    - "recipes"          — title=dish name, subtitle=ingredients, link=recipe URL, extra1=cooking time, notes=steps
+    - "books"            — title=book title, subtitle=author, link=buy link, extra1=genre, extra2=year
+    - "movies"           — title=title, subtitle=platform, link=watch link, extra1=genre, extra2=year
+    - "quotes"           — title=quote text, subtitle=author, link=source
+    - "articles"         — title=headline, subtitle=publication, link=article URL, extra1=topic
+    - "contacts"         — title=person name, subtitle=phone, link=email, extra1=company, extra2=role
+    - "tasks"            — title=task, subtitle=due date, extra1=priority
+
+    Notes:
+    - If you see multiple products, places, etc., add each as a separate item.
+    - Only include information clearly visible in the screenshot.
+    - Return only valid JSON, no other text.
+    """
+}
