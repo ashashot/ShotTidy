@@ -31,6 +31,12 @@ final class ImportViewModel {
     // MARK: - SwiftData context (injected from View)
     var modelContext: ModelContext?
 
+    /// IDs of Screenshots created in the current import session.
+    /// Used to update or delete them after the user confirms (or cancels).
+    private var sessionScreenshotIds: Set<UUID> = []
+    /// Whether saveSelectedDrafts() was already called this session.
+    private var didSaveThisSession = false
+
     // MARK: - Load images from PhotosPicker
 
     func loadSelectedImages() async {
@@ -55,21 +61,26 @@ final class ImportViewModel {
         draftItems = []
         progressCurrent = 0
         progressTotal = selectedImages.count
+        sessionScreenshotIds = []
+        didSaveThisSession = false
 
         for (index, image) in selectedImages.enumerated() {
             progressCurrent = index + 1
 
-            // Save the screenshot as a backup copy
+            // Save the screenshot as a backup copy (provisional — may be deleted if not confirmed)
             let screenshot = Screenshot()
             screenshot.originalFileName = "screenshot_\(index + 1).jpg"
             screenshot.createdAt = Date()
             screenshot.analysisStatus = .analyzing
 
-            let thumb = image.resized(toMaxDimension: 500)
-            screenshot.thumbnailData = thumb.jpegData(compressionQuality: 0.8)
+            let thumb = image.resized(toMaxDimension: 800)
+            screenshot.thumbnailData = thumb.jpegData(compressionQuality: 0.85)
 
             ctx.insert(screenshot)
             try? ctx.save()
+
+            // Track this screenshot for cleanup
+            sessionScreenshotIds.insert(screenshot.id)
 
             do {
                 let extracted = try await OpenAIAPIClient.shared.analyzeScreenshot(
@@ -114,8 +125,6 @@ final class ImportViewModel {
         }
 
         isAnalyzing = false
-        // showConfirmation is removed from ViewModel — controlled via @State in ImportView
-        // so the sheet opens exactly AFTER the async function completes, without a race condition
     }
 
     // MARK: - Save confirmed items
@@ -123,21 +132,35 @@ final class ImportViewModel {
     func saveSelectedDrafts() {
         guard let ctx = modelContext else { return }
         let toSave = draftItems.filter { $0.isSelected && $0.isValid }
+
+        // Count how many items were confirmed per screenshot
+        var confirmedPerScreenshot: [UUID: Int] = [:]
         for draft in toSave {
             ctx.insert(draft.toCatalogItem())
+            if let sid = draft.sourceScreenshotId {
+                confirmedPerScreenshot[sid, default: 0] += 1
+            }
         }
+
+        // Update or delete session screenshots based on confirmed counts
+        applySessionScreenshotChanges(confirmedCounts: confirmedPerScreenshot, context: ctx)
+
+        didSaveThisSession = true
         try? ctx.save()
-        // Intentionally NOT calling resetAfterConfirmation() here.
-        // Clearing draftItems happens in onDismiss of ImportView — AFTER the sheet
-        // has fully animated closed and ConfirmationView is no longer rendering.
-        // Calling reset here → draftItems = [] while ForEach is still active → index out of range.
     }
 
     // MARK: - Reset
 
     func resetAfterConfirmation() {
+        // If the user pressed Cancel (Save was never called), clean up all session screenshots.
+        if !didSaveThisSession, let ctx = modelContext, !sessionScreenshotIds.isEmpty {
+            applySessionScreenshotChanges(confirmedCounts: [:], context: ctx)
+            try? ctx.save()
+        }
         draftItems = []
         warnings = []
+        sessionScreenshotIds = []
+        didSaveThisSession = false
     }
 
     func fullReset() {
@@ -149,5 +172,29 @@ final class ImportViewModel {
         warnings = []
         progressCurrent = 0
         progressTotal = 0
+        sessionScreenshotIds = []
+        didSaveThisSession = false
+    }
+
+    // MARK: - Private helpers
+
+    /// Updates or deletes session screenshots based on confirmed item counts.
+    /// Screenshots with 0 confirmed items are deleted from the context.
+    private func applySessionScreenshotChanges(confirmedCounts: [UUID: Int], context: ModelContext) {
+        for screenshotId in sessionScreenshotIds {
+            let count = confirmedCounts[screenshotId] ?? 0
+            let sid = screenshotId
+            let descriptor = FetchDescriptor<Screenshot>(
+                predicate: #Predicate { $0.id == sid }
+            )
+            guard let screenshot = try? context.fetch(descriptor).first else { continue }
+
+            if count == 0 {
+                context.delete(screenshot)
+            } else {
+                screenshot.extractedItemsCount = count
+            }
+        }
+        sessionScreenshotIds = []
     }
 }
