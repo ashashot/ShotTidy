@@ -2,14 +2,14 @@
 //  ShareEditView.swift
 //  ShotTidyShare
 //
-//  Full-featured edit form for a PendingDraftItem inside the Share Extension.
-//  Self-contained — mirrors ItemCategory.FieldSchema from the main app,
-//  but does not depend on any main-app types.
+//  Edit form for a PendingDraftItem inside the Share Extension.
+//  Self-contained — mirrors ItemCategory.FieldSchema from the main app
+//  without importing any main-app types.
 //
 
 import SwiftUI
 
-// MARK: - Category options for the picker
+// MARK: - Category options (picker list + display info)
 
 struct ShareCategoryOption: Identifiable {
     var id: String { key }
@@ -32,9 +32,32 @@ struct ShareCategoryOption: Identifiable {
         .init(key: "contacts",         name: "Contacts",          icon: "person.circle.fill"),
         .init(key: "tasks",            name: "Tasks",             icon: "checkmark.circle.fill"),
     ]
+
+    // MARK: - Display info (name + icon + color) for the category row chip
+
+    typealias DisplayInfo = (name: String, icon: String, color: Color)
+
+    static func displayInfo(for key: String) -> DisplayInfo {
+        switch key {
+        case "shopping":         return ("Shopping",          "cart.fill",               .orange)
+        case "places":           return ("Places",            "mappin.circle.fill",       Color(red: 0.88, green: 0.18, blue: 0.18))
+        case "appsServices":     return ("Apps & Services",   "app.fill",                 .blue)
+        case "languageLearning": return ("Language Learning", "textformat.abc",            Color(red: 0.18, green: 0.75, blue: 0.35))
+        case "prompts":          return ("Prompts",           "text.bubble.fill",         .purple)
+        case "health":           return ("Health",            "heart.fill",               .pink)
+        case "recipes":          return ("Recipes",           "fork.knife",               Color(red: 0.92, green: 0.67, blue: 0.12))
+        case "books":            return ("Books",             "book.fill",                Color(red: 0.6, green: 0.38, blue: 0.18))
+        case "movies":           return ("Movies & TV",       "play.rectangle.fill",      .indigo)
+        case "quotes":           return ("Quotes",            "quote.bubble.fill",        .teal)
+        case "articles":         return ("Articles",          "newspaper.fill",           Color(red: 0.0, green: 0.65, blue: 0.85))
+        case "contacts":         return ("Contacts",          "person.circle.fill",       Color(red: 0.12, green: 0.72, blue: 0.72))
+        case "tasks":            return ("Tasks",             "checkmark.circle.fill",    Color(red: 0.48, green: 0.48, blue: 0.56))
+        default:                 return (key,                 "tag.fill",                 .gray)
+        }
+    }
 }
 
-// MARK: - Field schema
+// MARK: - Field schema (mirrors ItemCategory.FieldSchema from the main app)
 
 struct ShareFieldSchema {
     let titleLabel: String
@@ -51,7 +74,6 @@ struct ShareFieldSchema {
     let notesPlaceholder: String?
     var isLinkEmail: Bool = false
 
-    // swiftlint:disable:next function_body_length
     static func make(for key: String) -> ShareFieldSchema {
         switch key {
         case "shopping":
@@ -198,8 +220,7 @@ struct ShareEditView: View {
     var body: some View {
         NavigationStack {
             Form {
-
-                // MARK: Category
+                // Category
                 Section("Category") {
                     Picker("Category", selection: $item.categoryKey) {
                         ForEach(ShareCategoryOption.all) { cat in
@@ -209,13 +230,13 @@ struct ShareEditView: View {
                     .pickerStyle(.menu)
                 }
 
-                // MARK: Title (always visible)
+                // Title (always visible)
                 Section(schema.titleLabel) {
                     TextField(schema.titlePlaceholder, text: $item.title, axis: .vertical)
                         .lineLimit(4, reservesSpace: false)
                 }
 
-                // MARK: Subtitle
+                // Subtitle
                 if let label = schema.subtitleLabel {
                     Section(label) {
                         TextField(
@@ -227,7 +248,7 @@ struct ShareEditView: View {
                     }
                 }
 
-                // MARK: Link
+                // Link
                 if let label = schema.linkLabel {
                     Section(label) {
                         TextField(schema.linkPlaceholder ?? "https://...", text: $item.link)
@@ -237,21 +258,21 @@ struct ShareEditView: View {
                     }
                 }
 
-                // MARK: Extra 1
+                // Extra 1
                 if let label = schema.extra1Label {
                     Section(label) {
                         TextField(schema.extra1Placeholder ?? label, text: $item.extra1)
                     }
                 }
 
-                // MARK: Extra 2
+                // Extra 2
                 if let label = schema.extra2Label {
                     Section(label) {
                         TextField(schema.extra2Placeholder ?? label, text: $item.extra2)
                     }
                 }
 
-                // MARK: Notes
+                // Notes
                 if let label = schema.notesLabel {
                     Section(label) {
                         TextField(

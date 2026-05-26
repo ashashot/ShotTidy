@@ -58,8 +58,8 @@
 		DE327FFF2FC1BA940090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidyShare" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				AppGroupManager.swift,
-				"UIImage+Extensions.swift",
+				"Core/Extensions/UIImage+Extensions.swift",
+				Core/Services/AppGroupManager.swift,
 			);
 			target = DE327FED2FC1B9400090FC80 /* ShotTidyShare */;
 		};
