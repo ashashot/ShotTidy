@@ -3,6 +3,8 @@
 //  ShotTidy
 //
 //  Screenshot import screen: gallery → AI analysis → confirmation.
+//  Free users are limited to 5 screenshots per month.
+//  A paywall sheet is shown when the limit is reached.
 //
 
 import SwiftUI
@@ -11,13 +13,17 @@ import SwiftData
 
 struct ImportView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss)      private var dismiss
+    @Environment(SubscriptionManager.self) private var subManager
+    @Environment(UsageManager.self)        private var usageManager
 
     @State private var viewModel = ImportViewModel()
-    // @State — stable storage for the sheet binding.
     // Set to true only AFTER analyzeImages() completes,
     // guaranteeing that draftItems are populated on ConfirmationView's first render.
     @State private var showConfirmation = false
+    @State private var showPaywall      = false
+
+    // MARK: - Body
 
     var body: some View {
         NavigationStack {
@@ -54,9 +60,6 @@ struct ImportView: View {
             } message: {
                 Text(viewModel.analysisError ?? "")
             }
-            // $showConfirmation — stable @State binding.
-            // dismiss() inside ConfirmationView correctly sets isPresented=false
-            // via this binding; onDismiss is called AFTER the animation completes.
             .sheet(isPresented: $showConfirmation, onDismiss: {
                 viewModel.resetAfterConfirmation()
             }) {
@@ -65,27 +68,44 @@ struct ImportView: View {
                     dismiss()
                 }
             }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+            }
         }
         .onAppear {
             viewModel.modelContext = modelContext
         }
     }
 
-    // MARK: - Start analysis
+    // MARK: - Start analysis (with limit check)
 
     private func startAnalysis() {
+        let count = viewModel.selectedImages.count
+        guard usageManager.canAnalyzeScreenshots(count: count, isPro: subManager.isProActive) else {
+            showPaywall = true
+            return
+        }
+
         Task {
             await viewModel.analyzeImages()
-            // Open ConfirmationView only HERE, after await —
-            // at this point draftItems are guaranteed to be populated
+            // Open ConfirmationView only after await — draftItems are populated at this point
             if !viewModel.draftItems.isEmpty {
+                // Consume quota for the screenshots that were submitted
+                usageManager.consumeScreenshots(count: count)
                 showConfirmation = true
             } else {
-                // All screenshots failed or returned no data —
-                // clean up orphaned Screenshot records that were created during analysis.
+                // All screenshots failed or returned no data — clean up orphaned Screenshot records
                 viewModel.resetAfterConfirmation()
             }
         }
+    }
+
+    // MARK: - Remaining quota info
+
+    /// Whether the selected batch exceeds the free limit.
+    private var isOverLimit: Bool {
+        !subManager.isProActive &&
+        !usageManager.canAnalyzeScreenshots(count: viewModel.selectedImages.count, isPro: false)
     }
 
     // MARK: - Picker prompt view
@@ -106,6 +126,11 @@ struct ImportView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+            }
+
+            // Quota badge (free users only)
+            if !subManager.isProActive {
+                quotaBadge
             }
 
             PhotosPicker(
@@ -134,7 +159,6 @@ struct ImportView: View {
 
     private var previewView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Preview of selected images
             ScrollView {
                 LazyVGrid(
                     columns: [GridItem(.adaptive(minimum: 100), spacing: 4)],
@@ -153,11 +177,16 @@ struct ImportView: View {
             }
 
             // Bottom panel
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 let count = viewModel.selectedImages.count
                 Text("\(count) \(count == 1 ? "screenshot" : "screenshots") selected")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+
+                // Over-limit warning
+                if isOverLimit {
+                    overLimitBanner
+                }
 
                 HStack(spacing: 12) {
                     // Change selection
@@ -178,17 +207,31 @@ struct ImportView: View {
                         Task { await viewModel.loadSelectedImages() }
                     }
 
-                    // Analyze
-                    Button {
-                        startAnalysis()
-                    } label: {
-                        Label("Analyze", systemImage: "sparkles")
-                            .font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(.blue)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    // Analyze / Upgrade button
+                    if isOverLimit {
+                        Button {
+                            showPaywall = true
+                        } label: {
+                            Label("Upgrade", systemImage: "sparkles")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.purple)
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                    } else {
+                        Button {
+                            startAnalysis()
+                        } label: {
+                            Label("Analyze", systemImage: "sparkles")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(.blue)
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
                     }
                 }
             }
@@ -234,5 +277,55 @@ struct ImportView: View {
 
             Spacer()
         }
+    }
+
+    // MARK: - Subviews
+
+    /// Pill showing remaining free screenshots.
+    private var quotaBadge: some View {
+        let remaining = usageManager.remainingScreenshots(isPro: false)
+        let total     = UsageManager.freeScreenshotsPerPeriod
+        return HStack(spacing: 6) {
+            Image(systemName: remaining > 0 ? "photo.stack" : "exclamationmark.circle.fill")
+                .font(.caption.weight(.semibold))
+            if remaining > 0 {
+                Text("\(remaining) of \(total) free screenshots remaining (30-day period)")
+                    .font(.caption.weight(.medium))
+            } else {
+                Text("Free limit reached — upgrade for unlimited access")
+                    .font(.caption.weight(.medium))
+            }
+        }
+        .foregroundStyle(remaining > 0 ? Color.secondary : Color.red)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(
+            (remaining > 0 ? Color(.systemFill) : Color.red.opacity(0.10))
+        )
+        .clipShape(Capsule())
+    }
+
+    /// Warning banner shown in previewView when selection exceeds quota.
+    private var overLimitBanner: some View {
+        let remaining = usageManager.remainingScreenshots(isPro: false)
+        return HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .font(.caption)
+            Text(remaining == 0
+                 ? "Free limit reached. Upgrade to analyze more screenshots."
+                 : "Only \(remaining) screenshot\(remaining == 1 ? "" : "s") left this month.")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.primary)
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(Color.orange.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Color.orange.opacity(0.25), lineWidth: 1)
+        )
     }
 }

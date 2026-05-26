@@ -5,6 +5,7 @@ Secrets.xcconfig
 *.xcuserstate
 xcuserdata/
 DerivedData/
+build/
 *.pbxuser
 *.perspectivev3
 

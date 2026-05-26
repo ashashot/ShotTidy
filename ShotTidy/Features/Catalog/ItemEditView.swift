@@ -15,7 +15,9 @@ struct ItemEditView: View {
     var existingItem: CatalogItem?
 
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss)      private var dismiss
+    @Environment(SubscriptionManager.self) private var subManager
+    @Environment(UsageManager.self)        private var usageManager
 
     @State private var title: String
     @State private var subtitle: String
@@ -26,7 +28,10 @@ struct ItemEditView: View {
 
     // MARK: - Duplicate detection
     @State private var duplicates: [DuplicateMatch] = []
-    @State private var showDuplicateConfirm = false
+    @State private var showDuplicateConfirm  = false
+
+    // MARK: - Paywall / store
+    @State private var showEnrichmentStore   = false
 
     // MARK: - Enrichment state
     @State private var enrichState: EditEnrichState = .idle
@@ -158,9 +163,18 @@ struct ItemEditView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     if hasMissingLocalFields && enrichState == .idle {
                         Button(action: runEnrichment) {
-                            Image(systemName: "magnifyingglass.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundStyle(category.color)
+                            HStack(spacing: 4) {
+                                Image(systemName: usageManager.enrichmentBalance > 0
+                                      ? "magnifyingglass.circle.fill"
+                                      : "cart.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(category.color)
+                                if usageManager.enrichmentBalance > 0 {
+                                    Text("\(usageManager.enrichmentBalance)")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(category.color)
+                                }
+                            }
                         }
                     }
                 }
@@ -176,6 +190,9 @@ struct ItemEditView: View {
                     .disabled(!canSave)
                     .fontWeight(.semibold)
                 }
+            }
+            .sheet(isPresented: $showEnrichmentStore) {
+                EnrichmentStoreView()
             }
             .alert("Possible Duplicate", isPresented: $showDuplicateConfirm) {
                 Button("Save Anyway", role: .destructive) { save(); dismiss() }
@@ -256,6 +273,15 @@ struct ItemEditView: View {
     // MARK: - Enrichment logic
 
     private func runEnrichment() {
+        // Gate on credit balance
+        guard usageManager.canEnrich() else {
+            showEnrichmentStore = true
+            return
+        }
+
+        // Consume one credit before the API call
+        usageManager.consumeEnrichment()
+
         withAnimation { enrichState = .loading }
         highlightedFields = []
 

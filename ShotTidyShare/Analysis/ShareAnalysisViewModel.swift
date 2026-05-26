@@ -56,6 +56,8 @@ final class ShareAnalysisViewModel {
         case noItems
         case error(String)
         case saving
+        /// Free screenshot quota exhausted for the current 30-day period.
+        case limitReached
     }
 
     // MARK: - Draft Wrapper
@@ -94,6 +96,16 @@ final class ShareAnalysisViewModel {
     // MARK: - Start analysis
 
     func start() async {
+        // Step 0: check 30-day screenshot quota before making any API call
+        let isPro = AppGroupManager.loadIsProStatus()
+        let usage = ShareUsageManager.shared
+        usage.performRollingReset(isPro: isPro)
+
+        guard usage.canAnalyzeScreenshots(count: 1, isPro: isPro) else {
+            phase = .limitReached
+            return
+        }
+
         // Step 1: extract image from share payload
         phase = .extracting
         guard let image = await extractImage(from: inputItems) else {
@@ -106,13 +118,17 @@ final class ShareAnalysisViewModel {
         do {
             let items = try await ShareAPIClient.shared.analyze(image: image)
             if items.isEmpty {
+                // Consume the quota slot even for "no items" — the API call was made
+                usage.consumeScreenshots(count: 1)
                 phase = .noItems
             } else {
+                usage.consumeScreenshots(count: 1)
                 draftWrappers = items.map { DraftWrapper(item: $0) }
                 checkDuplicates()   // Step 3: mark items that already exist
                 phase = .results
             }
         } catch {
+            // Network / server error — do NOT consume quota (no successful API call)
             phase = .error(error.localizedDescription)
         }
     }

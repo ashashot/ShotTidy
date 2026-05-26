@@ -216,6 +216,9 @@ struct ShareEditView: View {
     @State private var enrichState: ShareEnrichState = .idle
     @State private var highlightedFields: Set<String> = []
 
+    // Share Extension can't launch a purchase sheet — show balance inline only.
+    private var usageManager: ShareUsageManager { ShareUsageManager.shared }
+
     private var schema: ShareFieldSchema { ShareFieldSchema.make(for: item.categoryKey) }
     private var categoryColor: Color { ShareCategoryOption.displayInfo(for: item.categoryKey).color }
 
@@ -313,6 +316,9 @@ struct ShareEditView: View {
                 if enrichState != .idle {
                     shareEnrichStatusBar
                         .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else if !usageManager.canEnrich() && hasMissingFields {
+                    noCreditsBar
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .animation(.spring(duration: 0.3), value: enrichState == .idle)
@@ -324,13 +330,31 @@ struct ShareEditView: View {
                     Button("Done") { dismiss() }
                         .fontWeight(.semibold)
                 }
-                // Search — top RIGHT, shown when fields are missing and not already searching
+                // Search — top RIGHT, shown when optional fields are missing and not already searching
                 ToolbarItem(placement: .topBarTrailing) {
                     if hasMissingFields && enrichState == .idle {
-                        Button(action: runEnrichment) {
-                            Image(systemName: "magnifyingglass.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundStyle(categoryColor)
+                        if usageManager.canEnrich() {
+                            Button(action: runEnrichment) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "magnifyingglass.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundStyle(categoryColor)
+                                    Text("\(usageManager.enrichmentBalance)")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(categoryColor)
+                                }
+                            }
+                        } else {
+                            // No credits — show locked icon with 0 badge
+                            HStack(spacing: 4) {
+                                Image(systemName: "cart.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(Color.secondary)
+                                Text("0")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(Color.secondary)
+                            }
+                            .help("No enrichment credits. Open ShotTidy to buy more.")
                         }
                     }
                 }
@@ -395,6 +419,12 @@ struct ShareEditView: View {
     // MARK: - Enrichment logic
 
     private func runEnrichment() {
+        // Safety guard — button should already be hidden, but double-check
+        guard usageManager.canEnrich() else { return }
+
+        // Consume one credit before the API call
+        usageManager.consumeEnrichment()
+
         withAnimation { enrichState = .loading }
         highlightedFields = []
 
@@ -427,6 +457,26 @@ struct ShareEditView: View {
             } catch {
                 withAnimation { enrichState = .failure(error.localizedDescription) }
             }
+        }
+    }
+
+    // MARK: - No credits bar
+
+    private var noCreditsBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+            HStack(spacing: 10) {
+                Image(systemName: "cart.circle.fill")
+                    .foregroundStyle(.secondary)
+                Text("No enrichment credits left. Open ShotTidy to buy more.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(.bar)
         }
     }
 }

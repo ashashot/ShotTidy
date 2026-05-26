@@ -48,6 +48,8 @@ struct ShareAnalysisView: View {
                     errorView(message: message)
                 case .saving:
                     loadingView(icon: "checkmark.circle", text: "Saving…")
+                case .limitReached:
+                    limitReachedView
                 }
             }
             .navigationTitle("ShotTidy")
@@ -265,6 +267,71 @@ struct ShareAnalysisView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Limit reached
+
+    private var limitReachedView: some View {
+        let usage  = ShareUsageManager.shared
+        let limit  = ShareUsageManager.freeScreenshotsPerPeriod
+        let resets = usage.periodEndDate
+
+        return VStack(spacing: 20) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.orange.opacity(0.12))
+                    .frame(width: 88, height: 88)
+                Image(systemName: "exclamationmark.shield.fill")
+                    .font(.system(size: 38))
+                    .foregroundStyle(.orange)
+            }
+
+            VStack(spacing: 8) {
+                Text("Free Limit Reached")
+                    .font(.title3.weight(.semibold))
+
+                Text("You've used all \(limit) free screenshot analyses for this 30-day period.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+
+                // Reset countdown
+                HStack(spacing: 4) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.caption)
+                    Text("Resets on ")
+                        .font(.caption)
+                    Text(resets, style: .date)
+                        .font(.caption.weight(.medium))
+                }
+                .foregroundStyle(.secondary)
+                .padding(.top, 4)
+            }
+
+            // Upgrade hint
+            VStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.blue)
+                Text("Open ShotTidy → Settings to upgrade to Pro for unlimited analyses.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+            .padding(.top, 8)
+
+            Spacer()
+
+            Button("Close") { onCancel() }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .padding(.bottom, 32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

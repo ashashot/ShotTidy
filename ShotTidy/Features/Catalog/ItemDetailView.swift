@@ -12,10 +12,13 @@ import SwiftData
 struct ItemDetailView: View {
     @Bindable var item: CatalogItem
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss)      private var dismiss
+    @Environment(SubscriptionManager.self) private var subManager
+    @Environment(UsageManager.self)        private var usageManager
 
     @State private var showEdit = false
     @State private var showDeleteAlert = false
+    @State private var showEnrichmentStore = false
 
     // MARK: - Enrichment state
     @State private var enrichmentState: EnrichmentState = .idle
@@ -132,6 +135,9 @@ struct ItemDetailView: View {
         .sheet(isPresented: $showEdit) {
             ItemEditView(category: item.category, item: item)
         }
+        .sheet(isPresented: $showEnrichmentStore) {
+            EnrichmentStoreView()
+        }
         .alert("Delete item?", isPresented: $showDeleteAlert) {
             Button("Delete", role: .destructive) {
                 modelContext.delete(item)
@@ -150,7 +156,10 @@ struct ItemDetailView: View {
         VStack(spacing: 8) {
             switch enrichmentState {
             case .idle:
-                EnrichButton(color: item.category.color) {
+                EnrichButton(
+                    color: item.category.color,
+                    balance: usageManager.enrichmentBalance
+                ) {
                     runEnrichment()
                 }
 
@@ -228,6 +237,15 @@ struct ItemDetailView: View {
     // MARK: - Enrichment logic
 
     private func runEnrichment() {
+        // Check credits balance first
+        guard usageManager.canEnrich() else {
+            showEnrichmentStore = true
+            return
+        }
+
+        // Deduct one credit before the API call
+        usageManager.consumeEnrichment()
+
         withAnimation { enrichmentState = .loading }
         recentlyFilledKeys = []
 
@@ -280,19 +298,36 @@ private enum EnrichmentState {
 
 private struct EnrichButton: View {
     let color: Color
+    let balance: Int
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass.circle.fill")
+                Image(systemName: balance > 0
+                      ? "magnifyingglass.circle.fill"
+                      : "cart.circle.fill")
                     .font(.system(size: 16, weight: .semibold))
-                Text("Find Missing Info")
+
+                Text(balance > 0 ? "Find Missing Info" : "Buy Enrichment Credits")
                     .font(.subheadline.weight(.semibold))
+
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.secondary)
+
+                // Credit badge
+                if balance > 0 {
+                    Text("\(balance)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(color)
+                        .clipShape(Capsule())
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
             }
             .foregroundStyle(color)
             .padding(.horizontal, 14)

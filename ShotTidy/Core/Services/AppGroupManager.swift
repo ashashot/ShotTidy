@@ -66,6 +66,26 @@ enum AppGroupManager {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupID)
     }
 
+    /// UserDefaults shared between the main app and the Share Extension.
+    /// Falls back to .standard only if the App Group is misconfigured.
+    /// Marked nonisolated so it can be used as a default parameter value
+    /// in contexts that are not yet on the MainActor (e.g. init default args).
+    nonisolated static var sharedDefaults: UserDefaults {
+        UserDefaults(suiteName: groupID) ?? .standard
+    }
+
+    // MARK: - Subscription status bridge (main app → Share Extension)
+
+    /// Written by the main app's SubscriptionManager when Pro status changes.
+    /// Read by the Share Extension's ShareUsageManager to gate API calls.
+    nonisolated static func saveIsProStatus(_ isPro: Bool) {
+        sharedDefaults.set(isPro, forKey: "subscription.isPro")
+    }
+
+    nonisolated static func loadIsProStatus() -> Bool {
+        sharedDefaults.bool(forKey: "subscription.isPro")
+    }
+
     /// File URL for pending draft items JSON (new share extension flow)
     private static var pendingDraftsURL: URL? {
         containerURL?.appendingPathComponent("pending_drafts.json")

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		DE327FF82FC1B9400090FC80 /* ShotTidyShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DE3282BA2FC5798B0090FC80 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE3282B92FC5798B0090FC80 /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,6 +39,7 @@
 		DE327F002FC1B0000090FC80 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		DE327FC12FC1B4160090FC80 /* ShotTidy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShotTidy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotTidyShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE3282B92FC5798B0090FC80 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -90,6 +92,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DE3282BA2FC5798B0090FC80 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -110,6 +113,7 @@
 				DE327FEF2FC1B9400090FC80 /* ShotTidyShare */,
 				DE327FC22FC1B4160090FC80 /* Products */,
 				DE327F002FC1B0000090FC80 /* Secrets.xcconfig */,
+				DE3282B82FC5798B0090FC80 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -120,6 +124,14 @@
 				DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		DE3282B82FC5798B0090FC80 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DE3282B92FC5798B0090FC80 /* StoreKit.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
