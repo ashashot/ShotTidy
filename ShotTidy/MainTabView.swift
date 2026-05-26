@@ -6,12 +6,49 @@
 //  On each foreground activation checks for items saved by the Share Extension
 //  and silently imports them into SwiftData.
 //
+//  Deep link URL scheme (shottidy://):
+//    shottidy://            → Catalog tab
+//    shottidy://catalog     → Catalog tab
+//    shottidy://import      → open Import sheet
+//    shottidy://screenshots → Screenshots tab
+//    shottidy://settings    → Settings tab
 
 import SwiftUI
 import SwiftData
 
+// MARK: - Deep Link
+
+enum DeepLink {
+    case catalog
+    case screenshots
+    case settings
+    case openImport
+
+    /// Parse a `shottidy://` URL into a DeepLink action.
+    /// Returns `nil` for unrecognised paths (silently ignored).
+    init?(url: URL) {
+        guard url.scheme?.lowercased() == "shottidy" else { return nil }
+        switch url.host?.lowercased() {
+        case nil, "", "catalog": self = .catalog
+        case "import":           self = .openImport
+        case "screenshots":      self = .screenshots
+        case "settings":         self = .settings
+        default:                 return nil
+        }
+    }
+}
+
+// MARK: - Tab
+
+enum AppTab: Hashable {
+    case catalog, screenshots, settings
+}
+
+// MARK: - View
+
 struct MainTabView: View {
 
+    @State private var selectedTab: AppTab = .catalog
     @State private var showImport = false
 
     // Banner shown after a successful share-extension import
@@ -21,24 +58,27 @@ struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             // MARK: Catalog
             CategoriesView(showImport: $showImport)
                 .tabItem {
                     Label("Catalog", systemImage: "square.grid.2x2.fill")
                 }
+                .tag(AppTab.catalog)
 
             // MARK: Screenshots
             ScreenshotsView(showImport: $showImport)
                 .tabItem {
                     Label("Screenshots", systemImage: "photo.stack.fill")
                 }
+                .tag(AppTab.screenshots)
 
             // MARK: Settings
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gear")
                 }
+                .tag(AppTab.settings)
         }
         .sheet(isPresented: $showImport) {
             ImportView()
@@ -61,6 +101,30 @@ struct MainTabView: View {
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 importPendingDraftsIfNeeded()
+            }
+        }
+        // MARK: Deep link handling
+        .onOpenURL { url in
+            guard let link = DeepLink(url: url) else { return }
+            handleDeepLink(link)
+        }
+    }
+
+    // MARK: - Deep Link Router
+
+    private func handleDeepLink(_ link: DeepLink) {
+        switch link {
+        case .catalog:
+            selectedTab = .catalog
+        case .screenshots:
+            selectedTab = .screenshots
+        case .settings:
+            selectedTab = .settings
+        case .openImport:
+            selectedTab = .catalog
+            // Small delay so the tab switch completes before the sheet opens
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                showImport = true
             }
         }
     }
