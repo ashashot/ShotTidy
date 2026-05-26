@@ -53,11 +53,6 @@ enum AppGroupManager {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupID)
     }
 
-    /// Directory for raw images pending analysis (legacy flow)
-    static var pendingImagesDir: URL? {
-        containerURL?.appendingPathComponent("PendingImages", isDirectory: true)
-    }
-
     /// File URL for pending draft items JSON (new share extension flow)
     private static var pendingDraftsURL: URL? {
         containerURL?.appendingPathComponent("pending_drafts.json")
@@ -90,38 +85,20 @@ enum AppGroupManager {
         try? FileManager.default.removeItem(at: url)
     }
 
-    // MARK: - Pending Raw Images (legacy flow)
+    // MARK: - Startup cleanup
 
-    /// Save an image to the analysis queue
-    @discardableResult
-    static func savePendingImage(_ data: Data) throws -> URL {
-        guard let dir = pendingImagesDir else {
-            throw AppGroupError.containerUnavailable
+    /// Remove the legacy PendingImages directory left over from an older flow.
+    /// Call once at app launch; safe to call repeatedly (no-op if the directory is absent).
+    static func purgeLegacyPendingImages() {
+        guard let base = containerURL else { return }
+        let legacyDir = base.appendingPathComponent("PendingImages", isDirectory: true)
+        guard FileManager.default.fileExists(atPath: legacyDir.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: legacyDir)
+            print("[ShotTidy] Removed legacy PendingImages directory.")
+        } catch {
+            print("[ShotTidy] Could not remove legacy PendingImages directory: \(error)")
         }
-        try FileManager.default.createDirectory(
-            at: dir,
-            withIntermediateDirectories: true,
-            attributes: nil
-        )
-        let fileURL = dir.appendingPathComponent("\(UUID().uuidString).jpg")
-        try data.write(to: fileURL)
-        return fileURL
-    }
-
-    /// URLs of all pending raw images
-    static func pendingImageURLs() -> [URL] {
-        guard let dir = pendingImagesDir,
-              FileManager.default.fileExists(atPath: dir.path) else { return [] }
-        return (try? FileManager.default.contentsOfDirectory(
-            at: dir,
-            includingPropertiesForKeys: nil,
-            options: .skipsHiddenFiles
-        )) ?? []
-    }
-
-    /// Delete a processed raw image file
-    static func deletePendingImage(at url: URL) {
-        try? FileManager.default.removeItem(at: url)
     }
 }
 

@@ -12,6 +12,9 @@ struct ShotTidyApp: App {
     init() {
         // OpenAI key now lives in Supabase Secrets (server-side).
         // No local key to sync — AppGroupManager.apiKey is no longer used.
+
+        // Remove the legacy PendingImages directory left over from v1 of the Share Extension flow.
+        AppGroupManager.purgeLegacyPendingImages()
     }
 
     var sharedModelContainer: ModelContainer = {

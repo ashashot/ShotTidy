@@ -20,6 +20,8 @@ final class ImportViewModel {
     // MARK: - Analysis state
     var isAnalyzing = false
     var analysisError: String? = nil
+    /// Non-nil when a SwiftData save fails during confirmation — shown as an alert in the UI.
+    var persistenceError: String? = nil
     var progressCurrent = 0
     var progressTotal = 0
     /// Warnings (individual screenshot failures, non-fatal)
@@ -77,7 +79,7 @@ final class ImportViewModel {
             screenshot.thumbnailData = thumb.jpegData(compressionQuality: 0.85)
 
             ctx.insert(screenshot)
-            try? ctx.save()
+            saveCheckpoint(ctx)
 
             // Track this screenshot for cleanup
             sessionScreenshotIds.insert(screenshot.id)
@@ -115,7 +117,7 @@ final class ImportViewModel {
                 }
             }
 
-            try? ctx.save()
+            saveCheckpoint(ctx)
         }
 
         isAnalyzing = false
@@ -140,7 +142,7 @@ final class ImportViewModel {
         applySessionScreenshotChanges(confirmedCounts: confirmedPerScreenshot, context: ctx)
 
         didSaveThisSession = true
-        try? ctx.save()
+        saveCritical(ctx)
     }
 
     // MARK: - Reset
@@ -149,7 +151,7 @@ final class ImportViewModel {
         // If the user pressed Cancel (Save was never called), clean up all session screenshots.
         if !didSaveThisSession, let ctx = modelContext, !sessionScreenshotIds.isEmpty {
             applySessionScreenshotChanges(confirmedCounts: [:], context: ctx)
-            try? ctx.save()
+            saveCheckpoint(ctx)
         }
         draftItems = []
         warnings = []
@@ -168,6 +170,27 @@ final class ImportViewModel {
         progressTotal = 0
         sessionScreenshotIds = []
         didSaveThisSession = false
+    }
+
+    // MARK: - Persistence helpers
+
+    /// Non-critical save (intermediate progress). Logs failures but does not surface them to the user.
+    private func saveCheckpoint(_ context: ModelContext) {
+        do {
+            try context.save()
+        } catch {
+            print("[ShotTidy] SwiftData checkpoint save failed: \(error)")
+        }
+    }
+
+    /// Critical save (user-confirmed items). Sets persistenceError so the UI can show an alert.
+    private func saveCritical(_ context: ModelContext) {
+        do {
+            try context.save()
+        } catch {
+            print("[ShotTidy] SwiftData critical save failed: \(error)")
+            persistenceError = "Failed to save items: \(error.localizedDescription)"
+        }
     }
 
     // MARK: - Private helpers

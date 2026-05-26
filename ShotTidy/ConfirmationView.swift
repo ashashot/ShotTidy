@@ -117,7 +117,10 @@ struct ConfirmationView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
                         viewModel.saveSelectedDrafts()
-                        onSaved()
+                        // Only dismiss if the save actually succeeded
+                        if viewModel.persistenceError == nil {
+                            onSaved()
+                        }
                     } label: {
                         Text("Save (\(selectedCount))")
                             .fontWeight(.semibold)
@@ -131,6 +134,18 @@ struct ConfirmationView: View {
             // on close — no extra flag needed and no race condition.
             .sheet(item: $editingContext) { ctx in
                 DraftItemEditView(item: $viewModel.draftItems[ctx.id])
+            }
+            // Persistence error alert — shown when SwiftData fails to save confirmed items.
+            .alert(
+                "Failed to Save",
+                isPresented: Binding(
+                    get: { viewModel.persistenceError != nil },
+                    set: { if !$0 { viewModel.persistenceError = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) { viewModel.persistenceError = nil }
+            } message: {
+                Text(viewModel.persistenceError ?? "An unexpected error occurred. Please try again.")
             }
         }
     }
