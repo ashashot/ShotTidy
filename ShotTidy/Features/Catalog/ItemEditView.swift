@@ -4,6 +4,7 @@
 //
 //  Screen for adding or editing a catalog item.
 //  Performs real-time duplicate detection while the user types.
+//  Shows a sticky "Find Missing Info" bar at the bottom when optional fields are empty.
 //
 
 import SwiftUI
@@ -27,6 +28,10 @@ struct ItemEditView: View {
     @State private var duplicates: [DuplicateMatch] = []
     @State private var showDuplicateConfirm = false
 
+    // MARK: - Enrichment state
+    @State private var enrichState: EditEnrichState = .idle
+    @State private var highlightedFields: Set<String> = []
+
     init(category: ItemCategory, item: CatalogItem?) {
         self.category = category
         self.existingItem = item
@@ -42,11 +47,24 @@ struct ItemEditView: View {
     private var schema: ItemCategory.FieldSchema { category.fieldSchema }
     private var canSave: Bool { !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
-    /// Key used to trigger the debounced duplicate check.
-    /// Changes whenever any of the fields used for matching change.
-    private var duplicateCheckKey: String {
-        "\(title)|\(subtitle)|\(link)"
+    /// True when the title is filled and at least one schema-defined optional field is empty.
+    private var hasMissingLocalFields: Bool {
+        guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        let checks: [(label: String?, value: String)] = [
+            (schema.subtitleLabel, subtitle),
+            (schema.linkLabel,     link),
+            (schema.extra1Label,   extra1),
+            (schema.extra2Label,   extra2),
+            (schema.notesLabel,    notes),
+        ]
+        return checks.contains { label, value in
+            label != nil && value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
     }
+
+    private var duplicateCheckKey: String { "\(title)|\(subtitle)|\(link)" }
+
+    // MARK: - Body
 
     var body: some View {
         NavigationStack {
@@ -59,21 +77,21 @@ struct ItemEditView: View {
                     Text(schema.titleLabel)
                 } footer: {
                     if title.isEmpty {
-                        Text("Required field")
-                            .foregroundStyle(.red)
+                        Text("Required field").foregroundStyle(.red)
                     }
                 }
 
-                // Duplicate warning — shown between title and subtitle
-                if !duplicates.isEmpty {
-                    duplicateWarningSection
-                }
+                // Duplicate warning
+                if !duplicates.isEmpty { duplicateWarningSection }
 
                 // Subtitle
                 if let label = schema.subtitleLabel {
                     Section(label) {
                         TextField(schema.subtitlePlaceholder ?? "", text: $subtitle, axis: .vertical)
                             .lineLimit(4, reservesSpace: false)
+                            .listRowBackground(
+                                highlightedFields.contains("subtitle") ? Color.green.opacity(0.15) : nil
+                            )
                     }
                 }
 
@@ -84,20 +102,29 @@ struct ItemEditView: View {
                             .keyboardType(schema.isLinkEmail ? .emailAddress : .URL)
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
+                            .listRowBackground(
+                                highlightedFields.contains("link") ? Color.green.opacity(0.15) : nil
+                            )
                     }
                 }
 
-                // Extra field 1
+                // Extra 1
                 if let label = schema.extra1Label {
                     Section(label) {
                         TextField(schema.extra1Placeholder ?? "", text: $extra1)
+                            .listRowBackground(
+                                highlightedFields.contains("extra1") ? Color.green.opacity(0.15) : nil
+                            )
                     }
                 }
 
-                // Extra field 2
+                // Extra 2
                 if let label = schema.extra2Label {
                     Section(label) {
                         TextField(schema.extra2Placeholder ?? "", text: $extra2)
+                            .listRowBackground(
+                                highlightedFields.contains("extra2") ? Color.green.opacity(0.15) : nil
+                            )
                     }
                 }
 
@@ -106,51 +133,60 @@ struct ItemEditView: View {
                     Section(label) {
                         TextField(schema.notesPlaceholder ?? label, text: $notes, axis: .vertical)
                             .lineLimit(6, reservesSpace: false)
+                            .listRowBackground(
+                                highlightedFields.contains("notes") ? Color.green.opacity(0.15) : nil
+                            )
                     }
                 }
             }
+            // Status bar — shown only while search is active (loading / success / error)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if enrichState != .idle {
+                    enrichmentStatusBar
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(duration: 0.3), value: enrichState == .idle)
             .navigationTitle(isEditing ? "Edit" : "Add")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                // Cancel — top LEFT
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
+                // Search — top RIGHT (before Save), shown when fields are missing
+                ToolbarItem(placement: .topBarTrailing) {
+                    if hasMissingLocalFields && enrichState == .idle {
+                        Button(action: runEnrichment) {
+                            Image(systemName: "magnifyingglass.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(category.color)
+                        }
+                    }
+                }
+                // Save — top RIGHT (rightmost)
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        // When adding a new item and duplicates are detected, ask for confirmation.
-                        // When editing an existing item, save directly (user intentionally chose to edit).
                         if !isEditing && !duplicates.isEmpty {
                             showDuplicateConfirm = true
                         } else {
-                            save()
-                            dismiss()
+                            save(); dismiss()
                         }
                     }
                     .disabled(!canSave)
                     .fontWeight(.semibold)
                 }
             }
-            // Confirmation alert when saving despite duplicates
             .alert("Possible Duplicate", isPresented: $showDuplicateConfirm) {
-                Button("Save Anyway", role: .destructive) {
-                    save()
-                    dismiss()
-                }
-                Button("Cancel", role: .cancel) { }
+                Button("Save Anyway", role: .destructive) { save(); dismiss() }
+                Button("Cancel", role: .cancel) {}
             } message: {
                 Text(duplicateAlertMessage)
             }
-            // Debounced duplicate check: fires 400 ms after duplicateCheckKey changes.
-            // Cancelled automatically when the key changes again before the delay elapses.
             .task(id: duplicateCheckKey) {
-                guard canSave else {
-                    duplicates = []
-                    return
-                }
-                // 400 ms debounce — avoids querying on every keystroke
+                guard canSave else { duplicates = []; return }
                 try? await Task.sleep(for: .milliseconds(400))
                 guard !Task.isCancelled else { return }
-
                 duplicates = DuplicateChecker.findDuplicates(
                     for: title,
                     subtitle: subtitle.isEmpty ? nil : subtitle,
@@ -163,7 +199,106 @@ struct ItemEditView: View {
         }
     }
 
-    // MARK: - Duplicate warning section
+    // MARK: - Status bar (bottom, shown only during active search)
+
+    @ViewBuilder
+    private var enrichmentStatusBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+            Group {
+                switch enrichState {
+                case .idle:
+                    EmptyView()
+
+                case .loading:
+                    HStack(spacing: 12) {
+                        ProgressView().tint(category.color)
+                        Text("Searching the web…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+
+                case .success(let count):
+                    HStack(spacing: 10) {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                        Text(count == 1
+                             ? "1 field filled — review and save"
+                             : "\(count) fields filled — review and save")
+                            .font(.subheadline.weight(.medium))
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+
+                case .failure(let message):
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+                        Text(message)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                        Spacer()
+                        Button("Retry") { withAnimation { enrichState = .idle } }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(category.color)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                }
+            }
+            .background(.bar)
+        }
+    }
+
+    // MARK: - Enrichment logic
+
+    private func runEnrichment() {
+        withAnimation { enrichState = .loading }
+        highlightedFields = []
+
+        Task {
+            do {
+                let result = try await EnrichmentAPIClient.shared.enrichFields(
+                    category: category,
+                    title: title,
+                    subtitle: subtitle,
+                    link: link,
+                    extra1: extra1,
+                    extra2: extra2,
+                    notes: notes,
+                    schema: schema
+                )
+
+                var filled = 0
+                var keys = Set<String>()
+
+                if let v = result.subtitle, subtitle.isEmpty { subtitle = v; filled += 1; keys.insert("subtitle") }
+                if let v = result.link,     link.isEmpty     { link     = v; filled += 1; keys.insert("link") }
+                if let v = result.extra1,   extra1.isEmpty   { extra1   = v; filled += 1; keys.insert("extra1") }
+                if let v = result.extra2,   extra2.isEmpty   { extra2   = v; filled += 1; keys.insert("extra2") }
+                if let v = result.notes,    notes.isEmpty    { notes    = v; filled += 1; keys.insert("notes") }
+
+                withAnimation(.spring(duration: 0.35)) {
+                    highlightedFields = keys
+                    enrichState = filled > 0 ? .success(filled) : .failure("No additional info found.")
+                }
+
+                // Fade highlight after 4 s
+                Task {
+                    try? await Task.sleep(for: .seconds(4))
+                    withAnimation(.easeOut(duration: 0.6)) { highlightedFields = [] }
+                }
+
+            } catch {
+                withAnimation { enrichState = .failure(error.localizedDescription) }
+            }
+        }
+    }
+
+    // MARK: - Duplicate warning
 
     @ViewBuilder
     private var duplicateWarningSection: some View {
@@ -173,22 +308,15 @@ struct ItemEditView: View {
                     Image(systemName: match.confidence.icon)
                         .foregroundStyle(match.confidence.color)
                         .font(.subheadline)
-
                     VStack(alignment: .leading, spacing: 2) {
                         Text(match.item.title)
                             .font(.subheadline.weight(.medium))
                             .lineLimit(1)
                         if let sub = match.item.subtitle {
-                            Text(sub)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
+                            Text(sub).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         }
-                        Text(match.reason)
-                            .font(.caption2)
-                            .foregroundStyle(match.confidence.color)
+                        Text(match.reason).font(.caption2).foregroundStyle(match.confidence.color)
                     }
-
                     Spacer()
                 }
                 .padding(.vertical, 2)
@@ -196,30 +324,22 @@ struct ItemEditView: View {
             .listRowBackground(Color.orange.opacity(0.07))
         } header: {
             HStack(spacing: 5) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                Text(duplicates.count == 1
-                     ? "Possible Duplicate"
-                     : "Possible Duplicates (\(duplicates.count))")
+                Image(systemName: "exclamationmark.triangle.fill").font(.caption)
+                Text(duplicates.count == 1 ? "Possible Duplicate" : "Possible Duplicates (\(duplicates.count))")
             }
             .foregroundStyle(.orange)
         } footer: {
-            Text("You can still save — duplicates are shown as a warning only.")
-                .foregroundStyle(.secondary)
+            Text("You can still save — duplicates are shown as a warning only.").foregroundStyle(.secondary)
         }
     }
 
     // MARK: - Alert message
 
     private var duplicateAlertMessage: String {
-        let topNames = duplicates.prefix(2)
-            .map { "\u{201C}\($0.item.title)\u{201D}" }
-            .joined(separator: ", ")
-        if duplicates.count == 1 {
-            return "An item with the same title already exists: \(topNames). Save anyway?"
-        } else {
-            return "\(duplicates.count) similar items already exist: \(topNames)\(duplicates.count > 2 ? "…" : ""). Save anyway?"
-        }
+        let names = duplicates.prefix(2).map { "\u{201C}\($0.item.title)\u{201D}" }.joined(separator: ", ")
+        return duplicates.count == 1
+            ? "An item with the same title already exists: \(names). Save anyway?"
+            : "\(duplicates.count) similar items already exist: \(names)\(duplicates.count > 2 ? "…" : ""). Save anyway?"
     }
 
     // MARK: - Save
@@ -245,4 +365,13 @@ struct ItemEditView: View {
             modelContext.insert(item)
         }
     }
+}
+
+// MARK: - EditEnrichState
+
+private enum EditEnrichState: Equatable {
+    case idle
+    case loading
+    case success(Int)
+    case failure(String)
 }

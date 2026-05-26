@@ -58,4 +58,20 @@ final class CatalogItem {
         get { ItemCategory(rawValue: categoryRaw) ?? .tasks }
         set { categoryRaw = newValue.rawValue }
     }
+
+    /// Returns true when at least one optional field that is defined in the
+    /// category's FieldSchema is empty — meaning enrichment could help.
+    var hasMissingOptionalFields: Bool {
+        let schema = category.fieldSchema
+        let checks: [(label: String?, value: String?)] = [
+            (schema.subtitleLabel, subtitle),
+            (schema.linkLabel,     link),
+            (schema.extra1Label,   extra1),
+            (schema.extra2Label,   extra2),
+            (schema.notesLabel,    notes),
+        ]
+        return checks.contains { label, value in
+            label != nil && (value == nil || value!.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+    }
 }

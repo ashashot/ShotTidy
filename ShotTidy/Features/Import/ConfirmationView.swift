@@ -345,7 +345,25 @@ struct DraftItemEditView: View {
     @Binding var item: DraftItem
     @Environment(\.dismiss) private var dismiss
 
+    @State private var enrichState: DraftEnrichState = .idle
+    @State private var highlightedFields: Set<String> = []
+
     private var schema: ItemCategory.FieldSchema { item.category.fieldSchema }
+
+    /// True when title is set and at least one schema-defined optional field is empty.
+    private var hasMissingFields: Bool {
+        guard !item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        let checks: [(label: String?, value: String)] = [
+            (schema.subtitleLabel, item.subtitle),
+            (schema.linkLabel,     item.link),
+            (schema.extra1Label,   item.extra1),
+            (schema.extra2Label,   item.extra2),
+            (schema.notesLabel,    item.notes),
+        ]
+        return checks.contains { label, value in
+            label != nil && value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -367,6 +385,9 @@ struct DraftItemEditView: View {
                     Section(label) {
                         TextField(schema.subtitlePlaceholder ?? "", text: $item.subtitle, axis: .vertical)
                             .lineLimit(3, reservesSpace: false)
+                            .listRowBackground(
+                                highlightedFields.contains("subtitle") ? Color.green.opacity(0.15) : nil
+                            )
                     }
                 }
 
@@ -376,18 +397,27 @@ struct DraftItemEditView: View {
                             .keyboardType(schema.isLinkEmail ? .emailAddress : .URL)
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
+                            .listRowBackground(
+                                highlightedFields.contains("link") ? Color.green.opacity(0.15) : nil
+                            )
                     }
                 }
 
                 if let label = schema.extra1Label {
                     Section(label) {
                         TextField(schema.extra1Placeholder ?? "", text: $item.extra1)
+                            .listRowBackground(
+                                highlightedFields.contains("extra1") ? Color.green.opacity(0.15) : nil
+                            )
                     }
                 }
 
                 if let label = schema.extra2Label {
                     Section(label) {
                         TextField(schema.extra2Placeholder ?? "", text: $item.extra2)
+                            .listRowBackground(
+                                highlightedFields.contains("extra2") ? Color.green.opacity(0.15) : nil
+                            )
                     }
                 }
 
@@ -395,16 +425,147 @@ struct DraftItemEditView: View {
                     Section(label) {
                         TextField(schema.notesPlaceholder ?? label, text: $item.notes, axis: .vertical)
                             .lineLimit(6, reservesSpace: false)
+                            .listRowBackground(
+                                highlightedFields.contains("notes") ? Color.green.opacity(0.15) : nil
+                            )
                     }
                 }
             }
+            // Status bar — shown only while search is active (loading / success / error)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if enrichState != .idle {
+                    draftEnrichStatusBar
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(duration: 0.3), value: enrichState == .idle)
             .navigationTitle("Edit")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }.fontWeight(.semibold)
+                // Done — top LEFT
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                }
+                // Search — top RIGHT, shown only when fields are missing and not already searching
+                ToolbarItem(placement: .topBarTrailing) {
+                    if hasMissingFields && enrichState == .idle {
+                        Button(action: runEnrichment) {
+                            Image(systemName: "magnifyingglass.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(item.category.color)
+                        }
+                    }
                 }
             }
         }
     }
+
+    // MARK: - Status bar (bottom, shown only during active search)
+
+    @ViewBuilder
+    private var draftEnrichStatusBar: some View {
+        let color = item.category.color
+        VStack(spacing: 0) {
+            Divider()
+            Group {
+                switch enrichState {
+                case .idle:
+                    EmptyView()
+
+                case .loading:
+                    HStack(spacing: 12) {
+                        ProgressView().tint(color)
+                        Text("Searching the web…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+
+                case .success(let count):
+                    HStack(spacing: 10) {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                        Text(count == 1
+                             ? "1 field filled — review and tap Done"
+                             : "\(count) fields filled — review and tap Done")
+                            .font(.subheadline.weight(.medium))
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+
+                case .failure(let message):
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+                        Text(message)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                        Spacer()
+                        Button("Retry") { withAnimation { enrichState = .idle } }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(color)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                }
+            }
+            .background(.bar)
+        }
+    }
+
+    // MARK: - Enrichment logic
+
+    private func runEnrichment() {
+        withAnimation { enrichState = .loading }
+        highlightedFields = []
+
+        Task {
+            do {
+                let result = try await EnrichmentAPIClient.shared.enrichFields(
+                    category: item.category,
+                    title: item.title,
+                    subtitle: item.subtitle,
+                    link: item.link,
+                    extra1: item.extra1,
+                    extra2: item.extra2,
+                    notes: item.notes,
+                    schema: schema
+                )
+
+                var filled = 0
+                var keys = Set<String>()
+
+                if let v = result.subtitle, item.subtitle.isEmpty { item.subtitle = v; filled += 1; keys.insert("subtitle") }
+                if let v = result.link,     item.link.isEmpty     { item.link     = v; filled += 1; keys.insert("link") }
+                if let v = result.extra1,   item.extra1.isEmpty   { item.extra1   = v; filled += 1; keys.insert("extra1") }
+                if let v = result.extra2,   item.extra2.isEmpty   { item.extra2   = v; filled += 1; keys.insert("extra2") }
+                if let v = result.notes,    item.notes.isEmpty    { item.notes    = v; filled += 1; keys.insert("notes") }
+
+                withAnimation(.spring(duration: 0.35)) {
+                    highlightedFields = keys
+                    enrichState = filled > 0 ? .success(filled) : .failure("No additional info found.")
+                }
+
+                Task {
+                    try? await Task.sleep(for: .seconds(4))
+                    withAnimation(.easeOut(duration: 0.6)) { highlightedFields = [] }
+                }
+
+            } catch {
+                withAnimation { enrichState = .failure(error.localizedDescription) }
+            }
+        }
+    }
+}
+
+// MARK: - DraftEnrichState
+
+private enum DraftEnrichState: Equatable {
+    case idle
+    case loading
+    case success(Int)
+    case failure(String)
 }
