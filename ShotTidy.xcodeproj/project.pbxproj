@@ -59,7 +59,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				AppGroupManager.swift,
-				KeychainManager.swift,
 				"UIImage+Extensions.swift",
 			);
 			target = DE327FED2FC1B9400090FC80 /* ShotTidyShare */;

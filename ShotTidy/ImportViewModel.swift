@@ -101,12 +101,6 @@ final class ImportViewModel {
                     // Refusal is non-fatal — just skip this screenshot
                     let name = screenshot.originalFileName ?? "screenshot \(index + 1)"
                     warnings.append("\(name): \(err.localizedDescription)")
-                case .noAPIKey:
-                    // Fatal — abort the entire analysis
-                    analysisError = err.localizedDescription
-                    isAnalyzing = false
-                    try? ctx.save()
-                    return
                 default:
                     // Network / HTTP errors — only show if nothing was extracted
                     if draftItems.isEmpty && index == selectedImages.count - 1 {

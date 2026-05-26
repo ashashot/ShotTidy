@@ -63,15 +63,6 @@ enum AppGroupManager {
         containerURL?.appendingPathComponent("pending_drafts.json")
     }
 
-    // MARK: - API Key (Keychain Access Group, shared with the Share Extension)
-    // Uses KeychainManager.sharedAPIKey so the key is encrypted at rest
-    // and never stored in UserDefaults or any unencrypted location.
-
-    static var apiKey: String? {
-        get { KeychainManager.shared.sharedAPIKey }
-        set { KeychainManager.shared.sharedAPIKey = newValue }
-    }
-
     // MARK: - Pending Draft Items (new flow)
 
     /// Save items confirmed by the user in the Share Extension
