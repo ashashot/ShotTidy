@@ -80,6 +80,10 @@ struct ImportView: View {
             // at this point draftItems are guaranteed to be populated
             if !viewModel.draftItems.isEmpty {
                 showConfirmation = true
+            } else {
+                // All screenshots failed or returned no data —
+                // clean up orphaned Screenshot records that were created during analysis.
+                viewModel.resetAfterConfirmation()
             }
         }
     }

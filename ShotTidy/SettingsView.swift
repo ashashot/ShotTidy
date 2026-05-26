@@ -10,7 +10,12 @@ struct SettingsView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Query private var allItems: [CatalogItem]
-    @Query private var screenshots: [Screenshot]
+    /// Only count screenshots that actually have saved catalog items (same filter as ScreenshotsView).
+    @Query(filter: #Predicate<Screenshot> { $0.extractedItemsCount > 0 })
+    private var screenshots: [Screenshot]
+    /// Orphaned screenshots with no saved items — kept separately for cleanup.
+    @Query(filter: #Predicate<Screenshot> { $0.extractedItemsCount == 0 })
+    private var orphanedScreenshots: [Screenshot]
 
     @State private var showDeleteAlert = false
 
@@ -54,6 +59,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .onAppear { purgeOrphanedScreenshots() }
             .alert("Delete All Data?", isPresented: $showDeleteAlert) {
                 Button("Delete All", role: .destructive) { deleteAll() }
                 Button("Cancel", role: .cancel) {}
@@ -63,9 +69,20 @@ struct SettingsView: View {
         }
     }
 
+    /// Deletes Screenshot records with no saved catalog items.
+    /// These are leftovers from failed or cancelled imports.
+    private func purgeOrphanedScreenshots() {
+        guard !orphanedScreenshots.isEmpty else { return }
+        for shot in orphanedScreenshots {
+            modelContext.delete(shot)
+        }
+        try? modelContext.save()
+    }
+
     private func deleteAll() {
         for item in allItems { modelContext.delete(item) }
         for shot in screenshots { modelContext.delete(shot) }
+        for shot in orphanedScreenshots { modelContext.delete(shot) }
         try? modelContext.save()
     }
 }

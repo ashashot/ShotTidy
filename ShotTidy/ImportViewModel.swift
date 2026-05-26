@@ -160,11 +160,18 @@ final class ImportViewModel {
     }
 
     func fullReset() {
+        // If analysis created Screenshot records but the user closed without confirming,
+        // delete those records from SwiftData to prevent orphaned entries.
+        if let ctx = modelContext, !sessionScreenshotIds.isEmpty {
+            applySessionScreenshotChanges(confirmedCounts: [:], context: ctx)
+            saveCheckpoint(ctx)
+        }
         selectedPickerItems = []
         selectedImages = []
         draftItems = []
         isAnalyzing = false
         analysisError = nil
+        persistenceError = nil
         warnings = []
         progressCurrent = 0
         progressTotal = 0
