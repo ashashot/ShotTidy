@@ -2,7 +2,8 @@
 //  ShareAPIClient.swift
 //  ShotTidyShare
 //
-//  Self-contained OpenAI GPT-4o Vision client for the Share Extension.
+//  Self-contained proxy client for the Share Extension.
+//  Calls the Supabase Edge Function analyze-screenshot instead of OpenAI directly.
 //  Returns [PendingDraftItem] — no dependency on the main app's models.
 //
 
@@ -14,9 +15,9 @@ import UIKit
 enum ShareAPIError: LocalizedError {
     case invalidImage
     case networkError(Error)
-    case invalidAPIKey
+    case unauthorized
     case rateLimited
-    case httpError(Int)
+    case serverError(Int)
     case refused
     case emptyResponse
     case decodingFailed
@@ -27,16 +28,16 @@ enum ShareAPIError: LocalizedError {
             return "Could not process the image."
         case .networkError(let err):
             return "Network error: \(err.localizedDescription)"
-        case .invalidAPIKey:
-            return "Invalid API key.\nOpen ShotTidy → Settings to check your key."
+        case .unauthorized:
+            return "Authorization error. Check your Supabase configuration."
         case .rateLimited:
-            return "Too many requests to OpenAI. Please wait a moment."
-        case .httpError(let code):
+            return "Too many requests. Please wait a moment."
+        case .serverError(let code):
             return "Server error (\(code)). Please try again."
         case .refused:
             return "GPT-4o could not analyze this screenshot."
         case .emptyResponse:
-            return "Empty response from OpenAI. Please try again."
+            return "Empty response. Please try again."
         case .decodingFailed:
             return "Could not parse the AI response. Please try again."
         }
@@ -50,40 +51,26 @@ final class ShareAPIClient {
     static let shared = ShareAPIClient()
     private init() {}
 
-    private let endpoint = URL(string: "https://api.openai.com/v1/chat/completions")!
+    // Supabase credentials — anon key is a publishable key, safe to embed.
+    private let supabaseURL     = "https://qpxvnnkewwolzglynrgj.supabase.co"
+    private let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFweHZubmtld3dvbHpnbHlucmdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NDkzMzksImV4cCI6MjA5NTMyNTMzOX0.fYzLDOILNm3I2TU6QobG5HGQQxe8kJAfPCI9kSABpec"
 
-    func analyze(image: UIImage, apiKey: String) async throws -> [PendingDraftItem] {
+    private var analyzeEndpoint: URL {
+        URL(string: "\(supabaseURL)/functions/v1/analyze-screenshot")!
+    }
+
+    func analyze(image: UIImage) async throws -> [PendingDraftItem] {
         let resized = resize(image, maxDimension: 1024)
         guard let imageData = resized.jpegData(compressionQuality: 0.75) else {
             throw ShareAPIError.invalidImage
         }
         let base64 = imageData.base64EncodedString()
 
-        let body: [String: Any] = [
-            "model": "gpt-4o",
-            "response_format": ["type": "json_object"],
-            "max_tokens": 2000,
-            "messages": [[
-                "role": "user",
-                "content": [
-                    [
-                        "type": "image_url",
-                        "image_url": [
-                            "url": "data:image/jpeg;base64,\(base64)",
-                            "detail": "auto"
-                        ]
-                    ],
-                    [
-                        "type": "text",
-                        "text": Self.analysisPrompt
-                    ]
-                ]
-            ]]
-        ]
+        let body: [String: Any] = ["image": base64]
 
-        var request = URLRequest(url: endpoint)
+        var request = URLRequest(url: analyzeEndpoint)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 60
@@ -96,9 +83,9 @@ final class ShareAPIClient {
         }
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
-            if http.statusCode == 401 { throw ShareAPIError.invalidAPIKey }
+            if http.statusCode == 401 { throw ShareAPIError.unauthorized }
             if http.statusCode == 429 { throw ShareAPIError.rateLimited }
-            throw ShareAPIError.httpError(http.statusCode)
+            throw ShareAPIError.serverError(http.statusCode)
         }
 
         return try parseItems(from: data)
@@ -163,42 +150,4 @@ final class ShareAPIClient {
             image.draw(in: CGRect(origin: .zero, size: newSize))
         }
     }
-
-    // MARK: - Prompt
-
-    static let analysisPrompt = """
-    Please look at this screenshot and extract any useful information you can see.
-    Return a JSON object with an "items" array containing the extracted data.
-
-    Each item in the array should have these fields (use empty string "" for missing values):
-    {
-      "category": one of the category keys listed below,
-      "title": the main text or name,
-      "subtitle": secondary information,
-      "link": a URL if present, otherwise "",
-      "extra1": a third relevant field,
-      "extra2": a fourth relevant field,
-      "notes": any additional details
-    }
-
-    Category keys and how to fill the fields:
-    - "shopping"         — title=product name, subtitle=price, link=product URL, extra1=store name, extra2=currency
-    - "places"           — title=place name, subtitle=address, link=maps URL, extra1=city, extra2=country
-    - "appsServices"     — title=app/service name, subtitle=description, link=website, extra1=platform, extra2=category
-    - "languageLearning" — title=word or phrase, subtitle=translation, extra1=language, extra2=example
-    - "prompts"          — title=prompt text, subtitle=use case, extra1=AI tool
-    - "health"           — title=health tip or info, subtitle=type, extra1=source
-    - "recipes"          — title=dish name, subtitle=ingredients, link=recipe URL, extra1=cooking time, notes=steps
-    - "books"            — title=book title, subtitle=author, link=buy link, extra1=genre, extra2=year
-    - "movies"           — title=title, subtitle=platform, link=watch link, extra1=genre, extra2=year
-    - "quotes"           — title=quote text, subtitle=author, link=source
-    - "articles"         — title=headline, subtitle=publication, link=article URL, extra1=topic
-    - "contacts"         — title=person name, subtitle=phone, link=email, extra1=company, extra2=role
-    - "tasks"            — title=task, subtitle=due date, extra1=priority
-
-    Notes:
-    - If you see multiple products, places, etc., add each as a separate item.
-    - Only include information clearly visible in the screenshot.
-    - Return only valid JSON, no other text.
-    """
 }

@@ -2,20 +2,16 @@
 //  Config.swift
 //  ShotTidy
 //
-//  The key is read from Info.plist, where Xcode substitutes the value
-//  from Secrets.xcconfig (which is NOT committed to git).
+//  Supabase project credentials.
+//  The anon key is a publishable key — safe to embed in the app.
+//  The OpenAI key lives exclusively in Supabase Secrets (server-side).
 //
 
 import Foundation
 
 enum Config {
-    static let openAIKey: String = {
-        guard let key = Bundle.main.object(forInfoDictionaryKey: "OPENAI_API_KEY") as? String,
-              !key.isEmpty,
-              key != "your_openai_api_key_here" else {
-            assertionFailure("⚠️ OPENAI_API_KEY is not configured. Create Secrets.xcconfig from Secrets.xcconfig.example")
-            return ""
-        }
-        return key
-    }()
+    static let supabaseURL     = "https://qpxvnnkewwolzglynrgj.supabase.co"
+    static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFweHZubmtld3dvbHpnbHlucmdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NDkzMzksImV4cCI6MjA5NTMyNTMzOX0.fYzLDOILNm3I2TU6QobG5HGQQxe8kJAfPCI9kSABpec"
+
+    static let analyzeEndpoint = URL(string: "\(supabaseURL)/functions/v1/analyze-screenshot")!
 }

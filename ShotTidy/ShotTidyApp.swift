@@ -10,13 +10,8 @@ import SwiftData
 struct ShotTidyApp: App {
 
     init() {
-        // Sync the API key from Config (Secrets.xcconfig → Info.plist)
-        // into the App Group so the Share Extension can read it without
-        // needing its own Info.plist entry.
-        let key = Config.openAIKey
-        if !key.isEmpty {
-            AppGroupManager.apiKey = key
-        }
+        // OpenAI key now lives in Supabase Secrets (server-side).
+        // No local key to sync — AppGroupManager.apiKey is no longer used.
     }
 
     var sharedModelContainer: ModelContainer = {

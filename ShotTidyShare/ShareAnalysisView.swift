@@ -60,16 +60,10 @@ final class ShareAnalysisViewModel {
             return
         }
 
-        // Step 2: check API key (synced from Config by the main app on launch)
-        guard let apiKey = AppGroupManager.apiKey, !apiKey.isEmpty else {
-            phase = .error("API key not available.\nOpen the ShotTidy app once to activate the extension.")
-            return
-        }
-
-        // Step 3: analyze
+        // Step 2: analyze via Supabase Edge Function (no local API key needed)
         phase = .analyzing
         do {
-            let items = try await ShareAPIClient.shared.analyze(image: image, apiKey: apiKey)
+            let items = try await ShareAPIClient.shared.analyze(image: image)
             if items.isEmpty {
                 phase = .noItems
             } else {
