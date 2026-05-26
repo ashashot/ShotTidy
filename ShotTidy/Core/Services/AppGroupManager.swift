@@ -8,6 +8,19 @@
 
 import Foundation
 
+// MARK: - CatalogIndexEntry
+
+/// Lightweight snapshot of one CatalogItem, written by the main app into the App Group
+/// so the Share Extension can check for duplicates without accessing SwiftData.
+///
+/// Only the fields used for matching are stored: title, subtitle, link, and category.
+struct CatalogIndexEntry: Codable {
+    let categoryKey: String
+    let title: String
+    let subtitle: String?
+    let link: String?
+}
+
 // MARK: - PendingDraftItem
 
 /// A confirmed draft item saved by the Share Extension, awaiting import into SwiftData.
@@ -83,6 +96,31 @@ enum AppGroupManager {
     static func clearPendingDrafts() {
         guard let url = pendingDraftsURL else { return }
         try? FileManager.default.removeItem(at: url)
+    }
+
+    // MARK: - Catalog index (for Share Extension duplicate detection)
+
+    private static var catalogIndexURL: URL? {
+        containerURL?.appendingPathComponent("catalog_index.json")
+    }
+
+    /// Write the current catalog as a lightweight index to the App Group.
+    /// Called by the main app so the Share Extension can check for duplicates.
+    static func saveCatalogIndex(_ entries: [CatalogIndexEntry]) {
+        guard let url = catalogIndexURL else { return }
+        guard let data = try? JSONEncoder().encode(entries) else { return }
+        try? data.write(to: url, options: .atomic)
+    }
+
+    /// Load the catalog index written by the main app.
+    /// Used by the Share Extension for duplicate detection.
+    static func loadCatalogIndex() -> [CatalogIndexEntry] {
+        guard
+            let url = catalogIndexURL,
+            let data = try? Data(contentsOf: url),
+            let entries = try? JSONDecoder().decode([CatalogIndexEntry].self, from: data)
+        else { return [] }
+        return entries
     }
 
     // MARK: - Startup cleanup

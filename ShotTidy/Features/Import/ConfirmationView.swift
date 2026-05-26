@@ -4,14 +4,17 @@
 //
 //  Confirmation screen before saving extracted items.
 //  The user can check/uncheck, edit, or delete each item.
+//  Duplicate detection runs against the existing catalog on appear
+//  and after every draft edit.
 //
 
 import SwiftUI
+import SwiftData
 
 /// An identifier wrapper for the index of the draft being edited.
 /// Required for .sheet(item:) so SwiftUI passes data atomically
 /// and does not build the sheet content before the index is set.
-private struct DraftEditContext: Identifiable {
+private struct DraftEditContext: Identifiable, Equatable {
     let id: Int  // global index in viewModel.draftItems
 }
 
@@ -20,21 +23,31 @@ struct ConfirmationView: View {
     @Bindable var viewModel: ImportViewModel
     var onSaved: () -> Void
 
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    /// Edit context: set → sheet opens → reset on close.
-    /// Single source of truth: .sheet(item:) guarantees that content is built
-    /// only when editingContext != nil, eliminating race conditions.
+
     @State private var editingContext: DraftEditContext? = nil
+
+    // MARK: - Duplicate detection
+    @State private var draftDuplicates: [UUID: [DuplicateMatch]] = [:]
+    @State private var showDuplicateSaveAlert = false
+
+    // MARK: - Computed
 
     private var selectedCount: Int {
         viewModel.draftItems.filter { $0.isSelected && $0.isValid }.count
     }
 
-    // Grouping: list of (category, [global indices in draftItems])
+    private var selectedDuplicateCount: Int {
+        viewModel.draftItems.filter { draft in
+            draft.isSelected && draft.isValid && !(draftDuplicates[draft.id] ?? []).isEmpty
+        }.count
+    }
+
     private var groupedItems: [(ItemCategory, [Int])] {
         ItemCategory.allCases.compactMap { category in
-            let indices = viewModel.draftItems.indices.filter { i in
-                viewModel.draftItems[i].category == category
+            let indices = viewModel.draftItems.indices.filter {
+                viewModel.draftItems[$0].category == category
             }
             return indices.isEmpty ? nil : (category, indices)
         }
@@ -42,138 +55,212 @@ struct ConfirmationView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.draftItems.isEmpty {
-                    ContentUnavailableView(
-                        "No Data",
-                        systemImage: "tray",
-                        description: Text("AI could not extract structured data from the screenshots")
+            listContent
+                .navigationTitle("Confirmation")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { toolbarContent }
+                .sheet(item: $editingContext) { ctx in
+                    DraftItemEditView(item: $viewModel.draftItems[ctx.id])
+                }
+                .onChange(of: editingContext) { _, newCtx in
+                    if newCtx == nil { checkDuplicates() }
+                }
+                .alert("Duplicate Items Found", isPresented: $showDuplicateSaveAlert) {
+                    Button("Save Anyway") { performSave() }
+                    Button("Cancel", role: .cancel) { }
+                } message: {
+                    Text(duplicateSaveAlertMessage)
+                }
+                .alert(
+                    "Failed to Save",
+                    isPresented: Binding(
+                        get: { viewModel.persistenceError != nil },
+                        set: { if !$0 { viewModel.persistenceError = nil } }
                     )
-                } else {
-                    List {
-                        // Hint
-                        Section {
-                            HStack(spacing: 10) {
-                                Image(systemName: "info.circle.fill")
-                                    .foregroundStyle(.blue)
-                                Text("Review the data. Uncheck unnecessary items or tap ✏️ to edit.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .listRowBackground(Color.blue.opacity(0.07))
-                        }
+                ) {
+                    Button("OK", role: .cancel) { viewModel.persistenceError = nil }
+                } message: {
+                    Text(viewModel.persistenceError ?? "An unexpected error occurred. Please try again.")
+                }
+                .onAppear { checkDuplicates() }
+        }
+    }
 
-                        // Warnings (skipped screenshots)
-                        if !viewModel.warnings.isEmpty {
-                            Section {
-                                ForEach(viewModel.warnings, id: \.self) { warning in
-                                    HStack(alignment: .top, spacing: 8) {
-                                        Image(systemName: "exclamationmark.triangle.fill")
-                                            .foregroundStyle(.orange)
-                                            .font(.caption)
-                                            .padding(.top, 2)
-                                        Text(warning)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                .listRowBackground(Color.orange.opacity(0.07))
-                            } header: {
-                                Text("Skipped (\(viewModel.warnings.count))")
-                                    .foregroundStyle(.orange)
-                            }
-                        }
+    // MARK: - List content
 
-                        // Groups by category
-                        ForEach(groupedItems, id: \.0) { category, indices in
-                            Section {
-                                ForEach(indices, id: \.self) { index in
-                                    DraftItemRow(
-                                        item: $viewModel.draftItems[index],
-                                        onEdit: {
-                                            // Single step → sheet opens only
-                                            // when item != nil, without a race condition
-                                            editingContext = DraftEditContext(id: index)
-                                        }
-                                    )
-                                }
-                                .onDelete { offsets in
-                                    deleteItems(offsets: offsets, globalIndices: indices)
-                                }
-                            } header: {
-                                categoryHeader(category, count: indices.count)
-                            }
-                        }
-                    }
-                    .listStyle(.insetGrouped)
-                }
+    @ViewBuilder
+    private var listContent: some View {
+        if viewModel.draftItems.isEmpty {
+            ContentUnavailableView(
+                "No Data",
+                systemImage: "tray",
+                description: Text("AI could not extract structured data from the screenshots")
+            )
+        } else {
+            List {
+                hintSection
+                if !viewModel.warnings.isEmpty { warningsSection }
+                categorySections
             }
-            .navigationTitle("Confirmation")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        viewModel.saveSelectedDrafts()
-                        // Only dismiss if the save actually succeeded
-                        if viewModel.persistenceError == nil {
-                            onSaved()
-                        }
-                    } label: {
-                        Text("Save (\(selectedCount))")
-                            .fontWeight(.semibold)
-                    }
-                    .disabled(selectedCount == 0)
-                }
+            .listStyle(.insetGrouped)
+        }
+    }
+
+    // MARK: - Hint section
+
+    private var hintSection: some View {
+        Section {
+            HStack(spacing: 10) {
+                Image(systemName: "info.circle.fill").foregroundStyle(.blue)
+                Text("Review the data. Uncheck unnecessary items or tap ✏️ to edit.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
-            // Edit sheet.
-            // .sheet(item:) guarantees atomicity: SwiftUI builds DraftItemEditView
-            // only when editingContext != nil, and automatically resets it to nil
-            // on close — no extra flag needed and no race condition.
-            .sheet(item: $editingContext) { ctx in
-                DraftItemEditView(item: $viewModel.draftItems[ctx.id])
+            .listRowBackground(Color.blue.opacity(0.07))
+        }
+    }
+
+    // MARK: - Warnings section
+
+    private var warningsSection: some View {
+        Section {
+            ForEach(viewModel.warnings, id: \.self) { warning in
+                WarningRow(text: warning)
             }
-            // Persistence error alert — shown when SwiftData fails to save confirmed items.
-            .alert(
-                "Failed to Save",
-                isPresented: Binding(
-                    get: { viewModel.persistenceError != nil },
-                    set: { if !$0 { viewModel.persistenceError = nil } }
-                )
-            ) {
-                Button("OK", role: .cancel) { viewModel.persistenceError = nil }
-            } message: {
-                Text(viewModel.persistenceError ?? "An unexpected error occurred. Please try again.")
+            .listRowBackground(Color.orange.opacity(0.07))
+        } header: {
+            Text("Skipped (\(viewModel.warnings.count))").foregroundStyle(.orange)
+        }
+    }
+
+    // MARK: - Category sections
+
+    private var categorySections: some View {
+        ForEach(groupedItems, id: \.0) { category, indices in
+            Section {
+                ForEach(indices, id: \.self) { index in
+                    draftRow(at: index)
+                }
+                .onDelete { offsets in
+                    deleteItems(offsets: offsets, globalIndices: indices)
+                }
+            } header: {
+                categoryHeader(category, count: indices.count)
             }
         }
+    }
+
+    // MARK: - Toolbar
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .cancellationAction) {
+            Button("Cancel") { dismiss() }
+        }
+        ToolbarItem(placement: .confirmationAction) {
+            Button {
+                if selectedDuplicateCount > 0 {
+                    showDuplicateSaveAlert = true
+                } else {
+                    performSave()
+                }
+            } label: {
+                saveButtonLabel
+            }
+            .disabled(selectedCount == 0)
+        }
+    }
+
+    private var saveButtonLabel: some View {
+        HStack(spacing: 4) {
+            if selectedDuplicateCount > 0 {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundStyle(.orange)
+                    .font(.caption)
+            }
+            Text("Save (\(selectedCount))").fontWeight(.semibold)
+        }
+    }
+
+    // MARK: - Draft row helper
+
+    @ViewBuilder
+    private func draftRow(at index: Int) -> some View {
+        let draft = viewModel.draftItems[index]
+        let dupes = draftDuplicates[draft.id] ?? []
+        DraftItemRow(
+            item: $viewModel.draftItems[index],
+            duplicateMatches: dupes,
+            onEdit: { editingContext = DraftEditContext(id: index) }
+        )
+        .listRowBackground(dupes.isEmpty ? nil : Color.orange.opacity(0.07))
+    }
+
+    // MARK: - Duplicate checking
+
+    private func checkDuplicates() {
+        var result: [UUID: [DuplicateMatch]] = [:]
+        for draft in viewModel.draftItems where draft.isValid {
+            let matches = DuplicateChecker.findDuplicates(
+                for: draft.title,
+                subtitle: draft.subtitle.isEmpty ? nil : draft.subtitle,
+                link: draft.link.isEmpty ? nil : draft.link,
+                category: draft.category,
+                in: modelContext
+            )
+            if !matches.isEmpty {
+                result[draft.id] = matches
+            }
+        }
+        draftDuplicates = result
+    }
+
+    private var duplicateSaveAlertMessage: String {
+        let count = selectedDuplicateCount
+        return count == 1
+            ? "1 item may already exist in your catalog. Save anyway?"
+            : "\(count) items may already exist in your catalog. Save anyway?"
+    }
+
+    // MARK: - Save
+
+    private func performSave() {
+        viewModel.saveSelectedDrafts()
+        if viewModel.persistenceError == nil { onSaved() }
     }
 
     // MARK: - Helpers
 
-    @ViewBuilder
     private func categoryHeader(_ category: ItemCategory, count: Int) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: category.icon)
-                .foregroundStyle(category.color)
+            Image(systemName: category.icon).foregroundStyle(category.color)
             Text(category.localizedName)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.primary)
             Spacer()
-            Text("\(count)")
-                .font(.caption.bold())
-                .foregroundStyle(category.color)
+            Text("\(count)").font(.caption.bold()).foregroundStyle(category.color)
         }
     }
 
     private func deleteItems(offsets: IndexSet, globalIndices: [Int]) {
-        // Convert local offsets to global indices, remove from the end
-        let toRemove = offsets
-            .map { localOffset in globalIndices[localOffset] }
-            .sorted(by: >)
-        for gi in toRemove {
-            viewModel.draftItems.remove(at: gi)
+        let toRemove = offsets.map { globalIndices[$0] }.sorted(by: >)
+        for gi in toRemove { viewModel.draftItems.remove(at: gi) }
+    }
+}
+
+// MARK: - WarningRow
+
+private struct WarningRow: View {
+    let text: String
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .font(.caption)
+                .padding(.top, 2)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 }
@@ -182,56 +269,73 @@ struct ConfirmationView: View {
 
 struct DraftItemRow: View {
     @Binding var item: DraftItem
+    var duplicateMatches: [DuplicateMatch] = []
     let onEdit: () -> Void
+
+    private var topDuplicate: DuplicateMatch? { duplicateMatches.first }
 
     var body: some View {
         HStack(spacing: 12) {
-            // Checkbox
-            Button {
-                item.isSelected.toggle()
-            } label: {
-                Image(systemName: item.isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(item.isSelected ? .blue : Color(.systemFill))
-                    .contentTransition(.symbolEffect(.replace))
-            }
-            .buttonStyle(.plain)
-
-            // Content
-            VStack(alignment: .leading, spacing: 3) {
-                Text(item.displayTitle)
-                    .font(.system(size: 15, weight: .medium))
-                    .lineLimit(2)
-                    .foregroundStyle(item.isSelected ? .primary : .secondary)
-
-                if !item.subtitle.isEmpty {
-                    Text(item.subtitle)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                if !item.extra1.isEmpty {
-                    Text(item.extra1)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                }
-            }
-
+            checkboxButton
+            contentStack
             Spacer()
-
-            // Edit button
-            Button {
-                onEdit()
-            } label: {
-                Image(systemName: "pencil.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Color(.systemFill))
-            }
-            .buttonStyle(.plain)
+            editButton
         }
         .padding(.vertical, 2)
         .opacity(item.isSelected ? 1.0 : 0.45)
+    }
+
+    private var checkboxButton: some View {
+        Button {
+            item.isSelected.toggle()
+        } label: {
+            Image(systemName: item.isSelected ? "checkmark.circle.fill" : "circle")
+                .font(.title3)
+                .foregroundStyle(item.isSelected ? .blue : Color(.systemFill))
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var contentStack: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(item.displayTitle)
+                .font(.system(size: 15, weight: .medium))
+                .lineLimit(2)
+                .foregroundStyle(item.isSelected ? .primary : .secondary)
+
+            if !item.subtitle.isEmpty {
+                Text(item.subtitle)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            if !item.extra1.isEmpty {
+                Text(item.extra1)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+            if let match = topDuplicate {
+                duplicateBadge(match)
+            }
+        }
+    }
+
+    private func duplicateBadge(_ match: DuplicateMatch) -> some View {
+        Label(match.confidence.label, systemImage: match.confidence.icon)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(match.confidence.color)
+            .padding(.top, 1)
+    }
+
+    private var editButton: some View {
+        Button { onEdit() } label: {
+            Image(systemName: "pencil.circle.fill")
+                .font(.title3)
+                .foregroundStyle(Color(.systemFill))
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -246,7 +350,6 @@ struct DraftItemEditView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // Category picker
                 Section("Category") {
                     Picker("Category", selection: $item.category) {
                         ForEach(ItemCategory.allCases, id: \.self) { cat in
@@ -255,7 +358,6 @@ struct DraftItemEditView: View {
                     }
                 }
 
-                // Main fields
                 Section(schema.titleLabel) {
                     TextField(schema.titlePlaceholder, text: $item.title, axis: .vertical)
                         .lineLimit(4, reservesSpace: false)
@@ -300,8 +402,7 @@ struct DraftItemEditView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .fontWeight(.semibold)
+                    Button("Done") { dismiss() }.fontWeight(.semibold)
                 }
             }
         }

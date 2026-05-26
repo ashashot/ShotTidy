@@ -4,6 +4,7 @@
 //
 //  Main SwiftUI view for the Share Extension.
 //  Renders each phase: loading → results list → empty / error states.
+//  Shows duplicate indicators for items already present in the catalog.
 //
 
 import SwiftUI
@@ -14,11 +15,12 @@ struct ShareAnalysisView: View {
     let onCancel: () -> Void
 
     /// Identifies which item is being edited (index into viewModel.draftWrappers)
-    private struct EditTarget: Identifiable {
+    private struct EditTarget: Identifiable, Equatable {
         let index: Int
         var id: Int { index }
     }
     @State private var editTarget: EditTarget? = nil
+    @State private var showDuplicateSaveAlert = false
 
     init(
         inputItems: [NSExtensionItem],
@@ -70,24 +72,49 @@ struct ShareAnalysisView: View {
         if case .results = viewModel.phase {
             ToolbarItem(placement: .confirmationAction) {
                 Button {
-                    do {
-                        try viewModel.saveSelected()
-                        // Brief pause so the user sees "Saving…" then the extension closes
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                            onComplete()
-                        }
-                    } catch {
-                        // Fall back to just closing — items were not saved
-                        onCancel()
+                    if viewModel.selectedDuplicateCount > 0 {
+                        showDuplicateSaveAlert = true
+                    } else {
+                        performSave()
                     }
                 } label: {
-                    Text(viewModel.selectedCount == 0
-                         ? "Save"
-                         : "Save (\(viewModel.selectedCount))")
-                        .fontWeight(.semibold)
+                    HStack(spacing: 4) {
+                        if viewModel.selectedDuplicateCount > 0 {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundStyle(.orange)
+                                .font(.caption)
+                        }
+                        Text(viewModel.selectedCount == 0
+                             ? "Save"
+                             : "Save (\(viewModel.selectedCount))")
+                            .fontWeight(.semibold)
+                    }
                 }
                 .disabled(viewModel.selectedCount == 0)
+                .alert("Duplicate Items Found", isPresented: $showDuplicateSaveAlert) {
+                    Button("Save Anyway") { performSave() }
+                    Button("Cancel", role: .cancel) { }
+                } message: {
+                    let count = viewModel.selectedDuplicateCount
+                    Text(count == 1
+                         ? "1 item may already exist in your catalog. Save anyway?"
+                         : "\(count) items may already exist in your catalog. Save anyway?")
+                }
             }
+        }
+    }
+
+    // MARK: - Save
+
+    private func performSave() {
+        do {
+            try viewModel.saveSelected()
+            // Brief pause so the user sees "Saving…" then the extension closes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                onComplete()
+            }
+        } catch {
+            onCancel()
         }
     }
 
@@ -141,12 +168,17 @@ struct ShareAnalysisView: View {
                 )
             )
         }
+        // Re-check duplicates after editing (user may have changed the title)
+        .onChange(of: editTarget) { _, newTarget in
+            if newTarget == nil { viewModel.checkDuplicates() }
+        }
     }
 
     @ViewBuilder
     private func draftRow(index: Int) -> some View {
         let wrapper = viewModel.draftWrappers[index]
         let info = ShareCategoryOption.displayInfo(for: wrapper.item.categoryKey)
+        let dupLevel = wrapper.duplicateLevel
 
         HStack(spacing: 12) {
             // Checkbox
@@ -166,10 +198,8 @@ struct ShareAnalysisView: View {
             VStack(alignment: .leading, spacing: 4) {
                 // Category chip
                 HStack(spacing: 4) {
-                    Image(systemName: info.icon)
-                        .font(.caption2)
-                    Text(info.name)
-                        .font(.caption2.weight(.semibold))
+                    Image(systemName: info.icon).font(.caption2)
+                    Text(info.name).font(.caption2.weight(.semibold))
                 }
                 .foregroundStyle(info.color)
 
@@ -194,6 +224,14 @@ struct ShareAnalysisView: View {
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
                 }
+
+                // Duplicate badge
+                if let level = dupLevel {
+                    Label(level.label, systemImage: level.icon)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(level.color)
+                        .padding(.top, 1)
+                }
             }
 
             Spacer(minLength: 0)
@@ -210,6 +248,7 @@ struct ShareAnalysisView: View {
         }
         .padding(.vertical, 2)
         .opacity(wrapper.isSelected ? 1.0 : 0.4)
+        .listRowBackground(dupLevel == nil ? nil : Color.orange.opacity(0.07))
     }
 
     // MARK: - Empty

@@ -3,6 +3,7 @@
 //  ShotTidy
 //
 //  Screen for adding or editing a catalog item.
+//  Performs real-time duplicate detection while the user types.
 //
 
 import SwiftUI
@@ -22,6 +23,10 @@ struct ItemEditView: View {
     @State private var extra2: String
     @State private var notes: String
 
+    // MARK: - Duplicate detection
+    @State private var duplicates: [DuplicateMatch] = []
+    @State private var showDuplicateConfirm = false
+
     init(category: ItemCategory, item: CatalogItem?) {
         self.category = category
         self.existingItem = item
@@ -37,6 +42,12 @@ struct ItemEditView: View {
     private var schema: ItemCategory.FieldSchema { category.fieldSchema }
     private var canSave: Bool { !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
+    /// Key used to trigger the debounced duplicate check.
+    /// Changes whenever any of the fields used for matching change.
+    private var duplicateCheckKey: String {
+        "\(title)|\(subtitle)|\(link)"
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -51,6 +62,11 @@ struct ItemEditView: View {
                         Text("Required field")
                             .foregroundStyle(.red)
                     }
+                }
+
+                // Duplicate warning — shown between title and subtitle
+                if !duplicates.isEmpty {
+                    duplicateWarningSection
                 }
 
                 // Subtitle
@@ -101,13 +117,108 @@ struct ItemEditView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        save()
-                        dismiss()
+                        // When adding a new item and duplicates are detected, ask for confirmation.
+                        // When editing an existing item, save directly (user intentionally chose to edit).
+                        if !isEditing && !duplicates.isEmpty {
+                            showDuplicateConfirm = true
+                        } else {
+                            save()
+                            dismiss()
+                        }
                     }
                     .disabled(!canSave)
                     .fontWeight(.semibold)
                 }
             }
+            // Confirmation alert when saving despite duplicates
+            .alert("Possible Duplicate", isPresented: $showDuplicateConfirm) {
+                Button("Save Anyway", role: .destructive) {
+                    save()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text(duplicateAlertMessage)
+            }
+            // Debounced duplicate check: fires 400 ms after duplicateCheckKey changes.
+            // Cancelled automatically when the key changes again before the delay elapses.
+            .task(id: duplicateCheckKey) {
+                guard canSave else {
+                    duplicates = []
+                    return
+                }
+                // 400 ms debounce — avoids querying on every keystroke
+                try? await Task.sleep(for: .milliseconds(400))
+                guard !Task.isCancelled else { return }
+
+                duplicates = DuplicateChecker.findDuplicates(
+                    for: title,
+                    subtitle: subtitle.isEmpty ? nil : subtitle,
+                    link: link.isEmpty ? nil : link,
+                    category: category,
+                    excludingId: existingItem?.id,
+                    in: modelContext
+                )
+            }
+        }
+    }
+
+    // MARK: - Duplicate warning section
+
+    @ViewBuilder
+    private var duplicateWarningSection: some View {
+        Section {
+            ForEach(duplicates) { match in
+                HStack(spacing: 10) {
+                    Image(systemName: match.confidence.icon)
+                        .foregroundStyle(match.confidence.color)
+                        .font(.subheadline)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(match.item.title)
+                            .font(.subheadline.weight(.medium))
+                            .lineLimit(1)
+                        if let sub = match.item.subtitle {
+                            Text(sub)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Text(match.reason)
+                            .font(.caption2)
+                            .foregroundStyle(match.confidence.color)
+                    }
+
+                    Spacer()
+                }
+                .padding(.vertical, 2)
+            }
+            .listRowBackground(Color.orange.opacity(0.07))
+        } header: {
+            HStack(spacing: 5) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                Text(duplicates.count == 1
+                     ? "Possible Duplicate"
+                     : "Possible Duplicates (\(duplicates.count))")
+            }
+            .foregroundStyle(.orange)
+        } footer: {
+            Text("You can still save — duplicates are shown as a warning only.")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Alert message
+
+    private var duplicateAlertMessage: String {
+        let topNames = duplicates.prefix(2)
+            .map { "\u{201C}\($0.item.title)\u{201D}" }
+            .joined(separator: ", ")
+        if duplicates.count == 1 {
+            return "An item with the same title already exists: \(topNames). Save anyway?"
+        } else {
+            return "\(duplicates.count) similar items already exist: \(topNames)\(duplicates.count > 2 ? "…" : ""). Save anyway?"
         }
     }
 
