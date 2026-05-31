@@ -177,7 +177,7 @@ struct PaywallView: View {
             FeatureRow(
                 icon: "icloud.fill", color: .cyan,
                 title: "CloudKit Sync",
-                free: "✓", pro: "✓"
+                free: "-", pro: "✓"
             )
             Divider().padding(.leading, 50)
 

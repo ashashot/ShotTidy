@@ -1,0 +1,111 @@
+{
+  "identifier" : "6E86CAB7",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "1.99",
+      "familyShareable" : false,
+      "groupLevel" : 1,
+      "internalID" : "8A3F1B2C-1001-0000-0000-000000000001",
+      "introductoryOffer" : null,
+      "localizations" : [
+        {
+          "description" : "10 enrichment credits for catalog item enhancement",
+          "displayName" : "Enrichments Pack — 10",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.mbx.shottidier.enrichments_10",
+      "referenceName" : "Enrichments Pack 10",
+      "subscriptionGroupID" : null,
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "groupLevel" : 1,
+      "internalID" : "8A3F1B2C-1001-0000-0000-000000000002",
+      "introductoryOffer" : null,
+      "localizations" : [
+        {
+          "description" : "30 enrichment credits for catalog item enhancement",
+          "displayName" : "Enrichments Pack — 30",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.mbx.shottidier.enrichments_30",
+      "referenceName" : "Enrichments Pack 30",
+      "subscriptionGroupID" : null,
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "groupLevel" : 1,
+      "internalID" : "8A3F1B2C-1001-0000-0000-000000000003",
+      "introductoryOffer" : null,
+      "localizations" : [
+        {
+          "description" : "75 enrichment credits for catalog item enhancement",
+          "displayName" : "Enrichments Pack — 75",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.mbx.shottidier.enrichments_75",
+      "referenceName" : "Enrichments Pack 75",
+      "subscriptionGroupID" : null,
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_appStoreLocale" : "en_US",
+    "_failTransactionsEnabled" : false,
+    "_interruptedPurchasesEnabled" : false,
+    "_receiptURLType" : "xcode"
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "8A3F1B2C-2001-0000-0000-000000000000",
+      "localizations" : [
+        {
+          "customAppName" : "ShotTidy",
+          "displayName" : "ShotTidy Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "ShotTidy Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupLevel" : 1,
+          "internalID" : "8A3F1B2C-3001-0000-0000-000000000001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited screenshot analysis + 10 enrichment credits every 30 days",
+              "displayName" : "ShotTidy Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.mbx.shottidier.pro_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Pro Monthly",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

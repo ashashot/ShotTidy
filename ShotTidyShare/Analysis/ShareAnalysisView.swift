@@ -21,6 +21,7 @@ struct ShareAnalysisView: View {
     }
     @State private var editTarget: EditTarget? = nil
     @State private var showDuplicateSaveAlert = false
+    @State private var saveErrorMessage: String? = nil
 
     init(
         inputItems: [NSExtensionItem],
@@ -58,6 +59,14 @@ struct ShareAnalysisView: View {
         }
         .task {
             await viewModel.start()
+        }
+        .alert("Save Error", isPresented: .init(
+            get: { saveErrorMessage != nil },
+            set: { if !$0 { saveErrorMessage = nil } }
+        )) {
+            Button("Close") { onCancel() }
+        } message: {
+            Text(saveErrorMessage ?? "")
         }
     }
 
@@ -109,6 +118,11 @@ struct ShareAnalysisView: View {
     // MARK: - Save
 
     private func performSave() {
+        // Debug: show App Group container URL
+        let containerURL = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.mbx.ShotTidier")
+        print("[ShotTidyShare] App Group container URL: \(String(describing: containerURL))")
+
         do {
             try viewModel.saveSelected()
             // Brief pause so the user sees "Saving…" then the extension closes
@@ -116,7 +130,8 @@ struct ShareAnalysisView: View {
                 onComplete()
             }
         } catch {
-            onCancel()
+            print("[ShotTidyShare] Save failed: \(error)")
+            saveErrorMessage = "Save failed: \(error.localizedDescription)\nContainer: \(String(describing: containerURL?.path ?? "nil"))"
         }
     }
 

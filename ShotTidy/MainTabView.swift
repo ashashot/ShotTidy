@@ -163,7 +163,9 @@ struct MainTabView: View {
     // MARK: - Pending import
 
     private func importPendingDraftsIfNeeded() {
+        print("[MainApp] App Group container: \(AppGroupManager.containerURL?.path ?? "nil")")
         let pending = AppGroupManager.loadPendingDrafts()
+        print("[MainApp] Pending drafts count: \(pending.count)")
         guard !pending.isEmpty else { return }
 
         var imported = 0

@@ -59,7 +59,7 @@ struct PendingDraftItem: Codable, Identifiable {
 // MARK: - AppGroupManager
 
 enum AppGroupManager {
-    static let groupID = "group.mbx.ShotTidy"
+    static let groupID = "group.com.mbx.ShotTidier"
 
     /// URL of the shared App Group container
     static var containerURL: URL? {
@@ -166,6 +166,6 @@ enum AppGroupError: LocalizedError {
     case containerUnavailable
 
     var errorDescription: String? {
-        "The App Group shared container is unavailable. Check the group.mbx.ShotTidy configuration."
+        "The App Group shared container is unavailable. Check the group.com.mbx.ShotTidier configuration."
     }
 }

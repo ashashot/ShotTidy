@@ -29,7 +29,7 @@ final class ShareViewController: UIViewController {
             onCancel: { [weak self] in
                 self?.extensionContext?.cancelRequest(
                     withError: NSError(
-                        domain: "com.mbx.ShotTidy",
+                        domain: "com.mbx.ShotTidier",
                         code: NSUserCancelledError,
                         userInfo: nil
                     )

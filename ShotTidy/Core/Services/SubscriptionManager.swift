@@ -5,10 +5,10 @@
 //  StoreKit 2 manager — subscriptions and one-time enrichment packs.
 //
 //  Product IDs (configure in App Store Connect):
-//    com.mbxsolutions.shottidy.pro_monthly    — $4.99/month Auto-Renewable Subscription
-//    com.mbxsolutions.shottidy.enrichments_10 — $1.99  Non-Consumable pack (10 credits)
-//    com.mbxsolutions.shottidy.enrichments_30 — $4.99  Non-Consumable pack (30 credits)
-//    com.mbxsolutions.shottidy.enrichments_75 — $9.99  Non-Consumable pack (75 credits)
+//    com.mbx.shottidier.pro_monthly    — $4.99/month Auto-Renewable Subscription
+//    com.mbx.shottidier.enrichments_10 — $1.99  Consumable pack (10 credits)
+//    com.mbx.shottidier.enrichments_30 — $4.99  Consumable pack (30 credits)
+//    com.mbx.shottidier.enrichments_75 — $9.99  Consumable pack (75 credits)
 //
 
 import StoreKit
@@ -21,10 +21,10 @@ final class SubscriptionManager {
     // MARK: - Product IDs
 
     enum ProductID {
-        static let proMonthly     = "com.mbxsolutions.shottidy.pro_monthly"
-        static let enrichments10  = "com.mbxsolutions.shottidy.enrichments_10"
-        static let enrichments30  = "com.mbxsolutions.shottidy.enrichments_30"
-        static let enrichments75  = "com.mbxsolutions.shottidy.enrichments_75"
+        static let proMonthly     = "com.mbx.shottidier.pro_monthly"
+        static let enrichments10  = "com.mbx.shottidier.enrichments_10"
+        static let enrichments30  = "com.mbx.shottidier.enrichments_30"
+        static let enrichments75  = "com.mbx.shottidier.enrichments_75"
 
         static var all: Set<String> {
             [proMonthly, enrichments10, enrichments30, enrichments75]
@@ -126,9 +126,26 @@ final class SubscriptionManager {
                 active = true
             }
         }
+
+        let previous = isProActive
         isProActive = active
         // Sync Pro status to the App Group so the Share Extension can read it
         AppGroupManager.saveIsProStatus(active)
+
+        // If iCloud sync eligibility changed mid-session, notify the user to restart.
+        // The ModelContainer is configured once at launch based on Pro status,
+        // so a restart is required for the change to take effect.
+        if previous != active {
+            needsRestartForSyncChange = true
+        }
+    }
+
+    /// Set to true when Pro status changes mid-session.
+    /// The UI should prompt the user to restart to apply the iCloud sync change.
+    private(set) var needsRestartForSyncChange = false
+
+    func acknowledgeRestartPrompt() {
+        needsRestartForSyncChange = false
     }
 
     // MARK: - Private helpers

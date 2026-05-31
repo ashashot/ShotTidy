@@ -2,21 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIBackgroundModes</key>
-	<array>
-		<!-- Required by CloudKit (SwiftData sync): silent push notifications for change notifications -->
-		<string>remote-notification</string>
-	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.mbx.ShotTidier</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>shottidy</string>
 			</array>
-			<key>CFBundleURLName</key>
-			<string>mbx.ShotTidy</string>
 		</dict>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
 	</array>
 </dict>
 </plist>

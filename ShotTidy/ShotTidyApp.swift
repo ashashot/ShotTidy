@@ -32,17 +32,38 @@ struct ShotTidyApp: App {
             CatalogItem.self,
         ])
 
-        // First try CloudKit (CatalogItem metadata is synced)
-        if let container = try? ModelContainer(
-            for: schema,
-            configurations: [ModelConfiguration(schema: schema, cloudKitDatabase: .automatic)]
-        ) { return container }
+        // Both tiers use the same SQLite file so data is preserved across tier changes.
+        // CloudKit sync is layered on top for Pro users — no migration needed.
+        let storeURL = URL.applicationSupportDirectory
+            .appending(path: "ShotTidy.sqlite")
 
-        // Fallback — local storage only
-        if let container = try? ModelContainer(
-            for: schema,
-            configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)]
-        ) { return container }
+        let isPro = AppGroupManager.loadIsProStatus()
+
+        if isPro {
+            // Pro tier: CloudKit sync enabled.
+            // The container ID is kept as iCloud.mbx.ShotTidy (declared in entitlements)
+            // so existing records sync correctly regardless of the app bundle ID.
+            let cloudConfig = ModelConfiguration(
+                "ShotTidy",
+                schema: schema,
+                url: storeURL,
+                cloudKitDatabase: .private("iCloud.mbx.ShotTidy")
+            )
+            if let container = try? ModelContainer(for: schema, configurations: [cloudConfig]) {
+                return container
+            }
+        }
+
+        // Free tier (or CloudKit fallback): local storage only, no sync.
+        let localConfig = ModelConfiguration(
+            "ShotTidy",
+            schema: schema,
+            url: storeURL,
+            cloudKitDatabase: .none
+        )
+        if let container = try? ModelContainer(for: schema, configurations: [localConfig]) {
+            return container
+        }
 
         fatalError("Failed to create ModelContainer")
     }()
@@ -59,6 +80,23 @@ struct ShotTidyApp: App {
                     await subscriptionManager.onLaunch()
                     // Check rolling 30-day reset now that we know the subscription state.
                     usageManager.performRollingReset(isPro: subscriptionManager.isProActive)
+                }
+                .alert(
+                    "Restart Required",
+                    isPresented: .init(
+                        get: { subscriptionManager.needsRestartForSyncChange },
+                        set: { _ in subscriptionManager.acknowledgeRestartPrompt() }
+                    )
+                ) {
+                    Button("OK") {
+                        subscriptionManager.acknowledgeRestartPrompt()
+                    }
+                } message: {
+                    if subscriptionManager.isProActive {
+                        Text("iCloud sync has been enabled. Please restart the app to start syncing your catalog across devices.")
+                    } else {
+                        Text("iCloud sync has been disabled. Please restart the app to apply changes.")
+                    }
                 }
         }
         .modelContainer(sharedModelContainer)
