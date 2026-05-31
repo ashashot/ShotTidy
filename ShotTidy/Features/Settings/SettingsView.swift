@@ -25,6 +25,7 @@ struct SettingsView: View {
     @State private var showEnrichmentStore = false
     @State private var isRestoring = false
     @State private var restoreError: String?
+    @State private var syncMonitor = CloudSyncMonitor()
 
     var body: some View {
         NavigationStack {
@@ -151,6 +152,81 @@ struct SettingsView: View {
 
                     Button("Delete All Data", role: .destructive) {
                         showDeleteAlert = true
+                    }
+                }
+
+                // MARK: - iCloud Sync
+
+                if subManager.isProActive {
+                    Section {
+                        // Status row
+                        Group {
+                            if syncMonitor.isSyncing {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Label("Syncing…", systemImage: "icloud.and.arrow.up")
+                                            .foregroundStyle(.secondary)
+                                        Spacer()
+                                        ProgressView()
+                                    }
+                                    ProgressView()
+                                        .progressViewStyle(.linear)
+                                        .tint(.blue)
+                                }
+                                .padding(.vertical, 2)
+                            } else if let errorMsg = syncMonitor.state.errorMessage {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Label("Sync Error", systemImage: "exclamationmark.icloud.fill")
+                                        .foregroundStyle(.red)
+                                    Text(errorMsg)
+                                        .font(.caption)
+                                        .foregroundStyle(.red)
+                                }
+                                .padding(.vertical, 2)
+                            } else {
+                                HStack {
+                                    Label("Last Synced", systemImage: "checkmark.icloud")
+                                    Spacer()
+                                    if let date = syncMonitor.lastSyncDate {
+                                        Text(date, style: .relative)
+                                            .foregroundStyle(.secondary)
+                                    } else {
+                                        Text("Not yet")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Sync Now button
+                        Button {
+                            syncMonitor.triggerSync(context: modelContext)
+                        } label: {
+                            Label("Sync Now", systemImage: "arrow.clockwise.icloud")
+                        }
+                        .disabled(syncMonitor.isSyncing)
+
+                    } header: {
+                        Text("iCloud Sync")
+                    }
+                } else {
+                    Section {
+                        Button {
+                            showPaywall = true
+                        } label: {
+                            HStack {
+                                Label("iCloud Sync", systemImage: "lock.icloud")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Image(systemName: "lock.fill")
+                                    .foregroundStyle(.secondary)
+                                    .font(.caption)
+                            }
+                        }
+                    } header: {
+                        Text("iCloud Sync")
+                    } footer: {
+                        Text("Available with Pro subscription.")
                     }
                 }
 
