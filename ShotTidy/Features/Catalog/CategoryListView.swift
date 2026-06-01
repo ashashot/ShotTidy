@@ -61,6 +61,7 @@ struct CategoryListView: View {
                         for index in indexSet {
                             modelContext.delete(filtered[index])
                         }
+                        WidgetDataManager.writeSnapshot(context: modelContext)
                     }
                 }
                 .searchable(text: $searchText, prompt: "Search in \(descriptor.name)")
@@ -68,6 +69,9 @@ struct CategoryListView: View {
         }
         .navigationTitle(descriptor.name)
         .navigationBarTitleDisplayMode(.large)
+        .onChange(of: items.map { $0.isCompleted }) { _, _ in
+            WidgetDataManager.writeSnapshot(context: modelContext)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {

@@ -7,11 +7,22 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DE10BB572FCD69A2005897E9 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE10BB562FCD69A1005897E9 /* WidgetKit.framework */; };
+		DE10BB592FCD69A2005897E9 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE10BB582FCD69A2005897E9 /* SwiftUI.framework */; };
+		DE10BB682FCD69A2005897E9 /* ShotTidyWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DE10BB552FCD69A1005897E9 /* ShotTidyWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DE10BB832FCD6B83005897E9 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE10BB562FCD69A1005897E9 /* WidgetKit.framework */; };
 		DE327FF82FC1B9400090FC80 /* ShotTidyShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DE3282BA2FC5798B0090FC80 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE3282B92FC5798B0090FC80 /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		DE10BB662FCD69A2005897E9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DE327FB92FC1B4160090FC80 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DE10BB542FCD69A1005897E9;
+			remoteInfo = ShotTidyWidgetExtension;
+		};
 		DE327FF62FC1B9400090FC80 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = DE327FB92FC1B4160090FC80 /* Project object */;
@@ -28,6 +39,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				DE10BB682FCD69A2005897E9 /* ShotTidyWidgetExtension.appex in Embed Foundation Extensions */,
 				DE327FF82FC1B9400090FC80 /* ShotTidyShare.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
@@ -36,6 +48,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		DE10BB552FCD69A1005897E9 /* ShotTidyWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotTidyWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE10BB562FCD69A1005897E9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		DE10BB582FCD69A2005897E9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		DE10BB822FCD6ABE005897E9 /* ShotTidyWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShotTidyWidgetExtension.entitlements; sourceTree = "<group>"; };
 		DE327F002FC1B0000090FC80 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		DE327FC12FC1B4160090FC80 /* ShotTidy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShotTidy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotTidyShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -43,6 +59,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DE10BB6C2FCD69A2005897E9 /* Exceptions for "ShotTidyWidget" folder in "ShotTidyWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DE10BB542FCD69A1005897E9 /* ShotTidyWidgetExtension */;
+		};
 		DE327FCE2FC1B4170090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidy" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -68,6 +91,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		DE10BB5A2FCD69A2005897E9 /* ShotTidyWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DE10BB6C2FCD69A2005897E9 /* Exceptions for "ShotTidyWidget" folder in "ShotTidyWidgetExtension" target */,
+			);
+			path = ShotTidyWidget;
+			sourceTree = "<group>";
+		};
 		DE327FC32FC1B4160090FC80 /* ShotTidy */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -88,10 +119,20 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		DE10BB522FCD69A1005897E9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE10BB592FCD69A2005897E9 /* SwiftUI.framework in Frameworks */,
+				DE10BB572FCD69A2005897E9 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DE327FBE2FC1B4160090FC80 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DE10BB832FCD6B83005897E9 /* WidgetKit.framework in Frameworks */,
 				DE3282BA2FC5798B0090FC80 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -109,8 +150,10 @@
 		DE327FB82FC1B4160090FC80 = {
 			isa = PBXGroup;
 			children = (
+				DE10BB822FCD6ABE005897E9 /* ShotTidyWidgetExtension.entitlements */,
 				DE327FC32FC1B4160090FC80 /* ShotTidy */,
 				DE327FEF2FC1B9400090FC80 /* ShotTidyShare */,
+				DE10BB5A2FCD69A2005897E9 /* ShotTidyWidget */,
 				DE327FC22FC1B4160090FC80 /* Products */,
 				DE327F002FC1B0000090FC80 /* Secrets.xcconfig */,
 				DE3282B82FC5798B0090FC80 /* Frameworks */,
@@ -122,6 +165,7 @@
 			children = (
 				DE327FC12FC1B4160090FC80 /* ShotTidy.app */,
 				DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */,
+				DE10BB552FCD69A1005897E9 /* ShotTidyWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -130,6 +174,8 @@
 			isa = PBXGroup;
 			children = (
 				DE3282B92FC5798B0090FC80 /* StoreKit.framework */,
+				DE10BB562FCD69A1005897E9 /* WidgetKit.framework */,
+				DE10BB582FCD69A2005897E9 /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -137,6 +183,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		DE10BB542FCD69A1005897E9 /* ShotTidyWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE10BB692FCD69A2005897E9 /* Build configuration list for PBXNativeTarget "ShotTidyWidgetExtension" */;
+			buildPhases = (
+				DE10BB512FCD69A1005897E9 /* Sources */,
+				DE10BB522FCD69A1005897E9 /* Frameworks */,
+				DE10BB532FCD69A1005897E9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				DE10BB5A2FCD69A2005897E9 /* ShotTidyWidget */,
+			);
+			name = ShotTidyWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = ShotTidyWidgetExtension;
+			productReference = DE10BB552FCD69A1005897E9 /* ShotTidyWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		DE327FC02FC1B4160090FC80 /* ShotTidy */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DE327FCF2FC1B4170090FC80 /* Build configuration list for PBXNativeTarget "ShotTidy" */;
@@ -150,6 +218,7 @@
 			);
 			dependencies = (
 				DE327FF72FC1B9400090FC80 /* PBXTargetDependency */,
+				DE10BB672FCD69A2005897E9 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				DE327FC32FC1B4160090FC80 /* ShotTidy */,
@@ -193,6 +262,9 @@
 				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
+					DE10BB542FCD69A1005897E9 = {
+						CreatedOnToolsVersion = 26.5;
+					};
 					DE327FC02FC1B4160090FC80 = {
 						CreatedOnToolsVersion = 26.5;
 					};
@@ -217,11 +289,19 @@
 			targets = (
 				DE327FC02FC1B4160090FC80 /* ShotTidy */,
 				DE327FED2FC1B9400090FC80 /* ShotTidyShare */,
+				DE10BB542FCD69A1005897E9 /* ShotTidyWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		DE10BB532FCD69A1005897E9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DE327FBF2FC1B4160090FC80 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -239,6 +319,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		DE10BB512FCD69A1005897E9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DE327FBD2FC1B4160090FC80 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -256,6 +343,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		DE10BB672FCD69A2005897E9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DE10BB542FCD69A1005897E9 /* ShotTidyWidgetExtension */;
+			targetProxy = DE10BB662FCD69A2005897E9 /* PBXContainerItemProxy */;
+		};
 		DE327FF72FC1B9400090FC80 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = DE327FED2FC1B9400090FC80 /* ShotTidyShare */;
@@ -264,6 +356,68 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		DE10BB6A2FCD69A2005897E9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ShotTidyWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FK4KSS322U;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShotTidyWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShotTidyWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mbx.ShotTidier.ShotTididerWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DE10BB6B2FCD69A2005897E9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ShotTidyWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FK4KSS322U;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShotTidyWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShotTidyWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mbx.ShotTidier.ShotTididerWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		DE327FD02FC1B4170090FC80 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = DE327F002FC1B0000090FC80 /* Secrets.xcconfig */;
@@ -518,6 +672,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		DE10BB692FCD69A2005897E9 /* Build configuration list for PBXNativeTarget "ShotTidyWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE10BB6A2FCD69A2005897E9 /* Debug */,
+				DE10BB6B2FCD69A2005897E9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		DE327FBC2FC1B4160090FC80 /* Build configuration list for PBXProject "ShotTidy" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

@@ -11,6 +11,7 @@ import SwiftData
 struct CategoriesView: View {
     @Query private var allItems: [CatalogItem]
     @Binding var showImport: Bool
+    @Binding var navigationPath: NavigationPath
 
     @Environment(CategoryStore.self) private var categoryStore
 
@@ -27,13 +28,11 @@ struct CategoriesView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(categoryCounts, id: \.0) { category, count in
-                        NavigationLink {
-                            CategoryListView(descriptor: category)
-                        } label: {
+                        NavigationLink(value: category) {
                             CategoryCardView(category: category, count: count)
                         }
                         .buttonStyle(.plain)
@@ -45,6 +44,9 @@ struct CategoriesView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Catalog")
+            .navigationDestination(for: CategoryDescriptor.self) { category in
+                CategoryListView(descriptor: category)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {

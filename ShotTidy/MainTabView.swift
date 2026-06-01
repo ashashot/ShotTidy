@@ -7,11 +7,12 @@
 //  and silently imports them into SwiftData.
 //
 //  Deep link URL scheme (shottidy://):
-//    shottidy://            → Catalog tab
-//    shottidy://catalog     → Catalog tab
-//    shottidy://import      → open Import sheet
-//    shottidy://screenshots → Screenshots tab
-//    shottidy://settings    → Settings tab
+//    shottidy://                    → Catalog tab
+//    shottidy://catalog             → Catalog tab
+//    shottidy://import              → open Import sheet
+//    shottidy://screenshots         → Screenshots tab
+//    shottidy://settings            → Settings tab
+//    shottidy://category/<key>      → open category list (used by widgets)
 
 import SwiftUI
 import SwiftData
@@ -24,6 +25,7 @@ enum DeepLink {
     case screenshots
     case settings
     case openImport
+    case category(String)   // shottidy://category/<key>
 
     /// Parse a `shottidy://` URL into a DeepLink action.
     /// Returns `nil` for unrecognised paths (silently ignored).
@@ -34,6 +36,9 @@ enum DeepLink {
         case "import":           self = .openImport
         case "screenshots":      self = .screenshots
         case "settings":         self = .settings
+        case "category":
+            let key = url.pathComponents.dropFirst().first ?? ""
+            self = key.isEmpty ? .catalog : .category(key)
         default:                 return nil
         }
     }
@@ -51,6 +56,7 @@ struct MainTabView: View {
 
     @State private var selectedTab: AppTab = .catalog
     @State private var showImport = false
+    @State private var catalogNavigationPath = NavigationPath()
 
     // Banner shown after a successful share-extension import
     @State private var importBanner: String? = nil
@@ -70,7 +76,7 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             // MARK: Catalog
-            CategoriesView(showImport: $showImport)
+            CategoriesView(showImport: $showImport, navigationPath: $catalogNavigationPath)
                 .tabItem {
                     Label("Catalog", systemImage: "square.grid.2x2.fill")
                 }
@@ -109,6 +115,7 @@ struct MainTabView: View {
             syncCatalogIndex()
             syncCustomCategories()
             importPendingDraftsIfNeeded()
+            syncWidgetSnapshot()
         }
         // Keep the shared CategoryStore + App Group snapshot in sync with SwiftData
         .onChange(of: userCategories.count) { _, _ in
@@ -118,6 +125,7 @@ struct MainTabView: View {
         // Re-sync when items are added / removed in any in-app flow
         .onChange(of: allCatalogItems.count) { _, _ in
             syncCatalogIndex()
+            syncWidgetSnapshot()
         }
         // Sync when Import sheet closes (covers newly added in-app items)
         .onChange(of: showImport) { _, isShowing in
@@ -128,6 +136,9 @@ struct MainTabView: View {
             if newPhase == .active {
                 syncCatalogIndex()
                 importPendingDraftsIfNeeded()
+                // Apply completion toggles queued by interactive widget buttons, then refresh.
+                WidgetDataManager.applyPendingToggles(context: modelContext)
+                syncWidgetSnapshot()
             }
         }
         // MARK: Deep link handling
@@ -153,7 +164,21 @@ struct MainTabView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                 showImport = true
             }
+        case .category(let key):
+            selectedTab = .catalog
+            // Small delay ensures the tab has appeared and categoryStore is configured.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                let descriptor = categoryStore.descriptor(forKey: key)
+                catalogNavigationPath = NavigationPath()
+                catalogNavigationPath.append(descriptor)
+            }
         }
+    }
+
+    // MARK: - Widget snapshot sync
+
+    private func syncWidgetSnapshot() {
+        WidgetDataManager.writeSnapshot(context: modelContext)
     }
 
     // MARK: - Catalog index sync (for Share Extension duplicate detection)

@@ -107,6 +107,9 @@ struct ItemDetailView: View {
                         .padding()
                         .background(Color(.secondarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .onChange(of: item.isCompleted) {
+                            WidgetDataManager.writeSnapshot(context: modelContext)
+                        }
                 }
 
                 // Metadata
