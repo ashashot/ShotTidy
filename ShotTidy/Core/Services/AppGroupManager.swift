@@ -7,6 +7,192 @@
 //
 
 import Foundation
+import Security
+
+// MARK: - UsageStore (Keychain-backed, survives app reinstall)
+
+/// Persistent storage for free-tier usage counters and credit balances.
+///
+/// Backed by the Keychain (shared access group) instead of UserDefaults, so the
+/// values survive an app delete + reinstall on the same device — closing the
+/// "delete to reset free limits" loophole. The App Group UserDefaults is kept as
+/// a fast cache and as the migration source for users created before this change.
+///
+/// Exposes the same method names as `UserDefaults` (`integer`/`bool`/`object`/`set`)
+/// so existing call sites change only their storage type, not their logic.
+///
+/// All values are stored as `Double` in a single JSON Keychain item:
+///   Int  → Double      Bool → 0/1      Date → timeIntervalSince1970 (Double)
+///
+/// Note: app and Share Extension are separate processes. They very rarely write
+/// concurrently (extension runs while sharing; app runs in foreground), so the
+/// read-modify-write of the backing dictionary is acceptable without locking.
+final class UsageStore {
+
+    nonisolated(unsafe) static let shared = UsageStore()
+
+    private let account = "usage.counters"
+    private let service = "com.mbx.ShotTidy.usage"
+
+    /// Fully-qualified shared keychain access group (`<TeamID>.com.mbx.ShotTidy.usage`),
+    /// resolved at runtime so the Team ID is never hardcoded. `nil` means the
+    /// access group could not be determined — we then fall back to the target's
+    /// default keychain (still survives reinstall, but won't share across targets).
+    private let accessGroup: String?
+
+    private var cache: [String: Double]
+    private let mirror: UserDefaults
+
+    private init() {
+        mirror = UserDefaults(suiteName: AppGroupManager.groupID) ?? .standard
+        accessGroup = UsageStore.resolveAccessGroup(suffix: "com.mbx.ShotTidy.usage")
+        cache = UsageStore.readKeychain(
+            account: account, service: service, accessGroup: accessGroup
+        ) ?? [:]
+
+        // One-time migration: if the Keychain is empty but legacy UserDefaults
+        // values exist, adopt them so current users keep their progress/credits.
+        if cache.isEmpty {
+            migrateFromUserDefaults()
+        }
+    }
+
+    // MARK: - UserDefaults-compatible API
+
+    func integer(forKey key: String) -> Int {
+        Int(cache[key] ?? 0)
+    }
+
+    func bool(forKey key: String) -> Bool {
+        (cache[key] ?? 0) != 0
+    }
+
+    /// Returns a `Double?` boxed as `Any?` so existing `as? Double` casts work,
+    /// and `nil` means "never set" (matching UserDefaults.object semantics).
+    func object(forKey key: String) -> Any? {
+        cache[key]
+    }
+
+    func set(_ value: Int, forKey key: String)    { write(Double(value), key) }
+    func set(_ value: Double, forKey key: String) { write(value, key) }
+    func set(_ value: Bool, forKey key: String)   { write(value ? 1 : 0, key) }
+
+    // MARK: - Private
+
+    private func write(_ value: Double, _ key: String) {
+        cache[key] = value
+        persist()
+        mirror.set(value, forKey: key)  // keep the cache mirror in sync
+    }
+
+    private func persist() {
+        UsageStore.writeKeychain(
+            cache, account: account, service: service, accessGroup: accessGroup
+        )
+    }
+
+    private func migrateFromUserDefaults() {
+        // Keys whose values must persist across reinstall.
+        let intKeys = [
+            "usage.screenshotsThisPeriod",
+            "usage.enrichmentBalance",
+            "usage.categorySuggestionsThisPeriod",
+        ]
+        let doubleKeys = [
+            "usage.periodStartDate",
+            "usage.proEnrichmentStartDate",
+        ]
+        let boolKeys = [
+            "usage.hasClaimedFreeEnrichment",
+        ]
+
+        var migrated: [String: Double] = [:]
+        for k in intKeys where mirror.object(forKey: k) != nil {
+            migrated[k] = Double(mirror.integer(forKey: k))
+        }
+        for k in doubleKeys {
+            if let d = mirror.object(forKey: k) as? Double { migrated[k] = d }
+        }
+        for k in boolKeys where mirror.object(forKey: k) != nil {
+            migrated[k] = mirror.bool(forKey: k) ? 1 : 0
+        }
+
+        if !migrated.isEmpty {
+            cache = migrated
+            persist()
+        }
+    }
+
+    // MARK: - Access-group resolution
+
+    /// Discovers the app's keychain access-group prefix (the Team ID) at runtime
+    /// using the classic "bundle seed ID" probe, then appends `suffix` to form the
+    /// fully-qualified shared group. Returns `nil` if discovery fails.
+    private static func resolveAccessGroup(suffix: String) -> String? {
+        let probe: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "accessGroupProbe",
+            kSecAttrService as String: "accessGroupProbe",
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var result: AnyObject?
+        var status = SecItemCopyMatching(probe as CFDictionary, &result)
+        if status == errSecItemNotFound {
+            status = SecItemAdd(probe as CFDictionary, &result)
+        }
+        guard status == errSecSuccess,
+              let attrs = result as? [String: Any],
+              let group = attrs[kSecAttrAccessGroup as String] as? String,
+              let prefix = group.components(separatedBy: ".").first
+        else { return nil }
+        return "\(prefix).\(suffix)"
+    }
+
+    // MARK: - Keychain primitives
+
+    private static func query(account: String, service: String, accessGroup: String?) -> [String: Any] {
+        var q: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: account,
+            kSecAttrService as String: service,
+        ]
+        if let accessGroup { q[kSecAttrAccessGroup as String] = accessGroup }
+        return q
+    }
+
+    private static func readKeychain(account: String, service: String, accessGroup: String?) -> [String: Double]? {
+        var q = query(account: account, service: service, accessGroup: accessGroup)
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(q as CFDictionary, &result)
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let dict = try? JSONDecoder().decode([String: Double].self, from: data)
+        else { return nil }
+        return dict
+    }
+
+    private static func writeKeychain(_ dict: [String: Double], account: String, service: String, accessGroup: String?) {
+        guard let data = try? JSONEncoder().encode(dict) else { return }
+        let q = query(account: account, service: service, accessGroup: accessGroup)
+
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        ]
+
+        let status = SecItemUpdate(q as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            var insert = q
+            insert[kSecValueData as String] = data
+            insert[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            SecItemAdd(insert as CFDictionary, nil)
+        }
+    }
+}
 
 // MARK: - CatalogIndexEntry
 

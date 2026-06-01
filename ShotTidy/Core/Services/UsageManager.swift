@@ -60,11 +60,13 @@ final class UsageManager {
     /// The date when the current 30-day Pro enrichment window started.
     private(set) var proEnrichmentStartDate: Date?
 
-    private let defaults: UserDefaults
+    private let defaults: UsageStore
 
     // MARK: - Init
 
-    init(defaults: UserDefaults = AppGroupManager.sharedDefaults) {
+    /// Counters live in the Keychain-backed `UsageStore` so free-tier limits
+    /// survive an app delete + reinstall (see [[custom-categories-feature]] sibling note).
+    init(defaults: UsageStore = .shared) {
         self.defaults = defaults
         loadFromDefaults()
         claimFreeEnrichmentIfNeeded()

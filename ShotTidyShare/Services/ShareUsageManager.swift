@@ -44,12 +44,12 @@ final class ShareUsageManager {
     private(set) var enrichmentBalance: Int = 0
     private(set) var periodStartDate: Date = Date()
 
-    private let defaults: UserDefaults
+    private let defaults: UsageStore
 
     // MARK: - Init
 
     private init() {
-        defaults = UserDefaults(suiteName: AppGroupManager.groupID) ?? .standard
+        defaults = UsageStore.shared
         loadFromDefaults()
         claimFreeEnrichmentIfNeeded()
     }
