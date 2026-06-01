@@ -369,9 +369,8 @@ enum AppGroupManager {
         guard FileManager.default.fileExists(atPath: legacyDir.path) else { return }
         do {
             try FileManager.default.removeItem(at: legacyDir)
-            print("[ShotTidy] Removed legacy PendingImages directory.")
         } catch {
-            print("[ShotTidy] Could not remove legacy PendingImages directory: \(error)")
+            // non-critical: legacy directory cleanup failed
         }
     }
 }

@@ -89,7 +89,7 @@ final class SubscriptionManager {
             let loaded = try await Product.products(for: ProductID.all)
             products = loaded.sorted { $0.price < $1.price }
         } catch {
-            print("[StoreKit] Product load failed: \(error)")
+            // product load failed — non-critical, UI shows empty paywall
         }
     }
 

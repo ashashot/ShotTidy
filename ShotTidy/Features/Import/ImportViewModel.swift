@@ -193,7 +193,7 @@ final class ImportViewModel {
         do {
             try context.save()
         } catch {
-            print("[ShotTidy] SwiftData checkpoint save failed: \(error)")
+            // checkpoint save failed — non-critical
         }
     }
 
@@ -202,7 +202,6 @@ final class ImportViewModel {
         do {
             try context.save()
         } catch {
-            print("[ShotTidy] SwiftData critical save failed: \(error)")
             persistenceError = "Failed to save items: \(error.localizedDescription)"
         }
     }

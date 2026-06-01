@@ -118,11 +118,6 @@ struct ShareAnalysisView: View {
     // MARK: - Save
 
     private func performSave() {
-        // Debug: show App Group container URL
-        let containerURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.mbx.ShotTidier")
-        print("[ShotTidyShare] App Group container URL: \(String(describing: containerURL))")
-
         do {
             try viewModel.saveSelected()
             // Brief pause so the user sees "Saving…" then the extension closes
@@ -130,8 +125,7 @@ struct ShareAnalysisView: View {
                 onComplete()
             }
         } catch {
-            print("[ShotTidyShare] Save failed: \(error)")
-            saveErrorMessage = "Save failed: \(error.localizedDescription)\nContainer: \(String(describing: containerURL?.path ?? "nil"))"
+            saveErrorMessage = "Save failed: \(error.localizedDescription)"
         }
     }
 
