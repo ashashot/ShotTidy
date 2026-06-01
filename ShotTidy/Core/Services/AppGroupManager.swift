@@ -29,7 +29,7 @@ import Security
 /// read-modify-write of the backing dictionary is acceptable without locking.
 final class UsageStore {
 
-    nonisolated(unsafe) static let shared = UsageStore()
+    nonisolated static let shared = UsageStore()
 
     private let account = "usage.counters"
     private let service = "com.mbx.ShotTidy.usage"
@@ -256,7 +256,7 @@ struct SharedCategory: Codable {
 // MARK: - AppGroupManager
 
 enum AppGroupManager {
-    static let groupID = "group.com.mbx.ShotTidier"
+    nonisolated static let groupID = "group.com.mbx.ShotTidier"
 
     /// URL of the shared App Group container
     static var containerURL: URL? {
@@ -342,7 +342,7 @@ enum AppGroupManager {
 
     // MARK: - Custom categories (main app → Share Extension)
 
-    private static let customCategoriesKey = "shared.customCategories"
+    private nonisolated static let customCategoriesKey = "shared.customCategories"
 
     /// Mirror the user's custom categories so the Share Extension can use them.
     nonisolated static func saveCustomCategories(_ categories: [SharedCategory]) {
