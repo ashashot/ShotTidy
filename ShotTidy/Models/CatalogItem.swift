@@ -30,7 +30,7 @@ final class CatalogItem {
     var isCompleted: Bool = false         // Purchased / visited / read / completed
 
     // MARK: - Convenience init
-    init(
+    convenience init(
         category: ItemCategory,
         title: String,
         subtitle: String? = nil,
@@ -40,8 +40,32 @@ final class CatalogItem {
         notes: String? = nil,
         sourceScreenshotId: UUID? = nil
     ) {
+        self.init(
+            categoryKey: category.rawValue,
+            title: title,
+            subtitle: subtitle,
+            link: link,
+            extra1: extra1,
+            extra2: extra2,
+            notes: notes,
+            sourceScreenshotId: sourceScreenshotId
+        )
+    }
+
+    /// Designated init accepting a raw category key — works for both built-in
+    /// (`ItemCategory` raw values) and custom (`UserCategory.key`) categories.
+    init(
+        categoryKey: String,
+        title: String,
+        subtitle: String? = nil,
+        link: String? = nil,
+        extra1: String? = nil,
+        extra2: String? = nil,
+        notes: String? = nil,
+        sourceScreenshotId: UUID? = nil
+    ) {
         self.id = UUID()
-        self.categoryRaw = category.rawValue
+        self.categoryRaw = categoryKey
         self.title = title
         self.subtitle = subtitle
         self.link = link
@@ -51,6 +75,22 @@ final class CatalogItem {
         self.sourceScreenshotId = sourceScreenshotId
         self.createdAt = Date()
         self.isCompleted = false
+    }
+
+    // MARK: - Built-in category helpers
+
+    /// True only for built-in categories that support a completion toggle
+    /// (Tasks, Shopping). Safe for custom keys (returns false).
+    var isCompletableCategory: Bool {
+        categoryRaw == ItemCategory.tasks.rawValue
+            || categoryRaw == ItemCategory.shopping.rawValue
+    }
+
+    /// Label for the completion toggle, or nil when the category is not completable.
+    var completionLabel: String? {
+        if categoryRaw == ItemCategory.tasks.rawValue { return "Completed" }
+        if categoryRaw == ItemCategory.shopping.rawValue { return "Purchased" }
+        return nil
     }
 
     // MARK: - Computed

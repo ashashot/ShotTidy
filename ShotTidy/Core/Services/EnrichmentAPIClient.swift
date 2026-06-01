@@ -57,10 +57,10 @@ final class EnrichmentAPIClient {
     private init() {}
 
     /// Searches the web for missing fields of the given `CatalogItem`.
-    func enrich(_ item: CatalogItem) async throws -> EnrichedFields {
-        let schema = item.category.fieldSchema
+    /// The resolved `schema` is passed in so custom categories work too.
+    func enrich(_ item: CatalogItem, schema: ItemCategory.FieldSchema) async throws -> EnrichedFields {
         return try await enrichFields(
-            category: item.category,
+            categoryKey: item.categoryRaw,
             title:    item.title,
             subtitle: item.subtitle ?? "",
             link:     item.link     ?? "",
@@ -73,8 +73,9 @@ final class EnrichmentAPIClient {
 
     /// Searches the web for missing fields given raw string values from the edit form.
     /// Only fields defined in the schema and currently empty are sent for enrichment.
+    /// `categoryKey` may be a built-in raw value or a custom `UserCategory.key`.
     func enrichFields(
-        category: ItemCategory,
+        categoryKey: String,
         title: String,
         subtitle: String,
         link: String,
@@ -85,7 +86,7 @@ final class EnrichmentAPIClient {
     ) async throws -> EnrichedFields {
 
         var body: [String: String] = [
-            "category": category.rawValue,
+            "category": categoryKey,
             "title":    title,
         ]
         if schema.subtitleLabel != nil { body["subtitle"] = subtitle }

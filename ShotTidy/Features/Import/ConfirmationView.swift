@@ -18,6 +18,12 @@ private struct DraftEditContext: Identifiable, Equatable {
     let id: Int  // global index in viewModel.draftItems
 }
 
+/// Identifiable wrapper for presenting the new-category editor by suggested name.
+private struct NewCategoryContext: Identifiable, Equatable {
+    let name: String
+    var id: String { name }
+}
+
 struct ConfirmationView: View {
     // @Bindable is needed to get bindings ($viewModel.draftItems[i])
     @Bindable var viewModel: ImportViewModel
@@ -25,8 +31,12 @@ struct ConfirmationView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(CategoryStore.self) private var categoryStore
 
     @State private var editingContext: DraftEditContext? = nil
+
+    // MARK: - New-category creation (from AI suggestion)
+    @State private var newCategoryName: String? = nil
 
     // MARK: - Duplicate detection
     @State private var draftDuplicates: [UUID: [DuplicateMatch]] = [:]
@@ -35,7 +45,7 @@ struct ConfirmationView: View {
     // MARK: - Computed
 
     private var selectedCount: Int {
-        viewModel.draftItems.filter { $0.isSelected && $0.isValid }.count
+        viewModel.draftItems.filter { $0.isSelected && $0.isValid && !$0.needsNewCategory }.count
     }
 
     private var selectedDuplicateCount: Int {
@@ -44,12 +54,17 @@ struct ConfirmationView: View {
         }.count
     }
 
-    private var groupedItems: [(ItemCategory, [Int])] {
-        ItemCategory.allCases.compactMap { category in
+    /// Distinct category keys present in the drafts, in display order
+    /// (built-in first, then custom, then the "new category" bucket last).
+    private var groupedItems: [(String, [Int])] {
+        var orderedKeys: [String] = categoryStore.allDescriptors.map(\.key)
+        orderedKeys.append(DraftItem.newCategoryKey)
+
+        return orderedKeys.compactMap { key in
             let indices = viewModel.draftItems.indices.filter {
-                viewModel.draftItems[$0].category == category
+                viewModel.draftItems[$0].categoryKey == key
             }
-            return indices.isEmpty ? nil : (category, indices)
+            return indices.isEmpty ? nil : (key, indices)
         }
     }
 
@@ -61,6 +76,14 @@ struct ConfirmationView: View {
                 .toolbar { toolbarContent }
                 .sheet(item: $editingContext) { ctx in
                     DraftItemEditView(item: $viewModel.draftItems[ctx.id])
+                }
+                .sheet(item: Binding(
+                    get: { newCategoryName.map { NewCategoryContext(name: $0) } },
+                    set: { newCategoryName = $0?.name }
+                )) { ctx in
+                    CategoryEditorView(prefillName: ctx.name) { newKey in
+                        assignDraftsWithSuggestion(named: ctx.name, toKey: newKey)
+                    }
                 }
                 .onChange(of: editingContext) { _, newCtx in
                     if newCtx == nil { checkDuplicates() }
@@ -136,7 +159,7 @@ struct ConfirmationView: View {
     // MARK: - Category sections
 
     private var categorySections: some View {
-        ForEach(groupedItems, id: \.0) { category, indices in
+        ForEach(groupedItems, id: \.0) { categoryKey, indices in
             Section {
                 ForEach(indices, id: \.self) { index in
                     draftRow(at: index)
@@ -145,7 +168,7 @@ struct ConfirmationView: View {
                     deleteItems(offsets: offsets, globalIndices: indices)
                 }
             } header: {
-                categoryHeader(category, count: indices.count)
+                categoryHeader(categoryKey, count: indices.count)
             }
         }
     }
@@ -191,21 +214,46 @@ struct ConfirmationView: View {
         DraftItemRow(
             item: $viewModel.draftItems[index],
             duplicateMatches: dupes,
-            onEdit: { editingContext = DraftEditContext(id: index) }
+            onEdit: { editingContext = DraftEditContext(id: index) },
+            onCreateCategory: draft.needsNewCategory && !draft.suggestedCategoryName.isEmpty
+                ? { newCategoryName = draft.suggestedCategoryName }
+                : nil
         )
-        .listRowBackground(dupes.isEmpty ? nil : Color.orange.opacity(0.07))
+        .listRowBackground(
+            draft.needsNewCategory
+                ? Color.purple.opacity(0.07)
+                : (dupes.isEmpty ? nil : Color.orange.opacity(0.07))
+        )
+    }
+
+    // MARK: - New-category assignment
+
+    /// After a category is created from a suggestion, reassign every draft that
+    /// carried that suggested name to the new category key.
+    private func assignDraftsWithSuggestion(named name: String, toKey key: String) {
+        let target = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        for i in viewModel.draftItems.indices {
+            let draft = viewModel.draftItems[i]
+            guard draft.needsNewCategory,
+                  draft.suggestedCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    .lowercased() == target
+            else { continue }
+            viewModel.draftItems[i].categoryKey = key
+            viewModel.draftItems[i].suggestedCategoryName = ""
+        }
+        checkDuplicates()
     }
 
     // MARK: - Duplicate checking
 
     private func checkDuplicates() {
         var result: [UUID: [DuplicateMatch]] = [:]
-        for draft in viewModel.draftItems where draft.isValid {
+        for draft in viewModel.draftItems where draft.isValid && !draft.needsNewCategory {
             let matches = DuplicateChecker.findDuplicates(
                 for: draft.title,
                 subtitle: draft.subtitle.isEmpty ? nil : draft.subtitle,
                 link: draft.link.isEmpty ? nil : draft.link,
-                category: draft.category,
+                categoryKey: draft.categoryKey,
                 in: modelContext
             )
             if !matches.isEmpty {
@@ -231,14 +279,27 @@ struct ConfirmationView: View {
 
     // MARK: - Helpers
 
-    private func categoryHeader(_ category: ItemCategory, count: Int) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: category.icon).foregroundStyle(category.color)
-            Text(category.localizedName)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
-            Spacer()
-            Text("\(count)").font(.caption.bold()).foregroundStyle(category.color)
+    @ViewBuilder
+    private func categoryHeader(_ categoryKey: String, count: Int) -> some View {
+        if categoryKey == DraftItem.newCategoryKey {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles").foregroundStyle(.purple)
+                Text("Suggested New Categories")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text("\(count)").font(.caption.bold()).foregroundStyle(.purple)
+            }
+        } else {
+            let descriptor = categoryStore.descriptor(forKey: categoryKey)
+            HStack(spacing: 6) {
+                Image(systemName: descriptor.iconName).foregroundStyle(descriptor.color)
+                Text(descriptor.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text("\(count)").font(.caption.bold()).foregroundStyle(descriptor.color)
+            }
         }
     }
 
@@ -271,6 +332,8 @@ struct DraftItemRow: View {
     @Binding var item: DraftItem
     var duplicateMatches: [DuplicateMatch] = []
     let onEdit: () -> Void
+    /// Present when this draft suggests a new category that can be created.
+    var onCreateCategory: (() -> Void)? = nil
 
     private var topDuplicate: DuplicateMatch? { duplicateMatches.first }
 
@@ -279,10 +342,22 @@ struct DraftItemRow: View {
             checkboxButton
             contentStack
             Spacer()
+            if let onCreateCategory {
+                createCategoryButton(onCreateCategory)
+            }
             editButton
         }
         .padding(.vertical, 2)
         .opacity(item.isSelected ? 1.0 : 0.45)
+    }
+
+    private func createCategoryButton(_ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: "folder.badge.plus")
+                .font(.title3)
+                .foregroundStyle(.purple)
+        }
+        .buttonStyle(.plain)
     }
 
     private var checkboxButton: some View {
@@ -316,6 +391,12 @@ struct DraftItemRow: View {
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
             }
+            if item.needsNewCategory && !item.suggestedCategoryName.isEmpty {
+                Label("New: \(item.suggestedCategoryName)", systemImage: "sparkles")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.purple)
+                    .padding(.top, 1)
+            }
             if let match = topDuplicate {
                 duplicateBadge(match)
             }
@@ -344,11 +425,19 @@ struct DraftItemRow: View {
 struct DraftItemEditView: View {
     @Binding var item: DraftItem
     @Environment(\.dismiss) private var dismiss
+    @Environment(CategoryStore.self) private var categoryStore
 
     @State private var enrichState: DraftEnrichState = .idle
     @State private var highlightedFields: Set<String> = []
 
-    private var schema: ItemCategory.FieldSchema { item.category.fieldSchema }
+    /// Resolved descriptor for the draft's current category key.
+    /// Falls back to the generic schema for `__new__` drafts.
+    private var descriptor: CategoryDescriptor {
+        item.needsNewCategory
+            ? .unresolved(key: DraftItem.newCategoryKey)
+            : categoryStore.descriptor(forKey: item.categoryKey)
+    }
+    private var schema: ItemCategory.FieldSchema { descriptor.fieldSchema }
 
     /// True when title is set and at least one schema-defined optional field is empty.
     private var hasMissingFields: Bool {
@@ -369,9 +458,19 @@ struct DraftItemEditView: View {
         NavigationStack {
             Form {
                 Section("Category") {
-                    Picker("Category", selection: $item.category) {
-                        ForEach(ItemCategory.allCases, id: \.self) { cat in
-                            Label(cat.localizedName, systemImage: cat.icon).tag(cat)
+                    if item.needsNewCategory {
+                        Label("New category suggested: \(item.suggestedCategoryName)",
+                              systemImage: "sparkles")
+                            .foregroundStyle(.purple)
+                    }
+                    Picker("Category", selection: $item.categoryKey) {
+                        if item.needsNewCategory {
+                            Label("Suggested: \(item.suggestedCategoryName)",
+                                  systemImage: "sparkles")
+                                .tag(DraftItem.newCategoryKey)
+                        }
+                        ForEach(categoryStore.allDescriptors) { desc in
+                            Label(desc.name, systemImage: desc.iconName).tag(desc.key)
                         }
                     }
                 }
@@ -453,7 +552,7 @@ struct DraftItemEditView: View {
                         Button(action: runEnrichment) {
                             Image(systemName: "magnifyingglass.circle.fill")
                                 .font(.system(size: 20))
-                                .foregroundStyle(item.category.color)
+                                .foregroundStyle(descriptor.color)
                         }
                     }
                 }
@@ -465,7 +564,7 @@ struct DraftItemEditView: View {
 
     @ViewBuilder
     private var draftEnrichStatusBar: some View {
-        let color = item.category.color
+        let color = descriptor.color
         VStack(spacing: 0) {
             Divider()
             Group {
@@ -525,7 +624,7 @@ struct DraftItemEditView: View {
         Task {
             do {
                 let result = try await EnrichmentAPIClient.shared.enrichFields(
-                    category: item.category,
+                    categoryKey: item.categoryKey,
                     title: item.title,
                     subtitle: item.subtitle,
                     link: item.link,

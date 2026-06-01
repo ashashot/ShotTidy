@@ -11,7 +11,7 @@ import SwiftUI
 import SwiftData
 
 struct ItemEditView: View {
-    let category: ItemCategory
+    let descriptor: CategoryDescriptor
     var existingItem: CatalogItem?
 
     @Environment(\.modelContext) private var modelContext
@@ -37,8 +37,8 @@ struct ItemEditView: View {
     @State private var enrichState: EditEnrichState = .idle
     @State private var highlightedFields: Set<String> = []
 
-    init(category: ItemCategory, item: CatalogItem?) {
-        self.category = category
+    init(descriptor: CategoryDescriptor, item: CatalogItem?) {
+        self.descriptor = descriptor
         self.existingItem = item
         _title    = State(initialValue: item?.title ?? "")
         _subtitle = State(initialValue: item?.subtitle ?? "")
@@ -49,7 +49,7 @@ struct ItemEditView: View {
     }
 
     private var isEditing: Bool { existingItem != nil }
-    private var schema: ItemCategory.FieldSchema { category.fieldSchema }
+    private var schema: ItemCategory.FieldSchema { descriptor.fieldSchema }
     private var canSave: Bool { !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
     /// True when the title is filled and at least one schema-defined optional field is empty.
@@ -168,11 +168,11 @@ struct ItemEditView: View {
                                       ? "magnifyingglass.circle.fill"
                                       : "cart.circle.fill")
                                     .font(.system(size: 20))
-                                    .foregroundStyle(category.color)
+                                    .foregroundStyle(descriptor.color)
                                 if usageManager.enrichmentBalance > 0 {
                                     Text("\(usageManager.enrichmentBalance)")
                                         .font(.system(size: 11, weight: .bold))
-                                        .foregroundStyle(category.color)
+                                        .foregroundStyle(descriptor.color)
                                 }
                             }
                         }
@@ -208,7 +208,7 @@ struct ItemEditView: View {
                     for: title,
                     subtitle: subtitle.isEmpty ? nil : subtitle,
                     link: link.isEmpty ? nil : link,
-                    category: category,
+                    categoryKey: descriptor.key,
                     excludingId: existingItem?.id,
                     in: modelContext
                 )
@@ -229,7 +229,7 @@ struct ItemEditView: View {
 
                 case .loading:
                     HStack(spacing: 12) {
-                        ProgressView().tint(category.color)
+                        ProgressView().tint(descriptor.color)
                         Text("Searching the web…")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -260,7 +260,7 @@ struct ItemEditView: View {
                         Spacer()
                         Button("Retry") { withAnimation { enrichState = .idle } }
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(category.color)
+                            .foregroundStyle(descriptor.color)
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 14)
@@ -288,7 +288,7 @@ struct ItemEditView: View {
         Task {
             do {
                 let result = try await EnrichmentAPIClient.shared.enrichFields(
-                    category: category,
+                    categoryKey: descriptor.key,
                     title: title,
                     subtitle: subtitle,
                     link: link,
@@ -380,7 +380,7 @@ struct ItemEditView: View {
             existing.notes    = notes.isEmpty ? nil : notes
         } else {
             let item = CatalogItem(
-                category: category,
+                categoryKey: descriptor.key,
                 title: title.trimmingCharacters(in: .whitespacesAndNewlines),
                 subtitle: subtitle.isEmpty ? nil : subtitle,
                 link: link.isEmpty ? nil : link,

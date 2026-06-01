@@ -53,7 +53,10 @@ final class ImportViewModel {
 
     // MARK: - Analysis
 
-    func analyzeImages() async {
+    func analyzeImages(
+        customCategories: [CategoryPromptInfo] = [],
+        allowNewCategory: Bool = false
+    ) async {
         guard !selectedImages.isEmpty else { return }
         guard let ctx = modelContext else { return }
 
@@ -87,6 +90,8 @@ final class ImportViewModel {
             do {
                 let extracted = try await OpenAIAPIClient.shared.analyzeScreenshot(
                     image,
+                    customCategories: customCategories,
+                    allowNewCategory: allowNewCategory,
                     screenshotId: screenshot.id
                 )
 
@@ -127,7 +132,9 @@ final class ImportViewModel {
 
     func saveSelectedDrafts() {
         guard let ctx = modelContext else { return }
-        let toSave = draftItems.filter { $0.isSelected && $0.isValid }
+        // Drafts still flagged as "needs new category" are skipped here — they are
+        // resolved (assigned to a real category) before save in the confirmation flow.
+        let toSave = draftItems.filter { $0.isSelected && $0.isValid && !$0.needsNewCategory }
 
         // Count how many items were confirmed per screenshot
         var confirmedPerScreenshot: [UUID: Int] = [:]

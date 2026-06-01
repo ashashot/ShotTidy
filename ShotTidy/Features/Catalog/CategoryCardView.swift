@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct CategoryCardView: View {
-    let category: ItemCategory
+    let category: CategoryDescriptor
     let count: Int
 
     var body: some View {
@@ -19,7 +19,7 @@ struct CategoryCardView: View {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(category.color.opacity(0.15))
                         .frame(width: 44, height: 44)
-                    Image(systemName: category.icon)
+                    Image(systemName: category.iconName)
                         .font(.system(size: 20, weight: .medium))
                         .foregroundStyle(category.color)
                 }
@@ -38,7 +38,7 @@ struct CategoryCardView: View {
                 }
             }
 
-            Text(category.localizedName)
+            Text(category.name)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.primary)
                 .lineLimit(2)
@@ -66,6 +66,6 @@ struct CategoryCardView: View {
 }
 
 #Preview {
-    CategoryCardView(category: .shopping, count: 14)
+    CategoryCardView(category: ItemCategory.shopping.descriptor, count: 14)
         .padding()
 }

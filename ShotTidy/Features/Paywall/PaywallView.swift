@@ -175,6 +175,20 @@ struct PaywallView: View {
             Divider().padding(.leading, 50)
 
             FeatureRow(
+                icon: "folder.badge.plus", color: .green,
+                title: "Custom Categories",
+                free: "-", pro: "✓"
+            )
+            Divider().padding(.leading, 50)
+
+            FeatureRow(
+                icon: "wand.and.stars", color: .pink,
+                title: "AI Category Fields",
+                free: "-", pro: "5 / 30 days"
+            )
+            Divider().padding(.leading, 50)
+
+            FeatureRow(
                 icon: "icloud.fill", color: .cyan,
                 title: "CloudKit Sync",
                 free: "-", pro: "✓"

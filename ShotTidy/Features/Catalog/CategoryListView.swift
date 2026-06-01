@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct CategoryListView: View {
-    let category: ItemCategory
+    let descriptor: CategoryDescriptor
 
     @Query var items: [CatalogItem]
     @Environment(\.modelContext) private var modelContext
@@ -18,9 +18,9 @@ struct CategoryListView: View {
     @State private var showAddManually = false
     @State private var sortByDate = true
 
-    init(category: ItemCategory) {
-        self.category = category
-        let raw = category.rawValue
+    init(descriptor: CategoryDescriptor) {
+        self.descriptor = descriptor
+        let raw = descriptor.key
         _items = Query(
             filter: #Predicate<CatalogItem> { item in
                 item.categoryRaw == raw
@@ -44,8 +44,8 @@ struct CategoryListView: View {
         Group {
             if items.isEmpty {
                 ContentUnavailableView(
-                    category.localizedName,
-                    systemImage: category.icon,
+                    descriptor.name,
+                    systemImage: descriptor.iconName,
                     description: Text("No items.\nAdd via screenshot import or the «+» button")
                 )
             } else {
@@ -54,7 +54,7 @@ struct CategoryListView: View {
                         NavigationLink {
                             ItemDetailView(item: item)
                         } label: {
-                            CatalogItemRow(item: item, schema: category.fieldSchema)
+                            CatalogItemRow(item: item, schema: descriptor.fieldSchema)
                         }
                     }
                     .onDelete { indexSet in
@@ -63,10 +63,10 @@ struct CategoryListView: View {
                         }
                     }
                 }
-                .searchable(text: $searchText, prompt: "Search in \(category.localizedName)")
+                .searchable(text: $searchText, prompt: "Search in \(descriptor.name)")
             }
         }
-        .navigationTitle(category.localizedName)
+        .navigationTitle(descriptor.name)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -78,7 +78,7 @@ struct CategoryListView: View {
             }
         }
         .sheet(isPresented: $showAddManually) {
-            ItemEditView(category: category, item: nil)
+            ItemEditView(descriptor: descriptor, item: nil)
         }
     }
 }

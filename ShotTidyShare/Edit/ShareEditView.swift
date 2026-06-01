@@ -17,7 +17,7 @@ struct ShareCategoryOption: Identifiable {
     let name: String
     let icon: String
 
-    static let all: [ShareCategoryOption] = [
+    static let builtIn: [ShareCategoryOption] = [
         .init(key: "shopping",         name: "Shopping",          icon: "cart.fill"),
         .init(key: "places",           name: "Places",            icon: "mappin.circle.fill"),
         .init(key: "appsServices",     name: "Apps & Services",   icon: "app.fill"),
@@ -32,6 +32,18 @@ struct ShareCategoryOption: Identifiable {
         .init(key: "contacts",         name: "Contacts",          icon: "person.circle.fill"),
         .init(key: "tasks",            name: "Tasks",             icon: "checkmark.circle.fill"),
     ]
+
+    /// Custom categories shared from the main app via the App Group.
+    static var custom: [ShareCategoryOption] {
+        AppGroupManager.loadCustomCategories().map {
+            .init(key: $0.key, name: $0.name, icon: $0.icon)
+        }
+    }
+
+    /// Built-in categories followed by the user's custom ones.
+    static var all: [ShareCategoryOption] {
+        builtIn + custom
+    }
 
     // MARK: - Display info (name + icon + color) for the category row chip
 
@@ -52,7 +64,12 @@ struct ShareCategoryOption: Identifiable {
         case "articles":         return ("Articles",          "newspaper.fill",           Color(red: 0.0, green: 0.65, blue: 0.85))
         case "contacts":         return ("Contacts",          "person.circle.fill",       Color(red: 0.12, green: 0.72, blue: 0.72))
         case "tasks":            return ("Tasks",             "checkmark.circle.fill",    Color(red: 0.48, green: 0.48, blue: 0.56))
-        default:                 return (key,                 "tag.fill",                 .gray)
+        default:
+            // Custom category — look it up in the App Group snapshot.
+            if let custom = custom.first(where: { $0.key == key }) {
+                return (custom.name, custom.icon, Color(red: 0.56, green: 0.56, blue: 0.58))
+            }
+            return ("Other", "tag.fill", .gray)
         }
     }
 }

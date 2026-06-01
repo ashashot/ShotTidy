@@ -13,6 +13,7 @@ struct ShotTidyApp: App {
 
     @State private var subscriptionManager = SubscriptionManager()
     @State private var usageManager        = UsageManager()
+    @State private var categoryStore       = CategoryStore()
 
     // MARK: - Init
 
@@ -30,6 +31,7 @@ struct ShotTidyApp: App {
         let schema = Schema([
             Screenshot.self,
             CatalogItem.self,
+            UserCategory.self,
         ])
 
         // Both tiers use the same SQLite file so data is preserved across tier changes.
@@ -75,6 +77,7 @@ struct ShotTidyApp: App {
             MainTabView()
                 .environment(subscriptionManager)
                 .environment(usageManager)
+                .environment(categoryStore)
                 .task {
                     // Load StoreKit products and verify subscription status on launch.
                     await subscriptionManager.onLaunch()

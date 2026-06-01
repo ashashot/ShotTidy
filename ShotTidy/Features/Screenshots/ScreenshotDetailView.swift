@@ -14,6 +14,7 @@ struct ScreenshotDetailView: View {
     @Query private var linkedItems: [CatalogItem]
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(CategoryStore.self) private var categoryStore
 
     @State private var showDeleteAlert = false
 
@@ -28,12 +29,12 @@ struct ScreenshotDetailView: View {
         )
     }
 
-    // Items grouped by category in display order
-    private var groupedByCategory: [(ItemCategory, [CatalogItem])] {
-        let grouped = Dictionary(grouping: linkedItems) { $0.category }
-        return ItemCategory.allCases.compactMap { category in
-            guard let items = grouped[category], !items.isEmpty else { return nil }
-            return (category, items)
+    // Items grouped by category descriptor in display order
+    private var groupedByCategory: [(CategoryDescriptor, [CatalogItem])] {
+        let grouped = Dictionary(grouping: linkedItems) { $0.categoryRaw }
+        return categoryStore.allDescriptors.compactMap { descriptor in
+            guard let items = grouped[descriptor.key], !items.isEmpty else { return nil }
+            return (descriptor, items)
         }
     }
 
@@ -62,16 +63,16 @@ struct ScreenshotDetailView: View {
                     )
                 }
             } else {
-                ForEach(groupedByCategory, id: \.0) { category, items in
+                ForEach(groupedByCategory, id: \.0) { descriptor, items in
                     Section {
                         ForEach(items) { item in
                             NavigationLink(destination: ItemDetailView(item: item)) {
-                                CatalogItemRow(item: item, schema: item.category.fieldSchema)
+                                CatalogItemRow(item: item, schema: descriptor.fieldSchema)
                             }
                         }
                     } header: {
-                        Label(category.localizedName, systemImage: category.icon)
-                            .foregroundStyle(category.color)
+                        Label(descriptor.name, systemImage: descriptor.iconName)
+                            .foregroundStyle(descriptor.color)
                             .font(.subheadline.weight(.semibold))
                     }
                 }

@@ -15,6 +15,7 @@ struct ItemDetailView: View {
     @Environment(\.dismiss)      private var dismiss
     @Environment(SubscriptionManager.self) private var subManager
     @Environment(UsageManager.self)        private var usageManager
+    @Environment(CategoryStore.self)       private var categoryStore
 
     @State private var showEdit = false
     @State private var showDeleteAlert = false
@@ -25,7 +26,8 @@ struct ItemDetailView: View {
     /// Keys of fields that were just filled by enrichment — used to animate them.
     @State private var recentlyFilledKeys: Set<String> = []
 
-    private var schema: ItemCategory.FieldSchema { item.category.fieldSchema }
+    private var descriptor: CategoryDescriptor { categoryStore.descriptor(for: item) }
+    private var schema: ItemCategory.FieldSchema { descriptor.fieldSchema }
 
     // MARK: - Body
 
@@ -35,15 +37,15 @@ struct ItemDetailView: View {
 
                 // Category badge
                 HStack(spacing: 6) {
-                    Image(systemName: item.category.icon)
+                    Image(systemName: descriptor.iconName)
                         .font(.system(size: 13, weight: .semibold))
-                    Text(item.category.localizedName)
+                    Text(descriptor.name)
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundStyle(.white)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
-                .background(item.category.color)
+                .background(descriptor.color)
                 .clipShape(Capsule())
 
                 // Fields
@@ -100,9 +102,8 @@ struct ItemDetailView: View {
                 }
 
                 // Completion toggle for tasks and shopping
-                if item.category == .tasks || item.category == .shopping {
-                    Toggle(item.category == .tasks ? "Completed" : "Purchased",
-                           isOn: $item.isCompleted)
+                if let completionLabel = item.completionLabel {
+                    Toggle(completionLabel, isOn: $item.isCompleted)
                         .padding()
                         .background(Color(.secondarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -133,7 +134,7 @@ struct ItemDetailView: View {
             }
         }
         .sheet(isPresented: $showEdit) {
-            ItemEditView(category: item.category, item: item)
+            ItemEditView(descriptor: descriptor, item: item)
         }
         .sheet(isPresented: $showEnrichmentStore) {
             EnrichmentStoreView()
@@ -157,7 +158,7 @@ struct ItemDetailView: View {
             switch enrichmentState {
             case .idle:
                 EnrichButton(
-                    color: item.category.color,
+                    color: descriptor.color,
                     balance: usageManager.enrichmentBalance
                 ) {
                     runEnrichment()
@@ -166,7 +167,7 @@ struct ItemDetailView: View {
             case .loading:
                 HStack(spacing: 10) {
                     ProgressView()
-                        .tint(item.category.color)
+                        .tint(descriptor.color)
                     Text("Searching for missing info…")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -221,7 +222,7 @@ struct ItemDetailView: View {
                         withAnimation { enrichmentState = .idle }
                     }
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(item.category.color)
+                    .foregroundStyle(descriptor.color)
                 }
                 .padding(14)
                 .background(Color.orange.opacity(0.07))
@@ -251,7 +252,7 @@ struct ItemDetailView: View {
 
         Task {
             do {
-                let result = try await EnrichmentAPIClient.shared.enrich(item)
+                let result = try await EnrichmentAPIClient.shared.enrich(item, schema: schema)
 
                 // Apply non-nil results to the item
                 var filledKeys: Set<String> = []

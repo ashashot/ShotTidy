@@ -31,22 +31,28 @@ final class UsageManager {
     static let freeScreenshotsPerPeriod  = 5
     static let freeInitialEnrichments    = 1
     static let proEnrichmentsPerPeriod   = 10
+    /// Number of AI category-field suggestions Pro users get per 30-day period.
+    static let proCategorySuggestionsPerPeriod = 5
     static let periodDays: Double        = 30
 
     // MARK: - UserDefaults keys
 
     private enum Key {
-        static let screenshotsThisPeriod    = "usage.screenshotsThisPeriod"
-        static let periodStartDate          = "usage.periodStartDate"
-        static let enrichmentBalance        = "usage.enrichmentBalance"
-        static let hasClaimedFreeEnrichment = "usage.hasClaimedFreeEnrichment"
-        static let proEnrichmentStartDate   = "usage.proEnrichmentStartDate"
+        static let screenshotsThisPeriod         = "usage.screenshotsThisPeriod"
+        static let periodStartDate               = "usage.periodStartDate"
+        static let enrichmentBalance             = "usage.enrichmentBalance"
+        static let hasClaimedFreeEnrichment      = "usage.hasClaimedFreeEnrichment"
+        static let proEnrichmentStartDate        = "usage.proEnrichmentStartDate"
+        static let categorySuggestionsThisPeriod = "usage.categorySuggestionsThisPeriod"
     }
 
     // MARK: - Observable state
 
     private(set) var screenshotsThisPeriod: Int = 0
     private(set) var enrichmentBalance: Int = 0
+
+    /// AI category-field suggestions used in the current 30-day period (Pro only).
+    private(set) var categorySuggestionsThisPeriod: Int = 0
 
     /// The date when the current 30-day screenshot window started.
     private(set) var periodStartDate: Date = Date()
@@ -89,6 +95,16 @@ final class UsageManager {
     /// Whether the user has at least one enrichment credit.
     func canEnrich() -> Bool { enrichmentBalance > 0 }
 
+    /// Remaining AI category-field suggestions (0 for non-Pro).
+    func remainingCategorySuggestions(isPro: Bool) -> Int {
+        isPro ? max(0, Self.proCategorySuggestionsPerPeriod - categorySuggestionsThisPeriod) : 0
+    }
+
+    /// Whether the user can request an AI category-field suggestion right now.
+    func canSuggestCategoryFields(isPro: Bool) -> Bool {
+        remainingCategorySuggestions(isPro: isPro) > 0
+    }
+
     // MARK: - Consume / add
 
     /// Records N screenshots as analyzed. Call after a successful analysis batch.
@@ -110,6 +126,12 @@ final class UsageManager {
         defaults.set(enrichmentBalance, forKey: Key.enrichmentBalance)
     }
 
+    /// Records one AI category-field suggestion. Call before the API request.
+    func consumeCategorySuggestion() {
+        categorySuggestionsThisPeriod += 1
+        defaults.set(categorySuggestionsThisPeriod, forKey: Key.categorySuggestionsThisPeriod)
+    }
+
     // MARK: - Rolling reset
 
     /// Call on app launch and whenever subscription status changes.
@@ -121,11 +143,14 @@ final class UsageManager {
     func performRollingReset(isPro: Bool) {
         let now = Date()
 
-        // Screenshot counter reset
+        // Screenshot counter reset (also resets the category-suggestion counter,
+        // which shares the same 30-day window).
         if now >= periodEndDate {
             screenshotsThisPeriod = 0
+            categorySuggestionsThisPeriod = 0
             periodStartDate = now
             defaults.set(0, forKey: Key.screenshotsThisPeriod)
+            defaults.set(0, forKey: Key.categorySuggestionsThisPeriod)
             defaults.set(now.timeIntervalSince1970, forKey: Key.periodStartDate)
         }
 
@@ -150,6 +175,7 @@ final class UsageManager {
     private func loadFromDefaults() {
         screenshotsThisPeriod = defaults.integer(forKey: Key.screenshotsThisPeriod)
         enrichmentBalance     = defaults.integer(forKey: Key.enrichmentBalance)
+        categorySuggestionsThisPeriod = defaults.integer(forKey: Key.categorySuggestionsThisPeriod)
 
         // Screenshot period start date (default: now on first launch)
         if let ts = defaults.object(forKey: Key.periodStartDate) as? Double {

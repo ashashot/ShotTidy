@@ -15,7 +15,7 @@ struct CatalogItemRow: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
                 // Checkbox for tasks and shopping items
-                if item.category == .tasks || item.category == .shopping {
+                if item.isCompletableCategory {
                     Image(systemName: item.isCompleted
                           ? "checkmark.circle.fill" : "circle")
                         .foregroundStyle(item.isCompleted ? .green : .secondary)

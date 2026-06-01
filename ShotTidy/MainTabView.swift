@@ -57,10 +57,15 @@ struct MainTabView: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
+    @Environment(CategoryStore.self) private var categoryStore
 
     /// Snapshot of the catalog count — used to detect when items are added/removed
     /// so we can refresh the App Group index for the Share Extension.
     @Query private var allCatalogItems: [CatalogItem]
+
+    /// Custom categories — observed so the shared CategoryStore stays in sync
+    /// whenever the user creates, edits, or deletes a category.
+    @Query private var userCategories: [UserCategory]
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -100,8 +105,15 @@ struct MainTabView: View {
         .animation(.spring(duration: 0.35), value: importBanner)
         // Import on first appearance + sync catalog index for Share Extension
         .onAppear {
+            categoryStore.configure(context: modelContext)
             syncCatalogIndex()
+            syncCustomCategories()
             importPendingDraftsIfNeeded()
+        }
+        // Keep the shared CategoryStore + App Group snapshot in sync with SwiftData
+        .onChange(of: userCategories.count) { _, _ in
+            categoryStore.reload()
+            syncCustomCategories()
         }
         // Re-sync when items are added / removed in any in-app flow
         .onChange(of: allCatalogItems.count) { _, _ in
@@ -158,6 +170,15 @@ struct MainTabView: View {
             )
         }
         AppGroupManager.saveCatalogIndex(entries)
+    }
+
+    /// Mirrors the user's custom categories to the App Group so the Share
+    /// Extension can match and offer them during analysis.
+    private func syncCustomCategories() {
+        let shared = userCategories.map {
+            SharedCategory(key: $0.key, name: $0.name, icon: $0.iconName, hint: $0.aiHint)
+        }
+        AppGroupManager.saveCustomCategories(shared)
     }
 
     // MARK: - Pending import

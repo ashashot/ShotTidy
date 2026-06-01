@@ -12,13 +12,17 @@ struct CategoriesView: View {
     @Query private var allItems: [CatalogItem]
     @Binding var showImport: Bool
 
+    @Environment(CategoryStore.self) private var categoryStore
+
+    @State private var showCategoryManager = false
+
     private let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
-    // Categories with item counts
-    private var categoryCounts: [(ItemCategory, Int)] {
-        ItemCategory.allCases.map { category in
-            let count = allItems.filter { $0.categoryRaw == category.rawValue }.count
-            return (category, count)
+    /// Built-in categories first, then custom ones — each with its item count.
+    private var categoryCounts: [(CategoryDescriptor, Int)] {
+        categoryStore.allDescriptors.map { descriptor in
+            let count = allItems.filter { $0.categoryRaw == descriptor.key }.count
+            return (descriptor, count)
         }
     }
 
@@ -28,7 +32,7 @@ struct CategoriesView: View {
                 LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(categoryCounts, id: \.0) { category, count in
                         NavigationLink {
-                            CategoryListView(category: category)
+                            CategoryListView(descriptor: category)
                         } label: {
                             CategoryCardView(category: category, count: count)
                         }
@@ -42,6 +46,16 @@ struct CategoriesView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Catalog")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showCategoryManager = true
+                    } label: {
+                        Image(systemName: "folder.badge.gearshape")
+                            .font(.body)
+                            .foregroundStyle(.blue)
+                    }
+                    .accessibilityLabel("Manage Categories")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showImport = true
@@ -51,6 +65,9 @@ struct CategoriesView: View {
                             .foregroundStyle(.blue)
                     }
                 }
+            }
+            .sheet(isPresented: $showCategoryManager) {
+                CategoryManagerView()
             }
         }
     }

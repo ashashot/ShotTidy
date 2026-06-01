@@ -16,6 +16,7 @@ struct ImportView: View {
     @Environment(\.dismiss)      private var dismiss
     @Environment(SubscriptionManager.self) private var subManager
     @Environment(UsageManager.self)        private var usageManager
+    @Environment(CategoryStore.self)       private var categoryStore
 
     @State private var viewModel = ImportViewModel()
     // Set to true only AFTER analyzeImages() completes,
@@ -86,8 +87,16 @@ struct ImportView: View {
             return
         }
 
+        // Custom categories let the AI match (and, for Pro, suggest) user categories.
+        let customPayload = categoryStore.customDescriptors.map {
+            CategoryPromptInfo(key: $0.key, name: $0.name, hint: $0.aiHint ?? "")
+        }
+
         Task {
-            await viewModel.analyzeImages()
+            await viewModel.analyzeImages(
+                customCategories: customPayload,
+                allowNewCategory: subManager.isProActive
+            )
             // Open ConfirmationView only after await — draftItems are populated at this point
             if !viewModel.draftItems.isEmpty {
                 // Consume quota for the screenshots that were submitted

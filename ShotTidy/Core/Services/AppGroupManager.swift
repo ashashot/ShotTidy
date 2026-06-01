@@ -56,6 +56,17 @@ struct PendingDraftItem: Codable, Identifiable {
     }
 }
 
+// MARK: - SharedCategory
+
+/// Lightweight snapshot of a user-defined category, written by the main app into
+/// the App Group so the Share Extension can match (and offer) custom categories.
+struct SharedCategory: Codable {
+    let key: String
+    let name: String
+    let icon: String
+    let hint: String
+}
+
 // MARK: - AppGroupManager
 
 enum AppGroupManager {
@@ -140,6 +151,25 @@ enum AppGroupManager {
             let data = try? Data(contentsOf: url),
             let entries = try? JSONDecoder().decode([CatalogIndexEntry].self, from: data)
         else { return [] }
+        return entries
+    }
+
+    // MARK: - Custom categories (main app → Share Extension)
+
+    private static let customCategoriesKey = "shared.customCategories"
+
+    /// Mirror the user's custom categories so the Share Extension can use them.
+    nonisolated static func saveCustomCategories(_ categories: [SharedCategory]) {
+        if let data = try? JSONEncoder().encode(categories) {
+            sharedDefaults.set(data, forKey: customCategoriesKey)
+        }
+    }
+
+    nonisolated static func loadCustomCategories() -> [SharedCategory] {
+        guard let data = sharedDefaults.data(forKey: customCategoriesKey),
+              let entries = try? JSONDecoder().decode([SharedCategory].self, from: data) else {
+            return []
+        }
         return entries
     }
 

@@ -15,4 +15,5 @@ enum Config {
 
     static let analyzeEndpoint = URL(string: "\(supabaseURL)/functions/v1/analyze-screenshot")!
     static let enrichEndpoint  = URL(string: "\(supabaseURL)/functions/v1/enrich-item")!
+    static let suggestCategoryFieldsEndpoint = URL(string: "\(supabaseURL)/functions/v1/suggest-category-fields")!
 }

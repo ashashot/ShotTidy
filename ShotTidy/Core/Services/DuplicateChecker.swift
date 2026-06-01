@@ -69,7 +69,7 @@ enum DuplicateChecker {
     ///   - title:       The title to check (required; empty string returns `[]`).
     ///   - subtitle:    Optional subtitle (e.g. price, author, address).
     ///   - link:        Optional URL or email.
-    ///   - category:    Only items in this category are searched.
+    ///   - categoryKey: Only items whose `categoryRaw` matches are searched.
     ///   - excludingId: Pass the current item's `id` when editing to skip itself.
     ///   - context:     A SwiftData `ModelContext` to query.
     /// - Returns: Matches sorted by confidence (`.high` first).
@@ -77,7 +77,7 @@ enum DuplicateChecker {
         for title: String,
         subtitle: String? = nil,
         link: String? = nil,
-        category: ItemCategory,
+        categoryKey: String,
         excludingId: UUID? = nil,
         in context: ModelContext
     ) -> [DuplicateMatch] {
@@ -87,7 +87,7 @@ enum DuplicateChecker {
             .lowercased()
         guard !normalizedTitle.isEmpty else { return [] }
 
-        let categoryRaw = category.rawValue
+        let categoryRaw = categoryKey
         let descriptor = FetchDescriptor<CatalogItem>(
             predicate: #Predicate { $0.categoryRaw == categoryRaw }
         )

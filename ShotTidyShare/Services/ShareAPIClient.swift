@@ -66,7 +66,19 @@ final class ShareAPIClient {
         }
         let base64 = imageData.base64EncodedString()
 
-        let body: [String: Any] = ["image": base64]
+        // Forward the user's custom categories so the AI can match them.
+        // New-category suggestions are disabled here: the Share Extension has no
+        // UI to create a category, so a "__new__" draft would be unresolvable.
+        var body: [String: Any] = [
+            "image": base64,
+            "allowNewCategory": false,
+        ]
+        let custom = AppGroupManager.loadCustomCategories()
+        if !custom.isEmpty {
+            body["customCategories"] = custom.map {
+                ["key": $0.key, "name": $0.name, "hint": $0.hint]
+            }
+        }
 
         var request = URLRequest(url: analyzeEndpoint)
         request.httpMethod = "POST"

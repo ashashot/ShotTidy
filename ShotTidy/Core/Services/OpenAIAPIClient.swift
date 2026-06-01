@@ -10,6 +10,16 @@
 import Foundation
 import UIKit
 
+// MARK: - Custom category payload
+
+/// Lightweight category info sent to the analysis function so the AI can match
+/// (and suggest) user-defined categories.
+struct CategoryPromptInfo: Encodable {
+    let key: String
+    let name: String
+    let hint: String
+}
+
 // MARK: - Errors
 
 enum OpenAIError: LocalizedError {
@@ -52,6 +62,8 @@ final class OpenAIAPIClient {
 
     func analyzeScreenshot(
         _ image: UIImage,
+        customCategories: [CategoryPromptInfo] = [],
+        allowNewCategory: Bool = false,
         screenshotId: UUID? = nil
     ) async throws -> [DraftItem] {
 
@@ -61,7 +73,15 @@ final class OpenAIAPIClient {
         }
         let base64 = imageData.base64EncodedString()
 
-        let body: [String: Any] = ["image": base64]
+        var body: [String: Any] = [
+            "image": base64,
+            "allowNewCategory": allowNewCategory,
+        ]
+        if !customCategories.isEmpty {
+            body["customCategories"] = customCategories.map {
+                ["key": $0.key, "name": $0.name, "hint": $0.hint]
+            }
+        }
 
         var request = URLRequest(url: Config.analyzeEndpoint)
         request.httpMethod = "POST"
@@ -118,19 +138,22 @@ final class OpenAIAPIClient {
         return items.compactMap { dict -> DraftItem? in
             guard
                 let categoryStr = dict["category"] as? String,
-                let category = ItemCategory(rawValue: categoryStr),
+                !categoryStr.isEmpty,
                 let title = dict["title"] as? String,
                 !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             else { return nil }
 
+            // Accept any non-empty key: built-in raw value, custom key, or "__new__".
+            // Resolution happens at display time via CategoryStore (with fallback).
             return DraftItem(
-                category: category,
+                categoryKey: categoryStr,
                 title: title,
                 subtitle: dict["subtitle"] as? String ?? "",
                 link: dict["link"] as? String ?? "",
                 extra1: dict["extra1"] as? String ?? "",
                 extra2: dict["extra2"] as? String ?? "",
                 notes: dict["notes"] as? String ?? "",
+                suggestedCategoryName: dict["suggestedCategoryName"] as? String ?? "",
                 sourceScreenshotId: screenshotId
             )
         }
