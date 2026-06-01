@@ -359,6 +359,16 @@ enum AppGroupManager {
         return entries
     }
 
+    // MARK: - Hide Completed Filter (Shopping / Tasks)
+
+    nonisolated static func setHideCompleted(_ hide: Bool, forCategory key: String) {
+        sharedDefaults.set(hide, forKey: "filter.hideCompleted.\(key)")
+    }
+
+    nonisolated static func hideCompleted(forCategory key: String) -> Bool {
+        sharedDefaults.bool(forKey: "filter.hideCompleted.\(key)")
+    }
+
     // MARK: - Startup cleanup
 
     /// Remove the legacy PendingImages directory left over from an older flow.

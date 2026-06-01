@@ -34,6 +34,12 @@ enum WidgetDataReader {
         return snap
     }
 
+    // MARK: - Hide Completed Filter
+
+    static func hideCompleted(forCategory key: String) -> Bool {
+        defaults.bool(forKey: "filter.hideCompleted.\(key)")
+    }
+
     // MARK: - Interactive toggle queue
 
     /// Queues a completion toggle for the given item, then optimistically flips

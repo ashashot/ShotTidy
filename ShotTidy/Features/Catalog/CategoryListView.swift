@@ -17,6 +17,11 @@ struct CategoryListView: View {
     @State private var searchText = ""
     @State private var showAddManually = false
     @State private var sortByDate = true
+    @State private var hideCompleted: Bool
+
+    private var supportsHideCompleted: Bool {
+        descriptor.key == "shopping" || descriptor.key == "tasks"
+    }
 
     init(descriptor: CategoryDescriptor) {
         self.descriptor = descriptor
@@ -27,12 +32,19 @@ struct CategoryListView: View {
             },
             sort: [SortDescriptor(\CatalogItem.createdAt, order: .reverse)]
         )
+        _hideCompleted = State(
+            initialValue: AppGroupManager.hideCompleted(forCategory: raw)
+        )
     }
 
     private var filtered: [CatalogItem] {
-        guard !searchText.isEmpty else { return items }
+        var result = items
+        if supportsHideCompleted && hideCompleted {
+            result = result.filter { !$0.isCompleted }
+        }
+        guard !searchText.isEmpty else { return result }
         let q = searchText.lowercased()
-        return items.filter { item in
+        return result.filter { item in
             item.title.lowercased().contains(q) ||
             (item.subtitle?.lowercased().contains(q) ?? false) ||
             (item.extra1?.lowercased().contains(q) ?? false) ||
@@ -48,6 +60,8 @@ struct CategoryListView: View {
                     systemImage: descriptor.iconName,
                     description: Text("No items.\nAdd via screenshot import or the «+» button")
                 )
+            } else if filtered.isEmpty && hideCompleted {
+                allDoneView
             } else {
                 List {
                     ForEach(filtered) { item in
@@ -73,6 +87,23 @@ struct CategoryListView: View {
             WidgetDataManager.writeSnapshot(context: modelContext)
         }
         .toolbar {
+            if supportsHideCompleted {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        hideCompleted.toggle()
+                        AppGroupManager.setHideCompleted(hideCompleted, forCategory: descriptor.key)
+                        WidgetDataManager.reloadWidgets()
+                    } label: {
+                        Image(
+                            systemName: hideCompleted
+                                ? "line.3.horizontal.decrease.circle.fill"
+                                : "line.3.horizontal.decrease.circle"
+                        )
+                        .foregroundStyle(hideCompleted ? Color.accentColor : Color.primary)
+                    }
+                    .accessibilityLabel(hideCompleted ? "Show completed" : "Hide completed")
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showAddManually = true
@@ -83,6 +114,19 @@ struct CategoryListView: View {
         }
         .sheet(isPresented: $showAddManually) {
             ItemEditView(descriptor: descriptor, item: nil)
+        }
+    }
+
+    // MARK: - All Done
+
+    private var allDoneView: some View {
+        ContentUnavailableView {
+            Label(
+                descriptor.key == "shopping" ? "All Purchased!" : "All Done!",
+                systemImage: "checkmark.circle.fill"
+            )
+        } description: {
+            Text("All checked items are hidden. Tap the filter to show them.")
         }
     }
 }

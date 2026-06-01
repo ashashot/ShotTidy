@@ -35,8 +35,10 @@ struct ShoppingProvider: TimelineProvider {
     }
 
     private func makeEntry() -> ShoppingEntry {
+        let hideCompleted = WidgetDataReader.hideCompleted(forCategory: "shopping")
         let items = WidgetDataReader.readSnapshot().items
             .filter { $0.categoryKey == "shopping" }
+            .filter { !hideCompleted || !$0.isCompleted }
             .sorted {
                 if $0.isCompleted != $1.isCompleted { return !$0.isCompleted }
                 return $0.createdAt > $1.createdAt

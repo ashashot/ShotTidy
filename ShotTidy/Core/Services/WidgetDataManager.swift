@@ -95,6 +95,12 @@ enum WidgetDataManager {
         return changed
     }
 
+    // MARK: - Widget reload
+
+    static func reloadWidgets() {
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     // MARK: - Private
 
     private static let snapshotFileName  = "widget_snapshot.json"
