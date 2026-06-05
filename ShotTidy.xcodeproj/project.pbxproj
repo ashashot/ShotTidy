@@ -363,7 +363,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = ShotTidyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShotTidyWidget/Info.plist;
@@ -394,7 +394,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = ShotTidyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShotTidyWidget/Info.plist;
@@ -616,7 +616,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = ShotTidyShare/ShotTidyShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShotTidyShare/Info.plist;
@@ -645,7 +645,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = ShotTidyShare/ShotTidyShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShotTidyShare/Info.plist;

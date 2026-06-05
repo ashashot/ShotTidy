@@ -236,14 +236,26 @@ struct SettingsView: View {
                     HStack {
                         Text("ShotTidy")
                         Spacer()
-                        Text("v2.0")
+                        Text(appVersion)
                             .foregroundStyle(.secondary)
                     }
-                    HStack {
-                        Label("AI Model", systemImage: "cpu")
-                        Spacer()
-                        Text("GPT-4o Vision")
-                            .foregroundStyle(.secondary)
+                    Link(destination: Config.privacyPolicyURL) {
+                        HStack {
+                            Label("Privacy Policy", systemImage: "lock.shield")
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Link(destination: Config.termsOfUseURL) {
+                        HStack {
+                            Label("Terms of Use", systemImage: "doc.text")
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -270,6 +282,14 @@ struct SettingsView: View {
                 Text(restoreError ?? "")
             }
         }
+    }
+
+    // MARK: - App version
+
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+        let build   = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+        return "v\(version) (\(build))"
     }
 
     // MARK: - Restore purchases

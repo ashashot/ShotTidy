@@ -265,10 +265,21 @@ struct PaywallView: View {
     // MARK: - Footer
 
     private var footerSection: some View {
-        Text("Subscription renews automatically each month. Manage or cancel anytime in your App Store account settings.")
-            .font(.caption2)
-            .foregroundStyle(.tertiary)
-            .multilineTextAlignment(.center)
+        VStack(spacing: 10) {
+            Text("Subscription renews automatically each month. Manage or cancel anytime in your App Store account settings.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+
+            HStack(spacing: 20) {
+                Link("Privacy Policy", destination: Config.privacyPolicyURL)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Link("Terms of Use", destination: Config.termsOfUseURL)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 
     // MARK: - Actions

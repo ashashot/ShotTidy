@@ -59,8 +59,19 @@ struct EnrichmentStoreView: View {
                     if !subManager.isProActive {
                         proTeaser
                             .padding(.horizontal, 20)
-                            .padding(.bottom, 24)
+                            .padding(.bottom, 16)
                     }
+
+                    // Legal links
+                    HStack(spacing: 20) {
+                        Link("Privacy Policy", destination: Config.privacyPolicyURL)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Link("Terms of Use", destination: Config.termsOfUseURL)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.bottom, 24)
                 }
             }
             .background(Color(.systemGroupedBackground))

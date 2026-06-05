@@ -16,4 +16,7 @@ enum Config {
     static let analyzeEndpoint = URL(string: "\(supabaseURL)/functions/v1/analyze-screenshot")!
     static let enrichEndpoint  = URL(string: "\(supabaseURL)/functions/v1/enrich-item")!
     static let suggestCategoryFieldsEndpoint = URL(string: "\(supabaseURL)/functions/v1/suggest-category-fields")!
+
+    static let privacyPolicyURL = URL(string: "https://m-bx.com/company/consent/")!
+    static let termsOfUseURL    = URL(string: "https://m-bx.com/company/terms/")!
 }
