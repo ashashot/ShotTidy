@@ -90,7 +90,9 @@ struct EnrichmentStoreView: View {
             } message: {
                 Text(errorMessage ?? "")
             }
-            .sheet(isPresented: $showPaywall) {
+            .sheet(isPresented: $showPaywall, onDismiss: {
+                if subManager.isProActive { dismiss() }
+            }) {
                 PaywallView()
             }
         }
@@ -139,7 +141,6 @@ struct EnrichmentStoreView: View {
 
     private var proTeaser: some View {
         Button {
-            dismiss()
             showPaywall = true
         } label: {
             HStack(spacing: 12) {
