@@ -40,7 +40,7 @@ enum OpenAIError: LocalizedError {
             if code == 500 { return "Server error. Make sure OPENAI_API_KEY is set in Supabase Secrets." }
             return "Server error (\(code)). Please try again."
         case .refused:
-            return "GPT-4o could not analyze this screenshot. Try a different image."
+            return "AI could not analyze this screenshot. Try a different image."
         case .emptyResponse:
             return "Empty response from the API. Please try again."
         case .decodingFailed(let detail):

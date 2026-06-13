@@ -35,7 +35,7 @@ enum ShareAPIError: LocalizedError {
         case .serverError(let code):
             return "Server error (\(code)). Please try again."
         case .refused:
-            return "GPT-4o could not analyze this screenshot."
+            return "AI could not analyze this screenshot."
         case .emptyResponse:
             return "Empty response. Please try again."
         case .decodingFailed:

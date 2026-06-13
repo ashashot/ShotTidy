@@ -40,7 +40,7 @@ struct ShareAnalysisView: View {
                 case .extracting:
                     loadingView(icon: "photo", text: "Loading image…")
                 case .analyzing:
-                    loadingView(icon: "sparkles", text: "Analyzing with GPT-4o…")
+                    loadingView(icon: "sparkles", text: "Analyzing screenshot…")
                 case .results:
                     resultsView
                 case .noItems:

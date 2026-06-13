@@ -19,4 +19,7 @@ enum Config {
 
     static let privacyPolicyURL = URL(string: "https://m-bx.com/company/consent/")!
     static let termsOfUseURL    = URL(string: "https://m-bx.com/company/terms/")!
+
+    /// Address used for the "Send Feedback" action in Settings.
+    static let feedbackEmail = "info@m-bx.com"
 }

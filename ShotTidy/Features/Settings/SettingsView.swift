@@ -5,6 +5,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct SettingsView: View {
 
@@ -26,6 +27,7 @@ struct SettingsView: View {
     @State private var isRestoring = false
     @State private var restoreError: String?
     @State private var syncMonitor = CloudSyncMonitor()
+    @State private var showMailUnavailableAlert = false
 
     var body: some View {
         NavigationStack {
@@ -239,6 +241,18 @@ struct SettingsView: View {
                         Text(appVersion)
                             .foregroundStyle(.secondary)
                     }
+                    Button {
+                        sendFeedback()
+                    } label: {
+                        HStack {
+                            Label("Send Feedback", systemImage: "envelope")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     Link(destination: Config.privacyPolicyURL) {
                         HStack {
                             Label("Privacy Policy", systemImage: "lock.shield")
@@ -267,6 +281,14 @@ struct SettingsView: View {
             .sheet(isPresented: $showEnrichmentStore) {
                 EnrichmentStoreView()
             }
+            .alert("Mail Not Available", isPresented: $showMailUnavailableAlert) {
+                Button("Copy Email Address") {
+                    UIPasteboard.general.string = Config.feedbackEmail
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("No mail app is configured on this device. You can reach us directly at \(Config.feedbackEmail).")
+            }
             .alert("Delete All Data?", isPresented: $showDeleteAlert) {
                 Button("Delete All", role: .destructive) { deleteAll() }
                 Button("Cancel", role: .cancel) {}
@@ -290,6 +312,20 @@ struct SettingsView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         let build   = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
         return "v\(version) (\(build))"
+    }
+
+    // MARK: - Feedback
+
+    private func sendFeedback() {
+        guard let url = FeedbackComposer.feedbackMailURL(isPro: subManager.isProActive) else {
+            showMailUnavailableAlert = true
+            return
+        }
+        UIApplication.shared.open(url) { success in
+            if !success {
+                showMailUnavailableAlert = true
+            }
+        }
     }
 
     // MARK: - Restore purchases
