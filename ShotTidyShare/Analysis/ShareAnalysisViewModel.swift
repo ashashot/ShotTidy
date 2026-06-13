@@ -52,6 +52,8 @@ final class ShareAnalysisViewModel {
     enum Phase: Equatable {
         case extracting
         case analyzing
+        /// Brief "success" phase shown after analysis finds items, before .results.
+        case complete(count: Int)
         case results
         case noItems
         case error(String)
@@ -125,6 +127,10 @@ final class ShareAnalysisViewModel {
                 usage.consumeScreenshots(count: 1)
                 draftWrappers = items.map { DraftWrapper(item: $0) }
                 checkDuplicates()   // Step 3: mark items that already exist
+
+                // Brief "success" screen before showing the results list
+                phase = .complete(count: items.count)
+                try? await Task.sleep(for: .milliseconds(650))
                 phase = .results
             }
         } catch {

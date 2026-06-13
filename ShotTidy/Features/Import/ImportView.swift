@@ -24,6 +24,14 @@ struct ImportView: View {
     @State private var showConfirmation = false
     @State private var showPaywall      = false
 
+    // MARK: - Analysis animation state
+
+    /// Brief "success" screen shown between analysis finishing and ConfirmationView opening.
+    @State private var showCompletion    = false
+    @State private var completionCount   = 0
+    /// Toggled to trigger the checkmark bounce on the completion screen.
+    @State private var bounceCheckmark   = false
+
     // MARK: - Body
 
     var body: some View {
@@ -31,12 +39,18 @@ struct ImportView: View {
             VStack(spacing: 0) {
                 if viewModel.isAnalyzing {
                     analyzingView
+                        .transition(.opacity)
+                } else if showCompletion {
+                    completionView
+                        .transition(.scale(scale: 0.7).combined(with: .opacity))
                 } else if viewModel.selectedImages.isEmpty {
                     pickerPromptView
                 } else {
                     previewView
                 }
             }
+            .animation(.easeInOut(duration: 0.35), value: viewModel.isAnalyzing)
+            .animation(.spring(response: 0.45, dampingFraction: 0.7), value: showCompletion)
             .navigationTitle("Import Screenshots")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -101,7 +115,14 @@ struct ImportView: View {
             if !viewModel.draftItems.isEmpty {
                 // Consume quota for the screenshots that were submitted
                 usageManager.consumeScreenshots(count: count)
+
+                // Show a brief "success" screen before handing off to ConfirmationView
+                completionCount = viewModel.draftItems.count
+                showCompletion  = true
+                try? await Task.sleep(for: .milliseconds(750))
+
                 showConfirmation = true
+                showCompletion   = false
             } else {
                 // All screenshots failed or returned no data — clean up orphaned Screenshot records
                 viewModel.resetAfterConfirmation()
@@ -256,29 +277,94 @@ struct ImportView: View {
             Spacer()
 
             VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .stroke(Color(.systemFill), lineWidth: 4)
-                        .frame(width: 72, height: 72)
-                    Circle()
-                        .trim(from: 0, to: viewModel.progressTotal > 0
-                              ? CGFloat(viewModel.progressCurrent) / CGFloat(viewModel.progressTotal)
-                              : 0)
-                        .stroke(.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                        .frame(width: 72, height: 72)
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeInOut(duration: 0.4), value: viewModel.progressCurrent)
+                TimelineView(.animation) { timeline in
+                    let now = timeline.date.timeIntervalSinceReferenceDate
 
-                    Image(systemName: "sparkles")
-                        .font(.title2)
-                        .foregroundStyle(.blue)
+                    ZStack {
+                        // Radar-style pulsing halos behind the progress ring
+                        ForEach(0..<2, id: \.self) { i in
+                            let phase = Self.haloPhase(at: now, index: i)
+                            Circle()
+                                .fill(Color.blue.opacity(0.10))
+                                .frame(width: 88, height: 88)
+                                .scaleEffect(0.85 + phase * 0.55)
+                                .opacity(0.6 * (1 - phase))
+                        }
+
+                        Circle()
+                            .stroke(Color(.systemFill), lineWidth: 4)
+                            .frame(width: 72, height: 72)
+                        Circle()
+                            .trim(from: 0, to: viewModel.progressTotal > 0
+                                  ? CGFloat(viewModel.progressCurrent) / CGFloat(viewModel.progressTotal)
+                                  : 0)
+                            .stroke(.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                            .frame(width: 72, height: 72)
+                            .rotationEffect(.degrees(-90))
+                            .animation(.easeInOut(duration: 0.4), value: viewModel.progressCurrent)
+
+                        Image(systemName: "sparkles")
+                            .font(.title2)
+                            .foregroundStyle(.blue)
+                            .symbolEffect(.pulse)
+                    }
                 }
+                .frame(width: 88, height: 88)
 
                 VStack(spacing: 6) {
                     Text("Analyzing screenshots...")
                         .font(.headline)
 
-                    Text("Image \(viewModel.progressCurrent) of \(viewModel.progressTotal)")
+                    HStack(spacing: 4) {
+                        Text("Image")
+                        Text("\(viewModel.progressCurrent)")
+                            .contentTransition(.numericText())
+                            .animation(.snappy, value: viewModel.progressCurrent)
+                        Text("of \(viewModel.progressTotal)")
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+        }
+    }
+
+    /// Computes a repeating 0...1 "pulse" phase for radar halo `index`, looping every 1.8s
+    /// with a per-index stagger so the rings expand out of sync.
+    static func haloPhase(at time: TimeInterval, index: Int) -> Double {
+        let period: Double = 1.8
+        let delay = Double(index) * 0.7
+        let t = (time - delay).truncatingRemainder(dividingBy: period)
+        return (t < 0 ? t + period : t) / period
+    }
+
+    // MARK: - Completion view
+
+    /// Brief "success" screen shown after analysis finishes and before ConfirmationView opens.
+    private var completionView: some View {
+        VStack(spacing: 32) {
+            Spacer()
+
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.green.opacity(0.12))
+                        .frame(width: 72, height: 72)
+
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.green)
+                        .symbolEffect(.bounce, value: bounceCheckmark)
+                }
+                .onAppear { bounceCheckmark.toggle() }
+
+                VStack(spacing: 6) {
+                    Text("Analysis Complete")
+                        .font(.headline)
+
+                    Text("\(completionCount) item\(completionCount == 1 ? "" : "s") found")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }

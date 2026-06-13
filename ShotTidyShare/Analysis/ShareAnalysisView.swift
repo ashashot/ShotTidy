@@ -23,6 +23,11 @@ struct ShareAnalysisView: View {
     @State private var showDuplicateSaveAlert = false
     @State private var saveErrorMessage: String? = nil
 
+    // MARK: - Analysis animation state
+
+    /// Toggled to trigger the checkmark bounce on the completion screen.
+    @State private var bounceCheckmark = false
+
     init(
         inputItems: [NSExtensionItem],
         onComplete: @escaping () -> Void,
@@ -40,7 +45,11 @@ struct ShareAnalysisView: View {
                 case .extracting:
                     loadingView(icon: "photo", text: "Loading image…")
                 case .analyzing:
-                    loadingView(icon: "sparkles", text: "Analyzing screenshot…")
+                    analyzingView
+                        .transition(.opacity)
+                case .complete(let count):
+                    completionView(count: count)
+                        .transition(.scale(scale: 0.7).combined(with: .opacity))
                 case .results:
                     resultsView
                 case .noItems:
@@ -53,6 +62,7 @@ struct ShareAnalysisView: View {
                     limitReachedView
                 }
             }
+            .animation(.spring(response: 0.45, dampingFraction: 0.7), value: viewModel.phase)
             .navigationTitle("ShotTidy")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
@@ -146,6 +156,88 @@ struct ShareAnalysisView: View {
             Text(text)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Analyzing
+
+    private var analyzingView: some View {
+        VStack(spacing: 20) {
+            TimelineView(.animation) { timeline in
+                let now = timeline.date.timeIntervalSinceReferenceDate
+
+                ZStack {
+                    // Radar-style pulsing halos behind the progress ring
+                    ForEach(0..<2, id: \.self) { i in
+                        let phase = Self.haloPhase(at: now, index: i)
+                        Circle()
+                            .fill(Color.blue.opacity(0.10))
+                            .frame(width: 88, height: 88)
+                            .scaleEffect(0.85 + phase * 0.55)
+                            .opacity(0.6 * (1 - phase))
+                    }
+
+                    Circle()
+                        .stroke(Color(.systemFill), lineWidth: 4)
+                        .frame(width: 72, height: 72)
+
+                    // Indeterminate rotating arc (single screenshot — no step progress)
+                    Circle()
+                        .trim(from: 0, to: 0.7)
+                        .stroke(.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                        .frame(width: 72, height: 72)
+                        .rotationEffect(.degrees((now.truncatingRemainder(dividingBy: 1.1) / 1.1) * 360))
+
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 28, weight: .medium))
+                        .foregroundStyle(.blue)
+                        .symbolEffect(.pulse)
+                }
+            }
+            .frame(width: 88, height: 88)
+
+            Text("Analyzing screenshot…")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Computes a repeating 0...1 "pulse" phase for radar halo `index`, looping every 1.8s
+    /// with a per-index stagger so the rings expand out of sync.
+    static func haloPhase(at time: TimeInterval, index: Int) -> Double {
+        let period: Double = 1.8
+        let delay = Double(index) * 0.7
+        let t = (time - delay).truncatingRemainder(dividingBy: period)
+        return (t < 0 ? t + period : t) / period
+    }
+
+    // MARK: - Completion
+
+    /// Brief "success" screen shown after analysis finds items, before the results list.
+    private func completionView(count: Int) -> some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(Color.green.opacity(0.12))
+                    .frame(width: 72, height: 72)
+
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 36))
+                    .foregroundStyle(.green)
+                    .symbolEffect(.bounce, value: bounceCheckmark)
+            }
+            .onAppear { bounceCheckmark.toggle() }
+
+            VStack(spacing: 4) {
+                Text("Analysis Complete")
+                    .font(.headline)
+
+                Text("\(count) item\(count == 1 ? "" : "s") found")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
