@@ -130,7 +130,8 @@ final class ShareAnalysisViewModel {
             } else {
                 usage.consumeScreenshots(count: 1)
                 draftWrappers = items.map { DraftWrapper(item: $0) }
-                checkDuplicates()   // Step 3: mark items that already exist
+                applyClipboardLink()    // Step 3: fill empty link fields from clipboard URL
+                checkDuplicates()   // Step 4: mark items that already exist
 
                 // Brief "success" screen before showing the results list
                 phase = .complete(count: items.count)
@@ -140,6 +141,34 @@ final class ShareAnalysisViewModel {
         } catch {
             // Network / server error — do NOT consume quota (no successful API call)
             phase = .error(error.localizedDescription)
+        }
+    }
+
+    // MARK: - Clipboard link autofill
+
+    /// Reads a URL from the clipboard and fills empty `link` fields on draft items
+    /// whose category schema has a URL-type link field (non-email categories only).
+    private func applyClipboardLink() {
+        let pasteboard = UIPasteboard.general
+        let urlString: String?
+        if let url = pasteboard.url {
+            urlString = url.absoluteString
+        } else if let string = pasteboard.string,
+                  let url = URL(string: string),
+                  url.scheme == "https" || url.scheme == "http" {
+            urlString = string
+        } else {
+            urlString = nil
+        }
+        guard let link = urlString, !link.isEmpty else { return }
+
+        for i in draftWrappers.indices {
+            let schema = ShareFieldSchema.make(for: draftWrappers[i].item.categoryKey)
+            guard schema.linkLabel != nil,
+                  !schema.isLinkEmail,
+                  draftWrappers[i].item.link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else { continue }
+            draftWrappers[i].item.link = link
         }
     }
 
