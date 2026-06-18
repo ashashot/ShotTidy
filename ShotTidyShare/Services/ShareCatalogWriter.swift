@@ -8,15 +8,34 @@
 
 import Foundation
 import SwiftData
+import UIKit
 
 enum ShareCatalogWriter {
 
-    /// Opens the shared SwiftData store and inserts one CatalogItem per draft.
-    /// The store lives in the App Group container, accessible by both targets.
+    /// Opens the shared SwiftData store and inserts one CatalogItem per draft,
+    /// plus a Screenshot record linked to them (if a source image is provided).
     @MainActor
-    static func save(_ items: [PendingDraftItem]) throws {
+    static func save(_ items: [PendingDraftItem], sourceImage: UIImage? = nil) throws {
         let container = try makeContainer()
         let context = container.mainContext
+
+        // Create a Screenshot record so the Screenshots tab shows the source image.
+        let screenshotId: UUID?
+        if let image = sourceImage, !items.isEmpty {
+            let screenshot = Screenshot()
+            screenshot.originalFileName = "share_screenshot.jpg"
+            screenshot.createdAt = Date()
+            screenshot.analyzedAt = Date()
+            screenshot.analysisStatus = .done
+            screenshot.extractedItemsCount = items.count
+
+            screenshot.thumbnailData = image.resized(toMaxDimension: 800).jpegData(compressionQuality: 0.85)
+
+            context.insert(screenshot)
+            screenshotId = screenshot.id
+        } else {
+            screenshotId = nil
+        }
 
         for draft in items {
             let item = CatalogItem(
@@ -28,6 +47,9 @@ enum ShareCatalogWriter {
                 extra2:      draft.extra2.isEmpty   ? nil : draft.extra2,
                 notes:       draft.notes.isEmpty    ? nil : draft.notes
             )
+            if let sid = screenshotId {
+                item.sourceScreenshotId = sid
+            }
             context.insert(item)
         }
 

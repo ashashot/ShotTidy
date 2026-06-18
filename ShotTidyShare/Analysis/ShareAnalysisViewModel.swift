@@ -78,6 +78,9 @@ final class ShareAnalysisViewModel {
     var phase: Phase = .extracting
     var draftWrappers: [DraftWrapper] = []
 
+    /// The image extracted from the share payload — retained for saving a Screenshot record.
+    private var capturedImage: UIImage?
+
     var selectedCount: Int {
         draftWrappers.filter(\.isSelected).count
     }
@@ -114,6 +117,7 @@ final class ShareAnalysisViewModel {
             phase = .error("Could not load the image from share data.")
             return
         }
+        capturedImage = image
 
         // Step 2: analyze via Supabase Edge Function (no local API key needed)
         phase = .analyzing
@@ -205,7 +209,7 @@ final class ShareAnalysisViewModel {
 
     func saveSelected() throws {
         let selected = draftWrappers.filter(\.isSelected).map(\.item)
-        try ShareCatalogWriter.save(selected)
+        try ShareCatalogWriter.save(selected, sourceImage: capturedImage)
         phase = .saving
     }
 
