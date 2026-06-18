@@ -236,7 +236,7 @@ struct SettingsView: View {
 
                 Section("About") {
                     HStack {
-                        Text("ShotTidy")
+                        Text("ShotTidier")
                         Spacer()
                         Text(appVersion)
                             .foregroundStyle(.secondary)

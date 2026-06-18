@@ -19,7 +19,7 @@ enum FeedbackComposer {
 
     static var subject: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
-        return "ShotTidy Feedback (v\(version))"
+        return "ShotTidier Feedback (v\(version))"
     }
 
     /// Diagnostic footer appended to the feedback email so issues are easier to triage.
@@ -33,7 +33,7 @@ enum FeedbackComposer {
 
 
         ---
-        ShotTidy v\(version) (\(build))
+        ShotTidier v\(version) (\(build))
         Plan: \(plan)
         \(device.systemName) \(device.systemVersion), \(device.model)
         """

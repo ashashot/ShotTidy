@@ -43,13 +43,11 @@ struct ShotTidyApp: App {
 
         if isPro {
             // Pro tier: CloudKit sync enabled.
-            // The container ID is kept as iCloud.mbx.ShotTidy (declared in entitlements)
-            // so existing records sync correctly regardless of the app bundle ID.
             let cloudConfig = ModelConfiguration(
                 "ShotTidy",
                 schema: schema,
                 url: storeURL,
-                cloudKitDatabase: .private("iCloud.mbx.ShotTidy")
+                cloudKitDatabase: .private("iCloud.com.mbx.ShotTidier")
             )
             if let container = try? ModelContainer(for: schema, configurations: [cloudConfig]) {
                 return container

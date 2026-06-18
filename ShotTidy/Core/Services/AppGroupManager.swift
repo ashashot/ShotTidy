@@ -32,9 +32,9 @@ final class UsageStore {
     nonisolated static let shared = UsageStore()
 
     private let account = "usage.counters"
-    private let service = "com.mbx.ShotTidy.usage"
+    private let service = "com.mbx.ShotTidier.usage"
 
-    /// Fully-qualified shared keychain access group (`<TeamID>.com.mbx.ShotTidy.usage`),
+    /// Fully-qualified shared keychain access group (`<TeamID>.com.mbx.ShotTidier.usage`),
     /// resolved at runtime so the Team ID is never hardcoded. `nil` means the
     /// access group could not be determined — we then fall back to the target's
     /// default keychain (still survives reinstall, but won't share across targets).
@@ -45,7 +45,7 @@ final class UsageStore {
 
     private init() {
         mirror = UserDefaults(suiteName: AppGroupManager.groupID) ?? .standard
-        accessGroup = UsageStore.resolveAccessGroup(suffix: "com.mbx.ShotTidy.usage")
+        accessGroup = UsageStore.resolveAccessGroup(suffix: "com.mbx.ShotTidier.usage")
         cache = UsageStore.readKeychain(
             account: account, service: service, accessGroup: accessGroup
         ) ?? [:]
@@ -290,12 +290,15 @@ enum AppGroupManager {
 
     // MARK: - Pending Draft Items (new flow)
 
-    /// Save items confirmed by the user in the Share Extension
+    /// Append items confirmed by the user in the Share Extension to any existing pending drafts.
+    /// Multiple share sessions without opening the main app accumulate items rather than overwriting.
     static func savePendingDrafts(_ items: [PendingDraftItem]) throws {
         guard let url = pendingDraftsURL else {
             throw AppGroupError.containerUnavailable
         }
-        let data = try JSONEncoder().encode(items)
+        var existing = loadPendingDrafts()
+        existing.append(contentsOf: items)
+        let data = try JSONEncoder().encode(existing)
         try data.write(to: url, options: .atomic)
     }
 

@@ -6,7 +6,7 @@
 	<string>development</string>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
-		<string>iCloud.mbx.ShotTidy</string>
+		<string>iCloud.com.mbx.ShotTidier</string>
 	</array>
 	<key>com.apple.developer.icloud-services</key>
 	<array>
@@ -18,7 +18,7 @@
 	</array>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)com.mbx.ShotTidy.usage</string>
+		<string>$(AppIdentifierPrefix)com.mbx.ShotTidier.usage</string>
 	</array>
 </dict>
 </plist>
