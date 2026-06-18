@@ -328,10 +328,13 @@ struct ShareEditView: View {
                     }
                 }
             }
-            // Status bar — shown only while search is active
+            // Status bar / action button — bottom safe area
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if enrichState != .idle {
                     shareEnrichStatusBar
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else if hasMissingFields && usageManager.canEnrich() {
+                    enrichActionButton
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else if !usageManager.canEnrich() && hasMissingFields {
                     noCreditsBar
@@ -342,40 +345,41 @@ struct ShareEditView: View {
             .navigationTitle("Edit Item")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Done — top LEFT
-                ToolbarItem(placement: .topBarLeading) {
+                // Done — top RIGHT
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                         .fontWeight(.semibold)
                 }
-                // Search — top RIGHT, shown when optional fields are missing and not already searching
-                ToolbarItem(placement: .topBarTrailing) {
-                    if hasMissingFields && enrichState == .idle {
-                        if usageManager.canEnrich() {
-                            Button(action: runEnrichment) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "magnifyingglass.circle.fill")
-                                        .font(.system(size: 20))
-                                        .foregroundStyle(categoryColor)
-                                    Text("\(usageManager.enrichmentBalance)")
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundStyle(categoryColor)
-                                }
-                            }
-                        } else {
-                            // No credits — show locked icon with 0 badge
-                            HStack(spacing: 4) {
-                                Image(systemName: "cart.circle.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(Color.secondary)
-                                Text("0")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(Color.secondary)
-                            }
-                            .help("No enrichment credits. Open ShotTidy to buy more.")
-                        }
-                    }
-                }
             }
+        }
+    }
+
+    // MARK: - Enrich action button (full-width, bottom)
+
+    private var enrichActionButton: some View {
+        VStack(spacing: 0) {
+            Divider()
+            Button(action: runEnrichment) {
+                HStack {
+                    Image(systemName: "magnifyingglass.circle.fill")
+                        .font(.system(size: 20))
+                    Text("Fill Missing Fields")
+                        .fontWeight(.semibold)
+                    Spacer()
+                    Text("\(usageManager.enrichmentBalance)")
+                        .font(.system(size: 12, weight: .bold))
+                        .monospacedDigit()
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(categoryColor.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+                .foregroundStyle(categoryColor)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+            }
+            .background(.bar)
         }
     }
 
