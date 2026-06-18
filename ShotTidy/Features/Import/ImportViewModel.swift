@@ -125,6 +125,7 @@ final class ImportViewModel {
             saveCheckpoint(ctx)
         }
 
+        applyClipboardLink()
         isAnalyzing = false
     }
 
@@ -150,6 +151,34 @@ final class ImportViewModel {
 
         didSaveThisSession = true
         saveCritical(ctx)
+    }
+
+    // MARK: - Clipboard link autofill
+
+    /// Reads a URL from the clipboard and fills empty `link` fields on draft items
+    /// whose category schema has a URL-type link field (non-email categories only).
+    private func applyClipboardLink() {
+        let pasteboard = UIPasteboard.general
+        let urlString: String?
+        if let url = pasteboard.url {
+            urlString = url.absoluteString
+        } else if let string = pasteboard.string,
+                  let url = URL(string: string),
+                  url.scheme == "https" || url.scheme == "http" {
+            urlString = string
+        } else {
+            urlString = nil
+        }
+        guard let link = urlString, !link.isEmpty else { return }
+
+        for i in draftItems.indices {
+            guard let category = ItemCategory(rawValue: draftItems[i].categoryKey),
+                  category.fieldSchema.linkLabel != nil,
+                  !category.fieldSchema.isLinkEmail,
+                  draftItems[i].link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else { continue }
+            draftItems[i].link = link
+        }
     }
 
     // MARK: - Reset
