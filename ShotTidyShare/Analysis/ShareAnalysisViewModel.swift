@@ -205,7 +205,7 @@ final class ShareAnalysisViewModel {
 
     func saveSelected() throws {
         let selected = draftWrappers.filter(\.isSelected).map(\.item)
-        try AppGroupManager.savePendingDrafts(selected)
+        try ShareCatalogWriter.save(selected)
         phase = .saving
     }
 

@@ -34,10 +34,21 @@ struct ShotTidyApp: App {
             UserCategory.self,
         ])
 
-        // Both tiers use the same SQLite file so data is preserved across tier changes.
-        // CloudKit sync is layered on top for Pro users — no migration needed.
-        let storeURL = URL.applicationSupportDirectory
-            .appending(path: "ShotTidy.sqlite")
+        // Store lives in the App Group container so the Share Extension can write directly.
+        let groupURL = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: AppGroupManager.groupID)!
+        let storeURL = groupURL.appending(path: "ShotTidy.sqlite")
+
+        // One-time migration: copy the store from the old app-sandbox location.
+        let oldURL = URL.applicationSupportDirectory.appending(path: "ShotTidy.sqlite")
+        if !FileManager.default.fileExists(atPath: storeURL.path),
+           FileManager.default.fileExists(atPath: oldURL.path) {
+            for suffix in ["", "-wal", "-shm"] {
+                let src = URL(fileURLWithPath: oldURL.path + suffix)
+                let dst = URL(fileURLWithPath: storeURL.path + suffix)
+                try? FileManager.default.copyItem(at: src, to: dst)
+            }
+        }
 
         let isPro = AppGroupManager.loadIsProStatus()
 

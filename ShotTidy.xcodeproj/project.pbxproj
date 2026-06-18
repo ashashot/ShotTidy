@@ -85,6 +85,10 @@
 			membershipExceptions = (
 				"Core/Extensions/UIImage+Extensions.swift",
 				Core/Services/AppGroupManager.swift,
+				Models/CatalogItem.swift,
+				Models/ItemCategory.swift,
+				Models/Screenshot.swift,
+				Models/UserCategory.swift,
 			);
 			target = DE327FED2FC1B9400090FC80 /* ShotTidyShare */;
 		};

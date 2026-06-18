@@ -24,16 +24,7 @@ final class ShareViewController: UIViewController {
         let analysisView = ShareAnalysisView(
             inputItems: inputItems,
             onComplete: { [weak self] in
-                guard let context = self?.extensionContext else { return }
-                // Open the main app so it immediately imports the saved drafts.
-                // Falls back gracefully if the system doesn't switch (data persists in pending_drafts.json).
-                if let url = URL(string: "shottidy://catalog") {
-                    context.open(url) { _ in
-                        context.completeRequest(returningItems: nil)
-                    }
-                } else {
-                    context.completeRequest(returningItems: nil)
-                }
+                self?.extensionContext?.completeRequest(returningItems: nil)
             },
             onCancel: { [weak self] in
                 self?.extensionContext?.cancelRequest(
