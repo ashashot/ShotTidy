@@ -529,6 +529,35 @@ struct DraftItemEditView: View {
                             )
                     }
                 }
+
+                // Fill Missing Fields button — inline in the form
+                if enrichState == .idle && hasMissingFields {
+                    Section {
+                        Button(action: runEnrichment) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "magnifyingglass.circle.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                Text("Fill Missing Fields")
+                                    .fontWeight(.semibold)
+                                    .font(.system(size: 16))
+                                Spacer()
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .listRowBackground(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 1.0, green: 0.45, blue: 0.0),
+                                    Color(red: 1.0, green: 0.28, blue: 0.0),
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                    }
+                }
             }
             // Status bar — shown only while search is active (loading / success / error)
             .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -541,20 +570,9 @@ struct DraftItemEditView: View {
             .navigationTitle("Edit")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Done — top LEFT
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                         .fontWeight(.semibold)
-                }
-                // Search — top RIGHT, shown only when fields are missing and not already searching
-                ToolbarItem(placement: .topBarTrailing) {
-                    if hasMissingFields && enrichState == .idle {
-                        Button(action: runEnrichment) {
-                            Image(systemName: "magnifyingglass.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundStyle(descriptor.color)
-                        }
-                    }
                 }
             }
         }
