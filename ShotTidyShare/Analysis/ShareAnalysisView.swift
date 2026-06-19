@@ -11,6 +11,7 @@ import SwiftUI
 
 struct ShareAnalysisView: View {
     @State private var viewModel: ShareAnalysisViewModel
+    @State private var updateService = ShareUpdateService()
     let onComplete: () -> Void
     let onCancel: () -> Void
 
@@ -68,7 +69,10 @@ struct ShareAnalysisView: View {
             .toolbar { toolbarContent }
         }
         .task {
-            await viewModel.start()
+            // Check for a required update and start analysis concurrently.
+            async let updateCheck: () = updateService.check()
+            async let analysisStart: () = viewModel.start()
+            _ = await (updateCheck, analysisStart)
         }
         .alert("Save Error", isPresented: .init(
             get: { saveErrorMessage != nil },
@@ -78,6 +82,17 @@ struct ShareAnalysisView: View {
         } message: {
             Text(saveErrorMessage ?? "")
         }
+        // Force update overlay — shown when a mandatory update is detected.
+        .overlay {
+            if updateService.state == .required {
+                ShareForceUpdateView(
+                    storeURL: updateService.storeURL,
+                    onCancel: onCancel
+                )
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: updateService.state == .required)
     }
 
     // MARK: - Toolbar

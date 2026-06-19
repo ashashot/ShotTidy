@@ -14,6 +14,7 @@ struct ShotTidyApp: App {
     @State private var subscriptionManager = SubscriptionManager()
     @State private var usageManager        = UsageManager()
     @State private var categoryStore       = CategoryStore()
+    @State private var updateService       = AppUpdateService()
 
     // MARK: - Init
 
@@ -92,6 +93,8 @@ struct ShotTidyApp: App {
                     await subscriptionManager.onLaunch()
                     // Check rolling 30-day reset now that we know the subscription state.
                     usageManager.performRollingReset(isPro: subscriptionManager.isProActive)
+                    // Check remote config for a required update (runs in background).
+                    await updateService.check()
                 }
                 .alert(
                     "Restart Required",
@@ -110,6 +113,15 @@ struct ShotTidyApp: App {
                         Text("iCloud sync has been disabled. Please restart the app to apply changes.")
                     }
                 }
+                // Force update overlay — covers the entire UI, cannot be dismissed.
+                .overlay {
+                    if updateService.state == .required {
+                        ForceUpdateView()
+                            .ignoresSafeArea()
+                            .transition(.opacity)
+                    }
+                }
+                .animation(.easeInOut(duration: 0.3), value: updateService.state == .required)
         }
         .modelContainer(sharedModelContainer)
     }
