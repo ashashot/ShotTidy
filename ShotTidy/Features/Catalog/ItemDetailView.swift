@@ -130,6 +130,11 @@ struct ItemDetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 .padding(.top, 4)
+
+                // Source screenshot
+                if let screenshotId = item.sourceScreenshotId {
+                    SourceScreenshotCard(screenshotId: screenshotId)
+                }
             }
             .padding()
         }
@@ -355,6 +360,70 @@ private struct EnrichButton: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - SourceScreenshotCard
+
+struct SourceScreenshotCard: View {
+    let screenshotId: UUID
+
+    @Query private var screenshots: [Screenshot]
+
+    init(screenshotId: UUID) {
+        self.screenshotId = screenshotId
+        let sid = screenshotId
+        _screenshots = Query(filter: #Predicate<Screenshot> { s in s.id == sid })
+    }
+
+    var body: some View {
+        if let screenshot = screenshots.first {
+            NavigationLink(destination: ScreenshotDetailView(screenshot: screenshot)) {
+                HStack(spacing: 12) {
+                    thumbnailView(screenshot)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("SOURCE SCREENSHOT")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .tracking(0.5)
+                        Text("View screenshot")
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                        Text(screenshot.createdAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(14)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    @ViewBuilder
+    private func thumbnailView(_ screenshot: Screenshot) -> some View {
+        if let data = screenshot.thumbnailData, let img = UIImage(data: data) {
+            Image(uiImage: img)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 54, height: 54)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        } else {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(.tertiarySystemGroupedBackground))
+                .frame(width: 54, height: 54)
+                .overlay(
+                    Image(systemName: "photo")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                )
+        }
     }
 }
 

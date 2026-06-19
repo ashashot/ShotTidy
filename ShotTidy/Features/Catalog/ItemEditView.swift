@@ -143,6 +143,13 @@ struct ItemEditView: View {
                             )
                     }
                 }
+
+                // Source screenshot (read-only, shown when item was created from import)
+                if let screenshotId = existingItem?.sourceScreenshotId {
+                    Section("Source Screenshot") {
+                        SourceScreenshotRow(screenshotId: screenshotId)
+                    }
+                }
             }
             // Status bar — shown only while search is active (loading / success / error)
             .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -389,6 +396,58 @@ struct ItemEditView: View {
                 notes: notes.isEmpty ? nil : notes
             )
             modelContext.insert(item)
+        }
+    }
+}
+
+// MARK: - SourceScreenshotRow
+
+private struct SourceScreenshotRow: View {
+    let screenshotId: UUID
+
+    @Query private var screenshots: [Screenshot]
+
+    init(screenshotId: UUID) {
+        self.screenshotId = screenshotId
+        let sid = screenshotId
+        _screenshots = Query(filter: #Predicate<Screenshot> { s in s.id == sid })
+    }
+
+    var body: some View {
+        if let screenshot = screenshots.first {
+            NavigationLink(destination: ScreenshotDetailView(screenshot: screenshot)) {
+                HStack(spacing: 12) {
+                    thumbnailView(screenshot)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Tap to view original screenshot")
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                        Text(screenshot.createdAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func thumbnailView(_ screenshot: Screenshot) -> some View {
+        if let data = screenshot.thumbnailData, let img = UIImage(data: data) {
+            Image(uiImage: img)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+        } else {
+            RoundedRectangle(cornerRadius: 7)
+                .fill(Color(.tertiarySystemFill))
+                .frame(width: 44, height: 44)
+                .overlay(
+                    Image(systemName: "photo")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                )
         }
     }
 }
