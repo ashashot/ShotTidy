@@ -127,15 +127,17 @@ final class SubscriptionManager {
             }
         }
 
-        let previous = isProActive
+        // Read the persisted Pro status BEFORE updating it — this is the value
+        // ModelContainer was configured with at launch, so it reflects whether
+        // CloudKit sync is currently active in the running container.
+        let containerWasConfiguredAsPro = AppGroupManager.loadIsProStatus()
         isProActive = active
-        // Sync Pro status to the App Group so the Share Extension can read it
         AppGroupManager.saveIsProStatus(active)
 
-        // If iCloud sync eligibility changed mid-session, notify the user to restart.
-        // The ModelContainer is configured once at launch based on Pro status,
-        // so a restart is required for the change to take effect.
-        if previous != active {
+        // Only prompt a restart when the sync configuration actually needs to change.
+        // Comparing against the persisted launch value prevents a false "Restart Required"
+        // alert on initial launch when the container is already correctly configured.
+        if containerWasConfiguredAsPro != active {
             needsRestartForSyncChange = true
         }
     }
