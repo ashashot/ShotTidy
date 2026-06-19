@@ -22,4 +22,16 @@ enum Config {
 
     /// Address used for the "Send Feedback" action in Settings.
     static let feedbackEmail = "info@m-bx.com"
+
+    // MARK: - Force Update
+
+    /// Remote JSON that controls force-update behavior.
+    /// Bucket "config" must be public in Supabase Storage.
+    /// File content: { "force_update": false }
+    static let appConfigURL = URL(
+        string: "\(supabaseURL)/storage/v1/object/public/config/app-config.json"
+    )
+
+    /// App Store link — update the numeric ID when the app is published.
+    static let appStoreURL = URL(string: "https://apps.apple.com/app/id6745548716")
 }
