@@ -8,6 +8,7 @@
 
 import SwiftUI
 import SwiftData
+import MapKit
 
 struct ItemDetailView: View {
     @Bindable var item: CatalogItem
@@ -94,6 +95,16 @@ struct ItemDetailView: View {
                             highlighted: recentlyFilledKeys.contains("notes")
                         )
                     }
+                }
+
+                // Map — shown only for the "places" category
+                if item.categoryRaw == ItemCategory.places.rawValue {
+                    PlaceMapView(
+                        placeName: item.title,
+                        address: item.subtitle,
+                        city: item.extra1,
+                        country: item.extra2
+                    )
                 }
 
                 // Enrichment button — only when some optional fields are empty
