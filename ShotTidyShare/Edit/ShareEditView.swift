@@ -327,17 +327,61 @@ struct ShareEditView: View {
                             )
                     }
                 }
+
+                // Fill Missing Fields button — inline in the form
+                if enrichState == .idle && hasMissingFields {
+                    if usageManager.canEnrich() {
+                        Section {
+                            Button(action: runEnrichment) {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "magnifyingglass.circle.fill")
+                                        .font(.system(size: 18, weight: .semibold))
+                                    Text("Fill Missing Fields")
+                                        .fontWeight(.semibold)
+                                        .font(.system(size: 16))
+                                    Spacer()
+                                    Text("\(usageManager.enrichmentBalance)")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .monospacedDigit()
+                                        .padding(.horizontal, 9)
+                                        .padding(.vertical, 4)
+                                        .background(.white.opacity(0.25))
+                                        .clipShape(Capsule())
+                                }
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                            }
+                            .listRowBackground(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 1.0, green: 0.45, blue: 0.0),
+                                        Color(red: 1.0, green: 0.28, blue: 0.0),
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                        }
+                    } else {
+                        Section {
+                            HStack(spacing: 10) {
+                                Image(systemName: "cart.circle.fill")
+                                    .foregroundStyle(.secondary)
+                                Text("No enrichment credits left. Open ShotTidy to buy more.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                            .frame(minHeight: 44)
+                        }
+                    }
+                }
             }
-            // Status bar / action button — bottom safe area
+            // Status bar — shown only while enrichment is active (loading / success / error)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if enrichState != .idle {
                     shareEnrichStatusBar
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                } else if hasMissingFields && usageManager.canEnrich() {
-                    enrichActionButton
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                } else if !usageManager.canEnrich() && hasMissingFields {
-                    noCreditsBar
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
@@ -351,35 +395,6 @@ struct ShareEditView: View {
                         .fontWeight(.semibold)
                 }
             }
-        }
-    }
-
-    // MARK: - Enrich action button (full-width, bottom)
-
-    private var enrichActionButton: some View {
-        VStack(spacing: 0) {
-            Divider()
-            Button(action: runEnrichment) {
-                HStack {
-                    Image(systemName: "magnifyingglass.circle.fill")
-                        .font(.system(size: 20))
-                    Text("Fill Missing Fields")
-                        .fontWeight(.semibold)
-                    Spacer()
-                    Text("\(usageManager.enrichmentBalance)")
-                        .font(.system(size: 12, weight: .bold))
-                        .monospacedDigit()
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(categoryColor.opacity(0.15))
-                        .clipShape(Capsule())
-                }
-                .foregroundStyle(categoryColor)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .frame(maxWidth: .infinity)
-            }
-            .background(.bar)
         }
     }
 
@@ -481,25 +496,6 @@ struct ShareEditView: View {
         }
     }
 
-    // MARK: - No credits bar
-
-    private var noCreditsBar: some View {
-        VStack(spacing: 0) {
-            Divider()
-            HStack(spacing: 10) {
-                Image(systemName: "cart.circle.fill")
-                    .foregroundStyle(.secondary)
-                Text("No enrichment credits left. Open ShotTidy to buy more.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(.bar)
-        }
-    }
 }
 
 // MARK: - ShareEnrichState
