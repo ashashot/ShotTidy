@@ -23,6 +23,8 @@ struct MacCategoriesSidebar: View {
     @Query private var allItems: [CatalogItem]
     @Environment(CategoryStore.self) private var categoryStore
 
+    @State private var showCategoryManager = false
+
     private func count(for descriptor: CategoryDescriptor) -> Int {
         allItems.filter { $0.categoryRaw == descriptor.key }.count
     }
@@ -59,6 +61,14 @@ struct MacCategoriesSidebar: View {
         .navigationTitle("ShotTidy")
         .listStyle(.sidebar)
         .toolbar {
+            ToolbarItem {
+                Button {
+                    showCategoryManager = true
+                } label: {
+                    Image(systemName: "folder.badge.gearshape")
+                }
+                .help("Manage Categories")
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showImport = true
@@ -67,6 +77,9 @@ struct MacCategoriesSidebar: View {
                 }
                 .help("Import Screenshots")
             }
+        }
+        .sheet(isPresented: $showCategoryManager) {
+            MacCategoryManagerView()
         }
     }
 }
