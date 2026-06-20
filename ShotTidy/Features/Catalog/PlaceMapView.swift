@@ -103,25 +103,36 @@ struct PlaceMapView: View {
 
     private func geocode() async {
         let query = queryString
-        guard !query.isEmpty else {
-            geocodeState = .failed
-            return
-        }
+        guard !query.isEmpty else { geocodeState = .failed; return }
 
-        let geocoder = CLGeocoder()
         do {
-            let placemarks = try await geocoder.geocodeAddressString(query)
-            if let location = placemarks.first?.location {
-                let coord = location.coordinate
-                coordinate = coord
-                cameraPosition = .region(MKCoordinateRegion(
-                    center: coord,
-                    span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
-                ))
-                geocodeState = .ready
+            let coord: CLLocationCoordinate2D
+            if #available(iOS 26, *) {
+                guard let request = MKGeocodingRequest(addressString: query) else {
+                    geocodeState = .failed
+                    return
+                }
+                let items = try await request.mapItems
+                guard let location = items.first?.location else {
+                    geocodeState = .failed
+                    return
+                }
+                coord = location.coordinate
             } else {
-                geocodeState = .failed
+                let geocoder = CLGeocoder()
+                let placemarks = try await geocoder.geocodeAddressString(query)
+                guard let location = placemarks.first?.location else {
+                    geocodeState = .failed
+                    return
+                }
+                coord = location.coordinate
             }
+            coordinate = coord
+            cameraPosition = .region(MKCoordinateRegion(
+                center: coord,
+                span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
+            ))
+            geocodeState = .ready
         } catch {
             geocodeState = .failed
         }
@@ -130,7 +141,13 @@ struct PlaceMapView: View {
     // MARK: - Open Apple Maps
 
     private func openInMaps(coordinate: CLLocationCoordinate2D) {
-        let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
+        let mapItem: MKMapItem
+        if #available(iOS 26, *) {
+            let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+            mapItem = MKMapItem(location: location, address: nil)
+        } else {
+            mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
+        }
         mapItem.name = placeName
         mapItem.openInMaps(launchOptions: [
             MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
