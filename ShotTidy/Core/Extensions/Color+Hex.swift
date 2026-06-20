@@ -7,6 +7,11 @@
 //
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 extension Color {
 
@@ -17,7 +22,7 @@ extension Color {
             .replacingOccurrences(of: "#", with: "")
 
         guard cleaned.count == 6, let value = UInt64(cleaned, radix: 16) else {
-            self = Color(.systemGray)
+            self = Color.gray
             return
         }
 
@@ -28,15 +33,16 @@ extension Color {
     }
 
     /// Returns a "#RRGGBB" representation of the color.
-    /// Resolves through UIColor so dynamic/system colors get a concrete value.
     func toHex() -> String {
-        let ui = UIColor(self)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        ui.getRed(&r, green: &g, blue: &b, alpha: &a)
-
-        let ri = Int((r * 255).rounded())
-        let gi = Int((g * 255).rounded())
-        let bi = Int((b * 255).rounded())
-        return String(format: "#%02X%02X%02X", ri, gi, bi)
+#if canImport(UIKit)
+        UIColor(self).getRed(&r, green: &g, blue: &b, alpha: &a)
+#elseif canImport(AppKit)
+        NSColor(self).getRed(&r, green: &g, blue: &b, alpha: &a)
+#endif
+        return String(format: "#%02X%02X%02X",
+                      Int((r * 255).rounded()),
+                      Int((g * 255).rounded()),
+                      Int((b * 255).rounded()))
     }
 }
