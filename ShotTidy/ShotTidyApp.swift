@@ -61,8 +61,12 @@ struct ShotTidyApp: App {
                 url: storeURL,
                 cloudKitDatabase: .private("iCloud.com.mbx.ShotTidier")
             )
-            if let container = try? ModelContainer(for: schema, configurations: [cloudConfig]) {
-                return container
+            do {
+                return try ModelContainer(for: schema, configurations: [cloudConfig])
+            } catch {
+                // Falling back to local-only storage. Log the reason so CloudKit
+                // sync misconfiguration (entitlements, container schema) is visible.
+                print("⚠️ CloudKit ModelContainer creation failed, falling back to local store: \(error)")
             }
         }
 
@@ -103,14 +107,19 @@ struct ShotTidyApp: App {
                         set: { _ in subscriptionManager.acknowledgeRestartPrompt() }
                     )
                 ) {
-                    Button("OK") {
+                    Button("Restart Now") {
+                        subscriptionManager.acknowledgeRestartPrompt()
+                        AppGroupManager.sharedDefaults.synchronize()
+                        exit(0)
+                    }
+                    Button("Later", role: .cancel) {
                         subscriptionManager.acknowledgeRestartPrompt()
                     }
                 } message: {
                     if subscriptionManager.isProActive {
-                        Text("iCloud sync has been enabled. Please restart the app to start syncing your catalog across devices.")
+                        Text("iCloud sync has been enabled. Tap \"Restart Now\" to apply the change — the app will close and reopen automatically.")
                     } else {
-                        Text("iCloud sync has been disabled. Please restart the app to apply changes.")
+                        Text("iCloud sync has been disabled. Tap \"Restart Now\" to apply the change.")
                     }
                 }
                 // Force update overlay — covers the entire UI, cannot be dismissed.

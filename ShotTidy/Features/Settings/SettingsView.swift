@@ -28,6 +28,7 @@ struct SettingsView: View {
     @State private var restoreError: String?
     @State private var syncMonitor = CloudSyncMonitor()
     @State private var showMailUnavailableAlert = false
+    @State private var showDiagnostic = false
 
     var body: some View {
         NavigationStack {
@@ -240,6 +241,7 @@ struct SettingsView: View {
                         Spacer()
                         Text(appVersion)
                             .foregroundStyle(.secondary)
+                            .onTapGesture(count: 5) { showDiagnostic = true }
                     }
                     Button {
                         sendFeedback()
@@ -303,6 +305,14 @@ struct SettingsView: View {
             } message: {
                 Text(restoreError ?? "")
             }
+            .alert("Diagnostics", isPresented: $showDiagnostic) {
+                Button("Copy") {
+                    UIPasteboard.general.string = diagnosticText
+                }
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(diagnosticText)
+            }
         }
     }
 
@@ -312,6 +322,19 @@ struct SettingsView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         let build   = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
         return "v\(version) (\(build))"
+    }
+
+    // MARK: - Diagnostics (tap version label 5× to show)
+
+    private var diagnosticText: String {
+        let persistedPro = AppGroupManager.loadIsProStatus()
+        return """
+        isProActive: \(subManager.isProActive)
+        persisted isPro: \(persistedPro)
+        products loaded: \(subManager.products.count)
+        lastDiagnostic: \(subManager.lastDiagnostic.isEmpty ? "—" : subManager.lastDiagnostic)
+        appVersion: \(appVersion)
+        """
     }
 
     // MARK: - Feedback
@@ -338,7 +361,7 @@ struct SettingsView: View {
             if subManager.isProActive {
                 usageManager.onSubscriptionActivated()
             } else {
-                restoreError = "No active subscription found."
+                restoreError = "No active Pro subscription found for your Apple ID. Make sure you're signed in with the same account used to purchase."
             }
         } catch {
             restoreError = error.localizedDescription

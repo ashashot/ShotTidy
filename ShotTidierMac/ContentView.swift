@@ -16,6 +16,7 @@ struct ContentView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(CategoryStore.self) private var categoryStore
+    @Environment(MacCloudSyncMonitor.self) private var syncMonitor
 
     @Query private var userCategories: [UserCategory]
 
@@ -33,11 +34,47 @@ struct ContentView: View {
                     .navigationTitle("Import Screenshots")
             }
         }
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                syncMonitor.isSyncing
+                    ? AnyView(ProgressView().controlSize(.small).help("Syncing with iCloud…"))
+                    : AnyView(Image(systemName: cloudIcon)
+                        .foregroundStyle(cloudColor)
+                        .help(cloudHelp)
+                        .onTapGesture { syncMonitor.triggerSync(context: modelContext) })
+            }
+        }
         .onAppear {
             categoryStore.configure(context: modelContext)
         }
         .onChange(of: userCategories.count) { _, _ in
             categoryStore.reload()
+        }
+    }
+
+    // MARK: - Cloud icon helpers
+
+    private var cloudIcon: String {
+        switch syncMonitor.state {
+        case .idle:   return "checkmark.icloud"
+        case .syncing: return "icloud"
+        case .error:  return "exclamationmark.icloud"
+        }
+    }
+
+    private var cloudColor: Color {
+        switch syncMonitor.state {
+        case .idle:   return .secondary
+        case .syncing: return .accentColor
+        case .error:  return .red
+        }
+    }
+
+    private var cloudHelp: String {
+        switch syncMonitor.state {
+        case .idle:   return "iCloud sync active — click to sync now"
+        case .syncing: return "Syncing with iCloud…"
+        case .error(let msg): return "iCloud error: \(msg)"
         }
     }
 

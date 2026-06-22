@@ -118,25 +118,49 @@ final class SubscriptionManager {
 
     // MARK: - Subscription status
 
+    /// Diagnostic info from the last call to refreshSubscriptionStatus.
+    private(set) var lastDiagnostic = ""
+
     func refreshSubscriptionStatus() async {
         var active = false
+        var totalEntitlements = 0
+        var unverifiedCount = 0
+        var foundProductIDs: [String] = []
+
         for await result in Transaction.currentEntitlements {
-            guard let tx = try? checkVerified(result) else { continue }
-            if tx.productID == ProductID.proMonthly && tx.revocationDate == nil {
-                active = true
+            totalEntitlements += 1
+            switch result {
+            case .verified(let tx):
+                foundProductIDs.append(tx.productID)
+                if tx.productID == ProductID.proMonthly && tx.revocationDate == nil {
+                    active = true
+                }
+            case .unverified(_, let error):
+                unverifiedCount += 1
+                foundProductIDs.append("UNVERIFIED(\(error.localizedDescription))")
             }
         }
 
-        // Read the persisted Pro status BEFORE updating it — this is the value
-        // ModelContainer was configured with at launch, so it reflects whether
-        // CloudKit sync is currently active in the running container.
+        // Fallback: check subscription status via Product API (helps in Sandbox)
+        if !active {
+            for product in products where product.id == ProductID.proMonthly {
+                if let statuses = try? await product.subscription?.status {
+                    for status in statuses {
+                        if status.state == .subscribed || status.state == .inGracePeriod {
+                            active = true
+                        }
+                    }
+                }
+            }
+        }
+
+        lastDiagnostic = "Entitlements: \(totalEntitlements), unverified: \(unverifiedCount), IDs: \(foundProductIDs.joined(separator: "|")), active: \(active)"
+
         let containerWasConfiguredAsPro = AppGroupManager.loadIsProStatus()
         isProActive = active
         AppGroupManager.saveIsProStatus(active)
+        AppGroupManager.sharedDefaults.synchronize()
 
-        // Only prompt a restart when the sync configuration actually needs to change.
-        // Comparing against the persisted launch value prevents a false "Restart Required"
-        // alert on initial launch when the container is already correctly configured.
         if containerWasConfiguredAsPro != active {
             needsRestartForSyncChange = true
         }

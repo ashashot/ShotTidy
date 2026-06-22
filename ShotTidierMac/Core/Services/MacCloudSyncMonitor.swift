@@ -1,0 +1,103 @@
+//
+//  MacCloudSyncMonitor.swift
+//  ShotTidierMac
+//
+//  Observes NSPersistentCloudKitContainer sync events and exposes a manual
+//  trigger for iCloud sync. Mirror of the iOS CloudSyncMonitor.
+//
+
+import SwiftUI
+import CoreData
+import SwiftData
+
+@Observable
+@MainActor
+final class MacCloudSyncMonitor {
+
+    // MARK: - State
+
+    enum SyncState {
+        case idle
+        case syncing
+        case error(String)
+
+        var isSyncing: Bool {
+            if case .syncing = self { return true }
+            return false
+        }
+
+        var errorMessage: String? {
+            if case .error(let msg) = self { return msg }
+            return nil
+        }
+    }
+
+    private(set) var state: SyncState = .idle
+    private(set) var lastSyncDate: Date?
+
+    var isSyncing: Bool { state.isSyncing }
+
+    // MARK: - Private
+
+    private var observer: NSObjectProtocol?
+    private var fallbackTask: Task<Void, Never>?
+
+    private static let lastSyncKey = "MacCloudSyncMonitor.lastSyncDate"
+
+    // MARK: - Init
+
+    init() {
+        lastSyncDate = UserDefaults.standard.object(forKey: Self.lastSyncKey) as? Date
+        startObserving()
+    }
+
+    // MARK: - Manual trigger
+
+    func triggerSync(context: ModelContext) {
+        guard !state.isSyncing else { return }
+        state = .syncing
+        try? context.save()
+
+        fallbackTask?.cancel()
+        fallbackTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            guard let self, case .syncing = self.state else { return }
+            self.state = .idle
+            self.updateLastSyncDate(Date())
+        }
+    }
+
+    // MARK: - CloudKit event observation
+
+    private func startObserving() {
+        observer = NotificationCenter.default.addObserver(
+            forName: NSPersistentCloudKitContainer.eventChangedNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self else { return }
+            MainActor.assumeIsolated { self.handle(notification) }
+        }
+    }
+
+    private func handle(_ notification: Notification) {
+        guard let event = notification.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey]
+                as? NSPersistentCloudKitContainer.Event else { return }
+
+        if event.endDate == nil {
+            state = .syncing
+        } else if event.succeeded {
+            fallbackTask?.cancel()
+            state = .idle
+            updateLastSyncDate(event.endDate ?? Date())
+        } else {
+            fallbackTask?.cancel()
+            state = .error(event.error?.localizedDescription ?? "Unknown iCloud error")
+        }
+    }
+
+    private func updateLastSyncDate(_ date: Date) {
+        lastSyncDate = date
+        UserDefaults.standard.set(date, forKey: Self.lastSyncKey)
+    }
+}

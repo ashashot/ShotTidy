@@ -306,10 +306,10 @@ struct PaywallView: View {
             if subManager.isProActive {
                 dismiss()
             } else {
-                errorMessage = "No active subscription found."
+                errorMessage = "No active Pro subscription found for your Apple ID. Make sure you're signed in with the same account used to purchase."
             }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = "Restore failed: \(error.localizedDescription). Make sure you're signed in with the same Apple ID used to purchase."
         }
     }
 }

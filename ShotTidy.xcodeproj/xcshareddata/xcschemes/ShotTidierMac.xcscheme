@@ -15,9 +15,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "DE327FC02FC1B4160090FC80"
-               BuildableName = "ShotTidy.app"
-               BlueprintName = "ShotTidy"
+               BlueprintIdentifier = "DE4AC0072FC1B4160090FC80"
+               BuildableName = "ShotTidierMac.app"
+               BlueprintName = "ShotTidierMac"
                ReferencedContainer = "container:ShotTidy.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -39,15 +39,14 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES"
-      queueDebuggingEnableBacktraceRecording = "Yes">
+      allowLocationSimulation = "YES">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "DE327FC02FC1B4160090FC80"
-            BuildableName = "ShotTidy.app"
-            BlueprintName = "ShotTidy"
+            BlueprintIdentifier = "DE4AC0072FC1B4160090FC80"
+            BuildableName = "ShotTidierMac.app"
+            BlueprintName = "ShotTidierMac"
             ReferencedContainer = "container:ShotTidy.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -65,9 +64,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "DE327FC02FC1B4160090FC80"
-            BuildableName = "ShotTidy.app"
-            BlueprintName = "ShotTidy"
+            BlueprintIdentifier = "DE4AC0072FC1B4160090FC80"
+            BuildableName = "ShotTidierMac.app"
+            BlueprintName = "ShotTidierMac"
             ReferencedContainer = "container:ShotTidy.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
