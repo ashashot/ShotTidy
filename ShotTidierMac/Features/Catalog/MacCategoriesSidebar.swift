@@ -25,11 +25,16 @@ struct MacCategoriesSidebar: View {
 
     @State private var showCategoryManager = false
 
-    private func count(for descriptor: CategoryDescriptor) -> Int {
-        allItems.filter { $0.categoryRaw == descriptor.key }.count
+    /// Item counts grouped by category key, computed in a single pass instead of
+    /// re-filtering the whole collection once per category row.
+    private var countsByCategory: [String: Int] {
+        allItems.reduce(into: [:]) { counts, item in
+            counts[item.categoryRaw, default: 0] += 1
+        }
     }
 
     var body: some View {
+        let counts = countsByCategory
         List(selection: $selection) {
             Section("Catalog") {
                 ForEach(categoryStore.allDescriptors) { descriptor in
@@ -37,7 +42,7 @@ struct MacCategoriesSidebar: View {
                         HStack {
                             Text(descriptor.name)
                             Spacer()
-                            let c = count(for: descriptor)
+                            let c = counts[descriptor.key] ?? 0
                             if c > 0 {
                                 Text("\(c)")
                                     .font(.caption)

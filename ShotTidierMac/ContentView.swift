@@ -36,12 +36,7 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItem(placement: .automatic) {
-                syncMonitor.isSyncing
-                    ? AnyView(ProgressView().controlSize(.small).help("Syncing with iCloud…"))
-                    : AnyView(Image(systemName: cloudIcon)
-                        .foregroundStyle(cloudColor)
-                        .help(cloudHelp)
-                        .onTapGesture { syncMonitor.triggerSync(context: modelContext) })
+                CloudSyncStatusButton()
             }
         }
         .onAppear {
@@ -49,32 +44,6 @@ struct ContentView: View {
         }
         .onChange(of: userCategories.count) { _, _ in
             categoryStore.reload()
-        }
-    }
-
-    // MARK: - Cloud icon helpers
-
-    private var cloudIcon: String {
-        switch syncMonitor.state {
-        case .idle:   return "checkmark.icloud"
-        case .syncing: return "icloud"
-        case .error:  return "exclamationmark.icloud"
-        }
-    }
-
-    private var cloudColor: Color {
-        switch syncMonitor.state {
-        case .idle:   return .secondary
-        case .syncing: return .accentColor
-        case .error:  return .red
-        }
-    }
-
-    private var cloudHelp: String {
-        switch syncMonitor.state {
-        case .idle:   return "iCloud sync active — click to sync now"
-        case .syncing: return "Syncing with iCloud…"
-        case .error(let msg): return "iCloud error: \(msg)"
         }
     }
 
@@ -111,6 +80,58 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+}
+
+// MARK: - CloudSyncStatusButton
+
+/// Toolbar indicator for iCloud sync state. Factored into its own `View` so it
+/// invalidates only when the sync state changes — and to avoid `AnyView` type
+/// erasure in the toolbar.
+private struct CloudSyncStatusButton: View {
+
+    @Environment(MacCloudSyncMonitor.self) private var syncMonitor
+    @Environment(\.modelContext) private var modelContext
+
+    var body: some View {
+        if syncMonitor.isSyncing {
+            ProgressView()
+                .controlSize(.small)
+                .help("Syncing with iCloud…")
+        } else {
+            Button {
+                syncMonitor.triggerSync(context: modelContext)
+            } label: {
+                Image(systemName: iconName)
+                    .foregroundStyle(iconColor)
+            }
+            .buttonStyle(.plain)
+            .help(helpText)
+        }
+    }
+
+    private var iconName: String {
+        switch syncMonitor.state {
+        case .idle:    return "checkmark.icloud"
+        case .syncing: return "icloud"
+        case .error:   return "exclamationmark.icloud"
+        }
+    }
+
+    private var iconColor: Color {
+        switch syncMonitor.state {
+        case .idle:    return .secondary
+        case .syncing: return .accentColor
+        case .error:   return .red
+        }
+    }
+
+    private var helpText: String {
+        switch syncMonitor.state {
+        case .idle:           return "iCloud sync active — click to sync now"
+        case .syncing:        return "Syncing with iCloud…"
+        case .error(let msg): return "iCloud error: \(msg)"
         }
     }
 }
