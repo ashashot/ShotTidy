@@ -368,7 +368,7 @@ struct ShareEditView: View {
                             HStack(spacing: 10) {
                                 Image(systemName: "cart.circle.fill")
                                     .foregroundStyle(.secondary)
-                                Text("No enrichment credits left. Open ShotTidy to buy more.")
+                                Text("No enrichment credits left. Open ShotTidier to buy more.")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(2)

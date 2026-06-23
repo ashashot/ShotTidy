@@ -64,7 +64,7 @@ struct ShareAnalysisView: View {
                 }
             }
             .animation(.spring(response: 0.45, dampingFraction: 0.7), value: viewModel.phase)
-            .navigationTitle("ShotTidy")
+            .navigationTitle("ShotTidier")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
         }
@@ -434,7 +434,7 @@ struct ShareAnalysisView: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 18))
                     .foregroundStyle(.blue)
-                Text("Open ShotTidy → Settings to upgrade to Pro for unlimited analyses.")
+                Text("Open ShotTidier → Settings to upgrade to Pro for unlimited analyses.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
