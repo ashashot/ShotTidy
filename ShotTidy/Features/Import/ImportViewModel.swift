@@ -157,6 +157,7 @@ final class ImportViewModel {
 
     /// Reads a URL from the clipboard and fills empty `link` fields on draft items
     /// whose category schema has a URL-type link field (non-email categories only).
+    /// Clears the clipboard after applying so subsequent imports don't reuse the same link.
     private func applyClipboardLink() {
         let pasteboard = UIPasteboard.general
         let urlString: String?
@@ -171,6 +172,7 @@ final class ImportViewModel {
         }
         guard let link = urlString, !link.isEmpty else { return }
 
+        var applied = false
         for i in draftItems.indices {
             guard let category = ItemCategory(rawValue: draftItems[i].categoryKey),
                   category.fieldSchema.linkLabel != nil,
@@ -178,6 +180,11 @@ final class ImportViewModel {
                   draftItems[i].link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             else { continue }
             draftItems[i].link = link
+            applied = true
+        }
+
+        if applied {
+            pasteboard.string = nil
         }
     }
 
