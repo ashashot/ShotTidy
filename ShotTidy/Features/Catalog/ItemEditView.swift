@@ -9,10 +9,13 @@
 
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 struct ItemEditView: View {
     let descriptor: CategoryDescriptor
     var existingItem: CatalogItem?
+    /// Called after a successful save. When nil, the default dismiss() is used.
+    var onSaved: (() -> Void)?
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss)      private var dismiss
@@ -26,6 +29,11 @@ struct ItemEditView: View {
     @State private var extra2: String
     @State private var notes: String
 
+    // MARK: - Manual screenshot attachment
+    @State private var manualPhoto: UIImage?
+    @State private var photoPickerItem: PhotosPickerItem?
+    @State private var showCamera = false
+
     // MARK: - Duplicate detection
     @State private var duplicates: [DuplicateMatch] = []
     @State private var showDuplicateConfirm  = false
@@ -37,15 +45,17 @@ struct ItemEditView: View {
     @State private var enrichState: EditEnrichState = .idle
     @State private var highlightedFields: Set<String> = []
 
-    init(descriptor: CategoryDescriptor, item: CatalogItem?) {
+    init(descriptor: CategoryDescriptor, item: CatalogItem?, attachedImage: UIImage? = nil, onSaved: (() -> Void)? = nil) {
         self.descriptor = descriptor
         self.existingItem = item
+        self.onSaved = onSaved
         _title    = State(initialValue: item?.title ?? "")
         _subtitle = State(initialValue: item?.subtitle ?? "")
         _link     = State(initialValue: item?.link ?? "")
         _extra1   = State(initialValue: item?.extra1 ?? "")
         _extra2   = State(initialValue: item?.extra2 ?? "")
         _notes    = State(initialValue: item?.notes ?? "")
+        _manualPhoto = State(initialValue: attachedImage)
     }
 
     private var isEditing: Bool { existingItem != nil }
@@ -74,6 +84,15 @@ struct ItemEditView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // Screenshot attachment (only for new items)
+                if !isEditing {
+                    Section {
+                        screenshotAttachmentRow
+                    } header: {
+                        Text("Screenshot (Optional)")
+                    }
+                }
+
                 // Title (required)
                 Section {
                     TextField(schema.titlePlaceholder, text: $title, axis: .vertical)
@@ -191,7 +210,7 @@ struct ItemEditView: View {
                         if !isEditing && !duplicates.isEmpty {
                             showDuplicateConfirm = true
                         } else {
-                            save(); dismiss()
+                            doSave()
                         }
                     }
                     .disabled(!canSave)
@@ -201,8 +220,12 @@ struct ItemEditView: View {
             .sheet(isPresented: $showEnrichmentStore) {
                 EnrichmentStoreView()
             }
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraPickerView(image: $manualPhoto)
+                    .ignoresSafeArea()
+            }
             .alert("Possible Duplicate", isPresented: $showDuplicateConfirm) {
-                Button("Save Anyway", role: .destructive) { save(); dismiss() }
+                Button("Save Anyway", role: .destructive) { doSave() }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text(duplicateAlertMessage)
@@ -377,6 +400,15 @@ struct ItemEditView: View {
 
     // MARK: - Save
 
+    private func doSave() {
+        save()
+        if let onSaved {
+            onSaved()
+        } else {
+            dismiss()
+        }
+    }
+
     private func save() {
         if let existing = existingItem {
             existing.title    = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -386,6 +418,18 @@ struct ItemEditView: View {
             existing.extra2   = extra2.isEmpty ? nil : extra2
             existing.notes    = notes.isEmpty ? nil : notes
         } else {
+            var sourceId: UUID? = nil
+            if let image = manualPhoto {
+                let screenshot = Screenshot()
+                screenshot.originalFileName = "manual_screenshot.jpg"
+                screenshot.createdAt = Date()
+                screenshot.analysisStatus = .done
+                screenshot.extractedItemsCount = 1
+                let thumb = image.resized(toMaxDimension: 800)
+                screenshot.thumbnailData = thumb.jpegData(compressionQuality: 0.85)
+                modelContext.insert(screenshot)
+                sourceId = screenshot.id
+            }
             let item = CatalogItem(
                 categoryKey: descriptor.key,
                 title: title.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -393,9 +437,77 @@ struct ItemEditView: View {
                 link: link.isEmpty ? nil : link,
                 extra1: extra1.isEmpty ? nil : extra1,
                 extra2: extra2.isEmpty ? nil : extra2,
-                notes: notes.isEmpty ? nil : notes
+                notes: notes.isEmpty ? nil : notes,
+                sourceScreenshotId: sourceId
             )
             modelContext.insert(item)
+        }
+    }
+
+    // MARK: - Screenshot attachment UI
+
+    @ViewBuilder
+    private var screenshotAttachmentRow: some View {
+        if let photo = manualPhoto {
+            HStack(spacing: 12) {
+                Image(uiImage: photo)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .clipped()
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Screenshot attached")
+                        .font(.subheadline)
+                    Text("Will be saved with this item as a reference")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button(role: .destructive) {
+                    withAnimation { manualPhoto = nil; photoPickerItem = nil }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 4)
+        } else {
+            HStack(spacing: 12) {
+                PhotosPicker(selection: $photoPickerItem, matching: .images) {
+                    Label("Gallery", systemImage: "photo.on.rectangle")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .onChange(of: photoPickerItem) { _, newItem in
+                    Task {
+                        if let data = try? await newItem?.loadTransferable(type: Data.self),
+                           let img = UIImage(data: data) {
+                            manualPhoto = img
+                        }
+                    }
+                }
+
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    Button {
+                        showCamera = true
+                    } label: {
+                        Label("Camera", systemImage: "camera")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+            }
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
         }
     }
 }
@@ -459,4 +571,46 @@ private enum EditEnrichState: Equatable {
     case loading
     case success(Int)
     case failure(String)
+}
+
+// MARK: - CameraPickerView
+
+private struct CameraPickerView: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    @Environment(\.dismiss) private var dismiss
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(image: $image, dismiss: dismiss)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        @Binding var image: UIImage?
+        let dismiss: DismissAction
+
+        init(image: Binding<UIImage?>, dismiss: DismissAction) {
+            _image = image
+            self.dismiss = dismiss
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            image = info[.originalImage] as? UIImage
+            dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            dismiss()
+        }
+    }
 }
