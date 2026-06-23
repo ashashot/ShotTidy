@@ -16,6 +16,7 @@ struct CategoriesView: View {
     @Environment(CategoryStore.self) private var categoryStore
 
     @State private var showCategoryManager = false
+    @State private var showManualAdd = false
     /// Cached hide-completed flags; refreshed on appear so count badges stay in sync.
     @State private var hideCompleted: [String: Bool] = [:]
 
@@ -68,8 +69,17 @@ struct CategoriesView: View {
                     .accessibilityLabel("Manage Categories")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showImport = true
+                    Menu {
+                        Button {
+                            showManualAdd = true
+                        } label: {
+                            Label("Add Manually", systemImage: "pencil")
+                        }
+                        Button {
+                            showImport = true
+                        } label: {
+                            Label("Import Screenshots", systemImage: "photo.badge.plus")
+                        }
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
@@ -79,6 +89,9 @@ struct CategoriesView: View {
             }
             .sheet(isPresented: $showCategoryManager) {
                 CategoryManagerView()
+            }
+            .sheet(isPresented: $showManualAdd) {
+                ManualAddView()
             }
         }
     }

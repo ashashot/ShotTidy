@@ -17,6 +17,8 @@
 	<string>ShotTidy needs calendar access to add reminders and events from your catalog items.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>ShotTidy needs calendar access to add reminders and events from your catalog items.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take a photo to attach as a reference screenshot for the catalog item.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
