@@ -57,7 +57,8 @@ enum WidgetDataManager {
             },
             updatedAt: Date(),
             isPro: AppGroupManager.loadIsProStatus(),
-            enrichmentBalance: UsageStore.shared.integer(forKey: "usage.enrichmentBalance"),
+            enrichmentBalance: UsageStore.shared.integer(forKey: "usage.purchasedCredits")
+                             + UsageStore.shared.integer(forKey: "usage.proCredits"),
             screenshotsThisPeriod: UsageStore.shared.integer(forKey: "usage.screenshotsThisPeriod")
         )
 

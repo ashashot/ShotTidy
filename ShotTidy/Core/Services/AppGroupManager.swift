@@ -97,6 +97,8 @@ final class UsageStore {
             "usage.screenshotsThisPeriod",
             "usage.enrichmentBalance",
             "usage.categorySuggestionsThisPeriod",
+            "usage.purchasedCredits",
+            "usage.proCredits",
         ]
         let doubleKeys = [
             "usage.periodStartDate",
