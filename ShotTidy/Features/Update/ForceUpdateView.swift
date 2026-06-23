@@ -34,7 +34,7 @@ struct ForceUpdateView: View {
                     .padding(.top, 28)
 
                 // Body
-                Text("A new version of ShotTidy is available.\nPlease update the app to continue using it.")
+                Text("A new version of ShotTidier is available.\nPlease update the app to continue using it.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
