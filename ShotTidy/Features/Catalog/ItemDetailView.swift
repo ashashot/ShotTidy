@@ -9,6 +9,7 @@
 import SwiftUI
 import SwiftData
 import MapKit
+import EventKitUI
 
 struct ItemDetailView: View {
     @Bindable var item: CatalogItem
@@ -21,6 +22,9 @@ struct ItemDetailView: View {
     @State private var showEdit = false
     @State private var showDeleteAlert = false
     @State private var showEnrichmentStore = false
+
+    // MARK: - Calendar state
+    @ObservedObject private var calendarService: CalendarService = CalendarService.shared
 
     // MARK: - Enrichment state
     @State private var enrichmentState: EnrichmentState = .idle
@@ -97,6 +101,13 @@ struct ItemDetailView: View {
                     }
                 }
 
+                // Add to Calendar button — shown when any field contains a parseable date
+                if item.calendarDate != nil {
+                    AddToCalendarButton(color: descriptor.color) {
+                        calendarService.addToCalendar(item: item)
+                    }
+                }
+
                 // Map — shown only for the "places" category
                 if item.categoryRaw == ItemCategory.places.rawValue {
                     PlaceMapView(
@@ -157,6 +168,24 @@ struct ItemDetailView: View {
         }
         .sheet(isPresented: $showEnrichmentStore) {
             EnrichmentStoreView()
+        }
+        .sheet(isPresented: $calendarService.showEditor) {
+            if calendarService.pendingEvent != nil {
+                CalendarEventEditorView(service: calendarService) {
+                    calendarService.showEditor = false
+                }
+                .ignoresSafeArea()
+            }
+        }
+        .alert("Calendar Access Denied", isPresented: $calendarService.showDeniedAlert) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Please allow ShotTidy to access your calendar in Settings.")
         }
         .alert("Delete item?", isPresented: $showDeleteAlert) {
             Button("Delete", role: .destructive) {
@@ -424,6 +453,38 @@ struct SourceScreenshotCard: View {
                         .foregroundStyle(.secondary)
                 )
         }
+    }
+}
+
+// MARK: - AddToCalendarButton
+
+private struct AddToCalendarButton: View {
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: "calendar.badge.plus")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Add to Calendar")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundStyle(color)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .background(color.opacity(0.09))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(color.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
