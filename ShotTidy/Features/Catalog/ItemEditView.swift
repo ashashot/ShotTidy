@@ -33,6 +33,9 @@ struct ItemEditView: View {
     @State private var manualPhoto: UIImage?
     @State private var photoPickerItem: PhotosPickerItem?
     @State private var showCamera = false
+    @State private var showSourcePicker = false
+    @State private var showGalleryPicker = false
+    @State private var showFilePicker = false
 
     // MARK: - Duplicate detection
     @State private var duplicates: [DuplicateMatch] = []
@@ -223,6 +226,31 @@ struct ItemEditView: View {
             .fullScreenCover(isPresented: $showCamera) {
                 CameraPickerView(image: $manualPhoto)
                     .ignoresSafeArea()
+            }
+            .confirmationDialog("Screenshot", isPresented: $showSourcePicker, titleVisibility: .hidden) {
+                Button("Choose from Gallery") { showGalleryPicker = true }
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    Button("Take Photo") { showCamera = true }
+                }
+                Button("Choose File") { showFilePicker = true }
+            }
+            .photosPicker(isPresented: $showGalleryPicker, selection: $photoPickerItem, matching: .images, photoLibrary: .shared())
+            .onChange(of: photoPickerItem) { _, newItem in
+                Task {
+                    if let data = try? await newItem?.loadTransferable(type: Data.self),
+                       let img = UIImage(data: data) {
+                        manualPhoto = img
+                    }
+                }
+            }
+            .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.image]) { result in
+                if case .success(let url) = result,
+                   url.startAccessingSecurityScopedResource() {
+                    defer { url.stopAccessingSecurityScopedResource() }
+                    if let data = try? Data(contentsOf: url), let img = UIImage(data: data) {
+                        manualPhoto = img
+                    }
+                }
             }
             .alert("Possible Duplicate", isPresented: $showDuplicateConfirm) {
                 Button("Save Anyway", role: .destructive) { doSave() }
@@ -478,35 +506,16 @@ struct ItemEditView: View {
             }
             .padding(.vertical, 4)
         } else {
-            HStack(spacing: 12) {
-                PhotosPicker(selection: $photoPickerItem, matching: .images) {
-                    Label("Gallery", systemImage: "photo.on.rectangle")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                .onChange(of: photoPickerItem) { _, newItem in
-                    Task {
-                        if let data = try? await newItem?.loadTransferable(type: Data.self),
-                           let img = UIImage(data: data) {
-                            manualPhoto = img
-                        }
-                    }
-                }
-
-                if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                    Button {
-                        showCamera = true
-                    } label: {
-                        Label("Camera", systemImage: "camera")
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                }
+            Button {
+                showSourcePicker = true
+            } label: {
+                Label("Add Screenshot", systemImage: "photo.badge.plus")
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
             }
+            .buttonStyle(.plain)
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
         }
     }

@@ -2,44 +2,43 @@
 //  ManualAddView.swift
 //  ShotTidy
 //
-//  Manual item addition flow: pick a category, fill the form.
+//  Manual item addition flow: pick a category, then fill the form.
 //  No AI analysis, no quota — available to all users including free tier.
+//
+//  Navigation note: ItemEditView owns its own NavigationStack (it's also used
+//  as a standalone sheet). Pushing it via navigationDestination would nest two
+//  NavigationStacks (flicker + instant pop). We present it as a sheet instead.
 //
 
 import SwiftUI
 
 struct ManualAddView: View {
-    @Environment(\.dismiss)       private var dismiss
+    @Environment(\.dismiss)         private var dismiss
     @Environment(CategoryStore.self) private var categoryStore
 
-    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
+    @State private var selectedDescriptor: CategoryDescriptor?
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+            List {
+                Section {
                     infoBanner
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                }
 
-                    Text("Select a category")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 16)
-
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(categoryStore.allDescriptors) { descriptor in
-                            NavigationLink(value: descriptor) {
-                                ManualCategoryCard(descriptor: descriptor)
-                            }
-                            .buttonStyle(.plain)
+                Section("Select a category") {
+                    ForEach(categoryStore.allDescriptors) { descriptor in
+                        Button {
+                            selectedDescriptor = descriptor
+                        } label: {
+                            ManualCategoryRow(descriptor: descriptor)
                         }
+                        .buttonStyle(.plain)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 24)
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .listStyle(.insetGrouped)
             .navigationTitle("Add Manually")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -47,7 +46,7 @@ struct ManualAddView: View {
                     Button("Cancel") { dismiss() }
                 }
             }
-            .navigationDestination(for: CategoryDescriptor.self) { descriptor in
+            .sheet(item: $selectedDescriptor) { descriptor in
                 ItemEditView(descriptor: descriptor, item: nil, onSaved: { dismiss() })
             }
         }
@@ -77,16 +76,18 @@ struct ManualAddView: View {
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(Color.blue.opacity(0.18), lineWidth: 1)
         )
+        .padding(.horizontal, 4)
+        .padding(.vertical, 4)
     }
 }
 
-// MARK: - ManualCategoryCard
+// MARK: - ManualCategoryRow
 
-private struct ManualCategoryCard: View {
+private struct ManualCategoryRow: View {
     let descriptor: CategoryDescriptor
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             Image(systemName: descriptor.iconName)
                 .font(.body)
                 .foregroundStyle(descriptor.color)
@@ -95,19 +96,15 @@ private struct ManualCategoryCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
             Text(descriptor.name)
-                .font(.subheadline.weight(.medium))
+                .font(.body)
                 .foregroundStyle(.primary)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
 
             Spacer(minLength: 0)
 
             Image(systemName: "chevron.right")
-                .font(.caption2)
+                .font(.caption)
                 .foregroundStyle(.tertiary)
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.vertical, 2)
     }
 }
