@@ -21,8 +21,10 @@ struct ImportView: View {
     @State private var viewModel = ImportViewModel()
     // Set to true only AFTER analyzeImages() completes,
     // guaranteeing that draftItems are populated on ConfirmationView's first render.
-    @State private var showConfirmation = false
-    @State private var showPaywall      = false
+    @State private var showConfirmation  = false
+    @State private var showPaywall       = false
+    @State private var showManualEntry   = false
+    @State private var manualEntryImage: UIImage? = nil
 
     // MARK: - Analysis animation state
 
@@ -67,13 +69,14 @@ struct ImportView: View {
                     }
                 }
             }
-            .alert("Analysis Error", isPresented: Binding(
-                get: { viewModel.analysisError != nil },
-                set: { if !$0 { viewModel.analysisError = nil } }
-            )) {
-                Button("OK") { viewModel.analysisError = nil }
-            } message: {
-                Text(viewModel.analysisError ?? "")
+            .sheet(isPresented: $showManualEntry) {
+                ManualEntrySheet(
+                    attachedImage: manualEntryImage,
+                    onSaved: {
+                        showManualEntry = false
+                        dismiss()
+                    }
+                )
             }
             .sheet(isPresented: $showConfirmation, onDismiss: {
                 viewModel.resetAfterConfirmation()
@@ -124,8 +127,11 @@ struct ImportView: View {
                 showConfirmation = true
                 showCompletion   = false
             } else {
-                // All screenshots failed or returned no data — clean up orphaned Screenshot records
+                // AI found nothing (or errored) — clean up and offer manual entry
                 viewModel.resetAfterConfirmation()
+                viewModel.analysisError = nil
+                manualEntryImage = viewModel.selectedImages.first
+                showManualEntry = true
             }
         }
     }
