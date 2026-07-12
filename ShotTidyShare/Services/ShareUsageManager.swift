@@ -6,8 +6,9 @@
 //  Reads and writes the same App Group UserDefaults keys, so both targets
 //  always operate on the same counters and balance.
 //
-//  Singleton is safe here because the Share Extension process is short-lived
-//  and creates a new instance for each invocation.
+//  Credit model (must match UsageManager):
+//    • purchasedCredits — one-time pack purchases; never expire; spent first.
+//    • proCredits       — included in Pro subscription; reset each 30-day cycle.
 //
 
 import Foundation
@@ -33,16 +34,22 @@ final class ShareUsageManager {
     private enum Key {
         static let screenshotsThisPeriod    = "usage.screenshotsThisPeriod"
         static let periodStartDate          = "usage.periodStartDate"
-        static let enrichmentBalance        = "usage.enrichmentBalance"
+        static let enrichmentBalance        = "usage.enrichmentBalance"  // legacy — migration only
         static let hasClaimedFreeEnrichment = "usage.hasClaimedFreeEnrichment"
         static let proEnrichmentStartDate   = "usage.proEnrichmentStartDate"
+        static let purchasedCredits         = "usage.purchasedCredits"
+        static let proCredits               = "usage.proCredits"
     }
 
     // MARK: - Observable state
 
     private(set) var screenshotsThisPeriod: Int = 0
-    private(set) var enrichmentBalance: Int = 0
+    private(set) var purchasedCredits: Int = 0
+    private(set) var proCredits: Int = 0
     private(set) var periodStartDate: Date = Date()
+
+    /// Combined visible balance.
+    var enrichmentBalance: Int { purchasedCredits + proCredits }
 
     private let defaults: UsageStore
 
@@ -73,16 +80,20 @@ final class ShareUsageManager {
         defaults.set(screenshotsThisPeriod, forKey: Key.screenshotsThisPeriod)
     }
 
+    /// Deducts one enrichment credit. Purchased credits are spent first.
     func consumeEnrichment() {
-        guard enrichmentBalance > 0 else { return }
-        enrichmentBalance -= 1
-        defaults.set(enrichmentBalance, forKey: Key.enrichmentBalance)
+        if purchasedCredits > 0 {
+            purchasedCredits -= 1
+            defaults.set(purchasedCredits, forKey: Key.purchasedCredits)
+        } else if proCredits > 0 {
+            proCredits -= 1
+            defaults.set(proCredits, forKey: Key.proCredits)
+        }
     }
 
     // MARK: - Rolling 30-day reset
 
     /// Call at the start of each extension session.
-    /// Resets the screenshot counter if 30 days have passed since the window opened.
     func performRollingReset(isPro: Bool) {
         let now = Date()
 
@@ -93,14 +104,31 @@ final class ShareUsageManager {
             defaults.set(now.timeIntervalSince1970, forKey: Key.periodStartDate)
         }
 
-        if isPro { grantProEnrichmentsIfDue(now: now) }
+        if isPro {
+            grantProCreditsIfDue(now: now)
+        } else {
+            if proCredits > 0 {
+                proCredits = 0
+                defaults.set(0, forKey: Key.proCredits)
+            }
+        }
     }
 
     // MARK: - Private
 
     private func loadFromDefaults() {
         screenshotsThisPeriod = defaults.integer(forKey: Key.screenshotsThisPeriod)
-        enrichmentBalance     = defaults.integer(forKey: Key.enrichmentBalance)
+
+        // Migration: if new keys are absent, treat legacy enrichmentBalance as purchasedCredits.
+        if defaults.object(forKey: Key.purchasedCredits) == nil {
+            let legacy = defaults.integer(forKey: Key.enrichmentBalance)
+            purchasedCredits = legacy
+            defaults.set(purchasedCredits, forKey: Key.purchasedCredits)
+            defaults.set(0, forKey: Key.proCredits)
+        } else {
+            purchasedCredits = defaults.integer(forKey: Key.purchasedCredits)
+            proCredits       = defaults.integer(forKey: Key.proCredits)
+        }
 
         if let ts = defaults.object(forKey: Key.periodStartDate) as? Double {
             periodStartDate = Date(timeIntervalSince1970: ts)
@@ -113,13 +141,13 @@ final class ShareUsageManager {
 
     private func claimFreeEnrichmentIfNeeded() {
         guard !defaults.bool(forKey: Key.hasClaimedFreeEnrichment) else { return }
-        enrichmentBalance = Self.freeInitialEnrichments
-        defaults.set(enrichmentBalance, forKey: Key.enrichmentBalance)
+        purchasedCredits = Self.freeInitialEnrichments
+        defaults.set(purchasedCredits, forKey: Key.purchasedCredits)
         defaults.set(true, forKey: Key.hasClaimedFreeEnrichment)
     }
 
-    private func grantProEnrichmentsIfDue(now: Date) {
-        let proKey = "usage.proEnrichmentStartDate"
+    private func grantProCreditsIfDue(now: Date) {
+        let proKey = Key.proEnrichmentStartDate
         let windowStart: Date
         if let ts = defaults.object(forKey: proKey) as? Double {
             windowStart = Date(timeIntervalSince1970: ts)
@@ -128,8 +156,10 @@ final class ShareUsageManager {
         }
         let nextGrant = windowStart.addingTimeInterval(Self.periodDays * 86400)
         guard now >= nextGrant else { return }
-        enrichmentBalance += Self.proEnrichmentsPerPeriod
-        defaults.set(enrichmentBalance, forKey: Key.enrichmentBalance)
+
+        // Reset Pro credits for the new cycle (no carryover).
+        proCredits = Self.proEnrichmentsPerPeriod
+        defaults.set(proCredits, forKey: Key.proCredits)
         defaults.set(now.timeIntervalSince1970, forKey: proKey)
     }
 }
