@@ -82,16 +82,29 @@ final class ShareAPIClient {
 
         var request = URLRequest(url: analyzeEndpoint)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 60
 
-        let (data, response): (Data, URLResponse)
+        let token = await SupabaseAuthManager.shared.bearerToken()
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        var (data, response): (Data, URLResponse)
         do {
             (data, response) = try await URLSession.shared.data(for: request)
         } catch {
             throw ShareAPIError.networkError(error)
+        }
+
+        // Expired session — refresh once and retry.
+        if let http = response as? HTTPURLResponse, http.statusCode == 401,
+           let fresh = await SupabaseAuthManager.shared.recoverFromAuthFailure() {
+            request.setValue("Bearer \(fresh)", forHTTPHeaderField: "Authorization")
+            do {
+                (data, response) = try await URLSession.shared.data(for: request)
+            } catch {
+                throw ShareAPIError.networkError(error)
+            }
         }
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {

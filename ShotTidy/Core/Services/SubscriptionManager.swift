@@ -78,6 +78,9 @@ final class SubscriptionManager {
     // MARK: - Launch sequence (call once from App)
 
     func onLaunch() async {
+        // Warm up the anonymous auth session so the user id is ready for
+        // API calls and purchase appAccountToken linking.
+        Task { _ = await SupabaseAuthManager.shared.bearerToken() }
         await loadProducts()
         await refreshSubscriptionStatus()
     }
@@ -120,11 +123,19 @@ final class SubscriptionManager {
 
     func refreshSubscriptionStatus() async {
         var active = false
+        var proJWS: String? = nil
         for await result in Transaction.currentEntitlements {
             guard let tx = try? checkVerified(result) else { continue }
             if tx.productID == ProductID.proMonthly && tx.revocationDate == nil {
                 active = true
+                proJWS = result.jwsRepresentation
             }
+        }
+
+        // Keep the server-side subscription record in sync (once per launch).
+        if active, let jws = proJWS, !didLinkSubscriptionThisSession {
+            didLinkSubscriptionThisSession = true
+            linkSubscriptionOnServer(jws: jws)
         }
 
         // Read the persisted Pro status BEFORE updating it — this is the value
@@ -157,12 +168,20 @@ final class SubscriptionManager {
         defer { isPurchasing = false }
         purchaseError = nil
 
-        let result = try await product.purchase()
+        // Tie the purchase to the anonymous Supabase user so App Store Server
+        // Notifications can attribute it server-side (appAccountToken).
+        var options: Set<Product.PurchaseOption> = []
+        if let userId = await SupabaseAuthManager.shared.currentUserId() {
+            options.insert(.appAccountToken(userId))
+        }
+
+        let result = try await product.purchase(options: options)
 
         switch result {
         case .success(let verification):
             let tx = try checkVerified(verification)
             if tx.productID == ProductID.proMonthly {
+                linkSubscriptionOnServer(jws: verification.jwsRepresentation)
                 await refreshSubscriptionStatus()
             }
             await tx.finish()
@@ -193,6 +212,31 @@ final class SubscriptionManager {
         switch result {
         case .unverified(_, let error): throw error
         case .verified(let value): return value
+        }
+    }
+
+    // MARK: - Server-side subscription linking
+
+    /// Guards against re-linking on every status refresh within one launch.
+    private var didLinkSubscriptionThisSession = false
+
+    /// Sends the signed transaction to the link-subscription Edge Function so
+    /// the server can associate this device's anonymous user with the Pro
+    /// subscription. Fire-and-forget: the server upsert is idempotent, and
+    /// failures are non-critical (the next launch or ASSN will sync it).
+    private func linkSubscriptionOnServer(jws: String) {
+        guard let url = URL(string: "\(Config.supabaseURL)/functions/v1/link-subscription") else { return }
+        Task.detached {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try? JSONSerialization.data(
+                withJSONObject: ["signedTransaction": jws]
+            )
+            request.timeoutInterval = 30
+            let token = await SupabaseAuthManager.shared.bearerToken()
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            _ = try? await URLSession.shared.data(for: request)
         }
     }
 }

@@ -84,6 +84,7 @@
 			membershipExceptions = (
 				"Core/Extensions/UIImage+Extensions.swift",
 				Core/Services/AppGroupManager.swift,
+				Core/Services/SupabaseAuthManager.swift,
 				Models/CatalogItem.swift,
 				Models/ItemCategory.swift,
 				Models/Screenshot.swift,

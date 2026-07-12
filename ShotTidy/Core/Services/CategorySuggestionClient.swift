@@ -25,11 +25,14 @@ struct SuggestedCategoryLayout {
 
 enum CategorySuggestionError: LocalizedError {
     case httpError(Int, String)
+    case quotaExceeded(String)
     case decodingFailed(String)
     case networkError(Error)
 
     var errorDescription: String? {
         switch self {
+        case .quotaExceeded(let message):
+            return message
         case .httpError(let code, _):
             if code == 429 { return "Rate limit exceeded. Please wait a moment." }
             if code == 500 { return "Server error. Please try again later." }
@@ -53,22 +56,32 @@ final class CategorySuggestionClient {
     func suggestFields(name: String, hint: String) async throws -> SuggestedCategoryLayout {
         var request = URLRequest(url: Config.suggestCategoryFieldsEndpoint)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(
             withJSONObject: ["name": name, "hint": hint]
         )
         request.timeoutInterval = 45
 
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await URLSession.shared.data(for: request)
-        } catch {
-            throw CategorySuggestionError.networkError(error)
+        let token = await SupabaseAuthManager.shared.bearerToken()
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        var (data, response) = try await transport(request)
+
+        // Expired session — refresh once and retry.
+        if let http = response as? HTTPURLResponse, http.statusCode == 401,
+           let fresh = await SupabaseAuthManager.shared.recoverFromAuthFailure() {
+            request.setValue("Bearer \(fresh)", forHTTPHeaderField: "Authorization")
+            (data, response) = try await transport(request)
         }
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             let bodyStr = String(data: data, encoding: .utf8) ?? ""
+            if http.statusCode == 429 {
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let message = json["error"] as? String, !message.isEmpty {
+                    throw CategorySuggestionError.quotaExceeded(message)
+                }
+            }
             throw CategorySuggestionError.httpError(http.statusCode, bodyStr)
         }
 
@@ -92,5 +105,13 @@ final class CategorySuggestionClient {
             notesLabel: str("notesLabel"),
             aiHint: str("aiHint")
         )
+    }
+
+    private func transport(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        do {
+            return try await URLSession.shared.data(for: request)
+        } catch {
+            throw CategorySuggestionError.networkError(error)
+        }
     }
 }

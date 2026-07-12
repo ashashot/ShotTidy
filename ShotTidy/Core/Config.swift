@@ -32,6 +32,6 @@ enum Config {
         string: "\(supabaseURL)/storage/v1/object/public/config/app-config.json"
     )
 
-    /// App Store link — update the numeric ID when the app is published.
-    static let appStoreURL = URL(string: "https://apps.apple.com/app/id6745548716")
+    /// App Store link — ShotTidier (Apple ID 6773235571).
+    static let appStoreURL = URL(string: "https://apps.apple.com/app/id6773235571")
 }
