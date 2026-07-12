@@ -138,12 +138,14 @@ struct ScreenshotsView: View {
                     count: Self.columnCount
                 )
 
+                let confirmedCounts = self.confirmedCounts
+
                 ScrollView {
                     LazyVGrid(columns: gridColumns, spacing: s) {
                         ForEach(screenshots) { screenshot in
                             ScreenshotCell(
                                 screenshot: screenshot,
-                                extractedCount: confirmedCount(for: screenshot),
+                                extractedCount: confirmedCounts[screenshot.id] ?? 0,
                                 cellWidth: cellWidth,
                                 cellHeight: cellHeight,
                                 isEditing: isEditing,
@@ -174,8 +176,16 @@ struct ScreenshotsView: View {
 
     // MARK: - Helpers
 
-    private func confirmedCount(for screenshot: Screenshot) -> Int {
-        allItems.filter { $0.sourceScreenshotId == screenshot.id }.count
+    /// Confirmed-item counts per screenshot, aggregated in a single pass
+    /// instead of filtering the full item array once per grid cell.
+    private var confirmedCounts: [UUID: Int] {
+        var counts: [UUID: Int] = [:]
+        for item in allItems {
+            if let sid = item.sourceScreenshotId {
+                counts[sid, default: 0] += 1
+            }
+        }
+        return counts
     }
 
     private func toggleSelection(for screenshot: Screenshot) {

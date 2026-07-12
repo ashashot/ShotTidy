@@ -157,7 +157,12 @@ final class ShareAPIClient {
         guard maxSide > maxDimension else { return image }
         let scale = maxDimension / maxSide
         let newSize = CGSize(width: size.width * scale, height: size.height * scale)
-        let renderer = UIGraphicsImageRenderer(size: newSize)
+        // Force scale 1 so the output pixel size equals newSize; the default
+        // renderer format uses the screen scale (2–3x), which would produce
+        // an image 2–3x larger than requested.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
         return renderer.image { _ in
             image.draw(in: CGRect(origin: .zero, size: newSize))
         }

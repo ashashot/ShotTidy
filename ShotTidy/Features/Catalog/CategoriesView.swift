@@ -23,13 +23,21 @@ struct CategoriesView: View {
     private let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
     /// Built-in categories first, then custom ones — each with its visible item count.
+    /// Counts are aggregated in a single pass over the items instead of
+    /// filtering the full array once per category.
     private var categoryCounts: [(CategoryDescriptor, Int)] {
-        categoryStore.allDescriptors.map { descriptor in
+        var totalCounts: [String: Int] = [:]
+        var activeCounts: [String: Int] = [:]
+        for item in allItems {
+            totalCounts[item.categoryRaw, default: 0] += 1
+            if !item.isCompleted {
+                activeCounts[item.categoryRaw, default: 0] += 1
+            }
+        }
+        return categoryStore.allDescriptors.map { descriptor in
             let shouldHide = hideCompleted[descriptor.key] ?? false
-            let count = allItems.filter {
-                $0.categoryRaw == descriptor.key && (!shouldHide || !$0.isCompleted)
-            }.count
-            return (descriptor, count)
+            let counts = shouldHide ? activeCounts : totalCounts
+            return (descriptor, counts[descriptor.key] ?? 0)
         }
     }
 

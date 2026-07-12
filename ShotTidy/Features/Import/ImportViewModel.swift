@@ -46,7 +46,9 @@ final class ImportViewModel {
         for item in selectedPickerItems {
             if let data = try? await item.loadTransferable(type: Data.self),
                let image = UIImage(data: data) {
-                selectedImages.append(image)
+                // Downsize immediately so full-resolution images are never
+                // retained in memory (the API size is 1024 anyway).
+                selectedImages.append(image.resized(toMaxDimension: 1024))
             }
         }
     }
@@ -69,60 +71,98 @@ final class ImportViewModel {
         sessionScreenshotIds = []
         didSaveThisSession = false
 
+        // Prepare all jobs up front. Each image is resized once to the API size;
+        // the thumbnail is derived from that smaller image instead of the original.
+        var jobs: [(index: Int, screenshot: Screenshot, image: UIImage)] = []
         for (index, image) in selectedImages.enumerated() {
-            progressCurrent = index + 1
+            let apiImage = image.resized(toMaxDimension: 1024)
 
             // Save the screenshot as a backup copy (provisional — may be deleted if not confirmed)
             let screenshot = Screenshot()
             screenshot.originalFileName = "screenshot_\(index + 1).jpg"
             screenshot.createdAt = Date()
             screenshot.analysisStatus = .analyzing
-
-            let thumb = image.resized(toMaxDimension: 800)
-            screenshot.thumbnailData = thumb.jpegData(compressionQuality: 0.85)
+            screenshot.thumbnailData = apiImage
+                .resized(toMaxDimension: 800)
+                .jpegData(compressionQuality: 0.85)
 
             ctx.insert(screenshot)
-            saveCheckpoint(ctx)
-
             // Track this screenshot for cleanup
             sessionScreenshotIds.insert(screenshot.id)
+            jobs.append((index, screenshot, apiImage))
+        }
+        saveCheckpoint(ctx)
 
-            do {
-                let extracted = try await OpenAIAPIClient.shared.analyzeScreenshot(
-                    image,
-                    customCategories: customCategories,
-                    allowNewCategory: allowNewCategory,
-                    screenshotId: screenshot.id
-                )
+        // Analyze up to `maxConcurrent` screenshots in parallel. Drafts are
+        // collected per index and appended in the original selection order.
+        var collectedDrafts: [Int: [DraftItem]] = [:]
+        var hardError: String? = nil
 
-                draftItems.append(contentsOf: extracted)
-                screenshot.analysisStatus = .done
-                screenshot.analyzedAt = Date()
-                screenshot.extractedItemsCount = extracted.count
-            } catch let err as OpenAIError {
-                screenshot.analysisStatus = .failed
-                screenshot.errorMessage = err.localizedDescription
+        await withTaskGroup(of: (Int, Result<[DraftItem], any Error>).self) { group in
+            let maxConcurrent = 3
+            var nextJob = 0
 
-                switch err {
-                case .refused, .emptyResponse:
-                    // Refusal is non-fatal — just skip this screenshot
-                    let name = screenshot.originalFileName ?? "screenshot \(index + 1)"
-                    warnings.append("\(name): \(err.localizedDescription)")
-                default:
-                    // Network / HTTP errors — only show if nothing was extracted
-                    if draftItems.isEmpty && index == selectedImages.count - 1 {
-                        analysisError = err.localizedDescription
+            func submitNext() {
+                guard nextJob < jobs.count else { return }
+                let job = jobs[nextJob]
+                nextJob += 1
+                let index = job.index
+                let image = job.image
+                let screenshotId = job.screenshot.id
+                group.addTask {
+                    do {
+                        let extracted = try await OpenAIAPIClient.shared.analyzeScreenshot(
+                            image,
+                            customCategories: customCategories,
+                            allowNewCategory: allowNewCategory,
+                            screenshotId: screenshotId
+                        )
+                        return (index, .success(extracted))
+                    } catch {
+                        return (index, .failure(error))
                     }
-                }
-            } catch {
-                screenshot.analysisStatus = .failed
-                screenshot.errorMessage = error.localizedDescription
-                if draftItems.isEmpty && index == selectedImages.count - 1 {
-                    analysisError = error.localizedDescription
                 }
             }
 
-            saveCheckpoint(ctx)
+            for _ in 0..<min(maxConcurrent, jobs.count) { submitNext() }
+
+            for await (index, result) in group {
+                progressCurrent += 1
+                let screenshot = jobs[index].screenshot
+
+                switch result {
+                case .success(let extracted):
+                    collectedDrafts[index] = extracted
+                    screenshot.analysisStatus = .done
+                    screenshot.analyzedAt = Date()
+                    screenshot.extractedItemsCount = extracted.count
+                case .failure(let error):
+                    screenshot.analysisStatus = .failed
+                    screenshot.errorMessage = error.localizedDescription
+
+                    if let err = error as? OpenAIError,
+                       case .refused = err {
+                        // Refusal is non-fatal — just skip this screenshot
+                        let name = screenshot.originalFileName ?? "screenshot \(index + 1)"
+                        warnings.append("\(name): \(err.localizedDescription)")
+                    } else if let err = error as? OpenAIError,
+                              case .emptyResponse = err {
+                        let name = screenshot.originalFileName ?? "screenshot \(index + 1)"
+                        warnings.append("\(name): \(err.localizedDescription)")
+                    } else {
+                        // Network / HTTP errors — only shown if nothing was extracted
+                        hardError = error.localizedDescription
+                    }
+                }
+
+                saveCheckpoint(ctx)
+                submitNext()
+            }
+        }
+
+        draftItems = jobs.indices.compactMap { collectedDrafts[$0] }.flatMap { $0 }
+        if draftItems.isEmpty, let hardError {
+            analysisError = hardError
         }
 
         applyClipboardLink()
