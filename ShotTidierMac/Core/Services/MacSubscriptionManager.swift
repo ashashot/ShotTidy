@@ -42,6 +42,9 @@ final class MacSubscriptionManager {
     // MARK: - Launch
 
     func onLaunch() async {
+        // Warm up the anonymous auth session so the user id is ready for
+        // API calls and purchase appAccountToken linking.
+        Task { _ = await SupabaseAuthManager.shared.bearerToken() }
         await withTaskGroup(of: Void.self) { group in
             group.addTask { await self.loadProduct() }
             group.addTask { await self.refreshSubscriptionStatus() }
@@ -72,10 +75,18 @@ final class MacSubscriptionManager {
         defer { isPurchasing = false }
 
         do {
-            let result = try await product.purchase()
+            // Tie the purchase to the anonymous Supabase user so App Store Server
+            // Notifications can attribute it server-side (appAccountToken).
+            var options: Set<Product.PurchaseOption> = []
+            if let userId = await SupabaseAuthManager.shared.currentUserId() {
+                options.insert(.appAccountToken(userId))
+            }
+
+            let result = try await product.purchase(options: options)
             switch result {
             case .success(let verification):
                 let tx = try checkVerified(verification)
+                linkSubscriptionOnServer(jws: verification.jwsRepresentation)
                 await refreshSubscriptionStatus()
                 await tx.finish()
             case .userCancelled, .pending:
@@ -118,6 +129,7 @@ final class MacSubscriptionManager {
 
     func refreshSubscriptionStatus() async {
         var active = false
+        var proJWS: String? = nil
         var totalEntitlements = 0
         var unverifiedCount = 0
         var foundIDs: [String] = []
@@ -129,6 +141,7 @@ final class MacSubscriptionManager {
                 foundIDs.append(tx.productID)
                 if tx.productID == Self.proProductID && tx.revocationDate == nil {
                     active = true
+                    proJWS = result.jwsRepresentation
                 }
             case .unverified(_, let error):
                 unverifiedCount += 1
@@ -136,7 +149,8 @@ final class MacSubscriptionManager {
             }
         }
 
-        // Fallback: subscription status API
+        // Fallback: subscription status API. No JWS is available on this path —
+        // server linking is skipped and will catch up on the next launch or ASSN.
         if !active, let product = proProduct {
             if let statuses = try? await product.subscription?.status {
                 for status in statuses where status.state == .subscribed || status.state == .inGracePeriod {
@@ -147,6 +161,12 @@ final class MacSubscriptionManager {
         }
 
         diagnostic = "entitlements:\(totalEntitlements) unverified:\(unverifiedCount) active:\(active)\nIDs: \(foundIDs.isEmpty ? "none" : foundIDs.joined(separator: ", "))\nexpected: \(Self.proProductID)"
+
+        // Keep the server-side subscription record in sync (once per launch).
+        if active, let jws = proJWS, !didLinkSubscriptionThisSession {
+            didLinkSubscriptionThisSession = true
+            linkSubscriptionOnServer(jws: jws)
+        }
 
         let containerWasConfiguredAsPro = Self.loadIsProStatus()
         isProActive = active
@@ -183,6 +203,31 @@ final class MacSubscriptionManager {
         switch result {
         case .unverified(_, let error): throw error
         case .verified(let value): return value
+        }
+    }
+
+    // MARK: - Server-side subscription linking
+
+    /// Guards against re-linking on every status refresh within one launch.
+    private var didLinkSubscriptionThisSession = false
+
+    /// Sends the signed transaction to the link-subscription Edge Function so
+    /// the server can associate this device's anonymous user with the Pro
+    /// subscription. Fire-and-forget: the server upsert is idempotent, and
+    /// failures are non-critical (the next launch or ASSN will sync it).
+    private func linkSubscriptionOnServer(jws: String) {
+        guard let url = URL(string: "\(Config.supabaseURL)/functions/v1/link-subscription") else { return }
+        Task.detached {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try? JSONSerialization.data(
+                withJSONObject: ["signedTransaction": jws]
+            )
+            request.timeoutInterval = 30
+            let token = await SupabaseAuthManager.shared.bearerToken()
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            _ = try? await URLSession.shared.data(for: request)
         }
     }
 }
