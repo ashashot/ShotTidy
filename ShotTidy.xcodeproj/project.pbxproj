@@ -109,8 +109,10 @@
 			membershipExceptions = (
 				Core/Config.swift,
 				"Core/Extensions/Color+Hex.swift",
+				Core/Services/AppLocale.swift,
 				Core/Services/CategoryStore.swift,
 				Core/Services/EnrichmentAPIClient.swift,
+				Core/Services/SupabaseAuthManager.swift,
 				Models/CatalogItem.swift,
 				Models/CategoryDescriptor.swift,
 				Models/DraftItem.swift,
