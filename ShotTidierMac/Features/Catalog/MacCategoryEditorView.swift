@@ -16,8 +16,12 @@ struct MacCategoryEditorView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openSettings) private var openSettings
     @Environment(CategoryStore.self) private var categoryStore
+    @Environment(MacSubscriptionManager.self) private var subManager
+    @Environment(UsageManager.self) private var usageManager
 
+    @State private var suggestState: SuggestState = .idle
     @State private var name: String
     @State private var iconName: String
     @State private var colorHex: String
@@ -181,10 +185,113 @@ struct MacCategoryEditorView: View {
             fieldRow("Fourth field", binding: $extra2Label, placeholder: "Leave empty to hide")
             fieldRow("Notes field", binding: $notesLabel, placeholder: "Leave empty to hide")
             fieldRow("AI hint (optional)", binding: $aiHint, placeholder: "Describes what belongs in this category")
+
+            if suggestState != .idle {
+                suggestStatusRow
+            }
         } header: {
-            Text("Fields")
+            HStack {
+                Text("Fields")
+                Spacer()
+                aiSuggestButton
+            }
         } footer: {
             Text("Field labels define the item form for this category. Leave a label empty to hide that field. The AI hint helps automatic categorization during screenshot analysis.")
+        }
+    }
+
+    // MARK: - AI suggest button
+
+    private var aiSuggestButton: some View {
+        let remaining = usageManager.remainingCategorySuggestions(isPro: subManager.isProActive)
+        return Button {
+            runSuggestion()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "sparkles")
+                Text(remaining > 0 ? "AI fields (\(remaining))" : "AI fields")
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.purple)
+        }
+        .buttonStyle(.plain)
+        .disabled(suggestState == .loading || trimmedName.isEmpty)
+    }
+
+    // MARK: - Suggest status row
+
+    @ViewBuilder
+    private var suggestStatusRow: some View {
+        switch suggestState {
+        case .idle:
+            EmptyView()
+        case .loading:
+            HStack(spacing: 12) {
+                ProgressView().controlSize(.small).tint(.purple)
+                Text("Designing fields…").font(.subheadline).foregroundStyle(.secondary)
+                Spacer()
+            }
+        case .success:
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Text("Fields suggested — review and adjust").font(.subheadline.weight(.medium))
+                Spacer()
+            }
+        case .failure(let message):
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+                Text(message).font(.subheadline).lineLimit(2)
+                Spacer()
+                Button("OK") { withAnimation { suggestState = .idle } }
+                    .font(.subheadline.weight(.semibold))
+            }
+        }
+    }
+
+    // MARK: - AI suggestion logic
+
+    private func runSuggestion() {
+        // The paywall lives in Settings on macOS.
+        guard subManager.isProActive else {
+            openSettings()
+            return
+        }
+        guard usageManager.canSuggestCategoryFields(isPro: subManager.isProActive) else {
+            withAnimation {
+                suggestState = .failure("You've used all AI field suggestions for this period.")
+            }
+            return
+        }
+
+        usageManager.consumeCategorySuggestion()
+        withAnimation { suggestState = .loading }
+
+        Task {
+            do {
+                let layout = try await CategorySuggestionClient.shared.suggestFields(
+                    name: trimmedName,
+                    hint: aiHint
+                )
+                withAnimation(.spring(duration: 0.35)) {
+                    iconName      = layout.iconName
+                    titleLabel    = layout.titleLabel
+                    subtitleLabel = layout.subtitleLabel
+                    linkLabel     = layout.linkLabel
+                    extra1Label   = layout.extra1Label
+                    extra2Label   = layout.extra2Label
+                    notesLabel    = layout.notesLabel
+                    if aiHint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        aiHint = layout.aiHint
+                    }
+                    suggestState = .success
+                }
+                Task {
+                    try? await Task.sleep(for: .seconds(3))
+                    withAnimation { if suggestState == .success { suggestState = .idle } }
+                }
+            } catch {
+                withAnimation { suggestState = .failure(error.localizedDescription) }
+            }
         }
     }
 
@@ -236,5 +343,14 @@ struct MacCategoryEditorView: View {
             onSaved?(category.key)
         }
         dismiss()
+    }
+
+    // MARK: - SuggestState
+
+    private enum SuggestState: Equatable {
+        case idle
+        case loading
+        case success
+        case failure(String)
     }
 }
