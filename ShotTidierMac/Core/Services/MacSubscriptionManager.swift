@@ -71,10 +71,10 @@ final class MacSubscriptionManager {
         // Warm up the anonymous auth session so the user id is ready for
         // API calls and purchase appAccountToken linking.
         Task { _ = await SupabaseAuthManager.shared.bearerToken() }
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.loadProducts() }
-            group.addTask { await self.refreshSubscriptionStatus() }
-        }
+        // Sequential on purpose (matches iOS): the status-refresh fallback
+        // reads proProduct, which is only available after products load.
+        await loadProducts()
+        await refreshSubscriptionStatus()
     }
 
     func acknowledgeRestartPrompt() {
@@ -199,14 +199,19 @@ final class MacSubscriptionManager {
             }
         }
 
-        // Fallback: subscription status API. No JWS is available on this path —
-        // server linking is skipped and will catch up on the next launch or ASSN.
+        // Fallback: subscription status API (helps in Sandbox).
         if !active, let product = proProduct {
             if let statuses = try? await product.subscription?.status {
                 for status in statuses where status.state == .subscribed || status.state == .inGracePeriod {
                     active = true
                     foundIDs.append("via subscription.status")
                 }
+            }
+            // Recover a JWS for server linking — the fallback path has no
+            // entitlement transaction, but latest(for:) usually still has one.
+            if active, proJWS == nil,
+               let latest = await Transaction.latest(for: Self.proProductID) {
+                proJWS = latest.jwsRepresentation
             }
         }
 

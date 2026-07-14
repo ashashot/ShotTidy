@@ -201,6 +201,11 @@ actor SupabaseAuthManager {
             kSecAttrService as String: service,
         ]
         if let accessGroup { query[kSecAttrAccessGroup as String] = accessGroup }
+        #if os(macOS)
+        // On macOS, access groups only work with the data protection keychain
+        // (the iOS-style keychain); the legacy file-based keychain ignores them.
+        query[kSecUseDataProtectionKeychain as String] = true
+        #endif
         return query
     }
 
@@ -209,13 +214,16 @@ actor SupabaseAuthManager {
     /// the fully-qualified shared group. Returns nil when discovery fails —
     /// the session then stays per-target instead of shared.
     private static func resolveAccessGroup(suffix: String) -> String? {
-        let probe: [String: Any] = [
+        var probe: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "accessGroupProbe",
             kSecAttrService as String: "accessGroupProbe",
             kSecReturnAttributes as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
+        #if os(macOS)
+        probe[kSecUseDataProtectionKeychain as String] = true
+        #endif
         var result: AnyObject?
         var status = SecItemCopyMatching(probe as CFDictionary, &result)
         if status == errSecItemNotFound {

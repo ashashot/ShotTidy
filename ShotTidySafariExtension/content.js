@@ -209,7 +209,12 @@
                     "Open the ShotTidier app to subscribe or restore your purchase.");
                 return;
             }
-            analyze(body, panel, text, status.customCategories || []);
+            // Built-ins come from the native source of truth (ItemCategory);
+            // the hardcoded list is only a fallback for older app builds.
+            const builtins = (status.builtinCategories || []).map((c) => [c.key, c.name]);
+            const categoryOptions = (builtins.length > 0 ? builtins : BUILTIN_CATEGORIES)
+                .concat((status.customCategories || []).map((c) => [c.key, c.name]));
+            analyze(body, panel, text, categoryOptions);
         }).catch((error) => {
             showStatus(body, `Error: ${error}`);
         });
@@ -232,7 +237,7 @@
         body.appendChild(status);
     }
 
-    function analyze(body, panel, text, customCategories) {
+    function analyze(body, panel, text, categoryOptions) {
         callNative({
             action: "analyzeText",
             text: text,
@@ -247,19 +252,15 @@
                 showStatus(body, "No structured data found in the selection.");
                 return;
             }
-            renderItems(body, panel, reply.items, customCategories);
+            renderItems(body, panel, reply.items, categoryOptions);
         }).catch((error) => {
             showStatus(body, `Error: ${error}`);
         });
     }
 
-    function renderItems(body, panel, items, customCategories) {
+    function renderItems(body, panel, items, categoryOptions) {
         body.textContent = "";
         const state = items.map((item) => ({ ...item, selected: true }));
-
-        const categoryOptions = BUILTIN_CATEGORIES.concat(
-            customCategories.map((c) => [c.key, c.name])
-        );
 
         state.forEach((item) => {
             const row = document.createElement("div");

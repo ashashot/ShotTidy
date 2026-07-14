@@ -93,6 +93,7 @@
 				Core/Services/AppGroupManager.swift,
 				Core/Services/AppLocale.swift,
 				Core/Services/SupabaseAuthManager.swift,
+				Models/ItemCategory.swift,
 			);
 			target = 5AFE5AFE0000000000000002 /* ShotTidySafariExtension */;
 		};

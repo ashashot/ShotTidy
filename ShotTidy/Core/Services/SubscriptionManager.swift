@@ -147,8 +147,6 @@ final class SubscriptionManager {
         }
 
         // Fallback: check subscription status via Product API (helps in Sandbox).
-        // No JWS is available on this path — server linking is skipped and will
-        // catch up on the next launch or via App Store Server Notifications.
         if !active {
             for product in products where product.id == ProductID.proMonthly {
                 if let statuses = try? await product.subscription?.status {
@@ -158,6 +156,12 @@ final class SubscriptionManager {
                         }
                     }
                 }
+            }
+            // Recover a JWS for server linking — the fallback path has no
+            // entitlement transaction, but latest(for:) usually still has one.
+            if active, proJWS == nil,
+               let latest = await Transaction.latest(for: ProductID.proMonthly) {
+                proJWS = latest.jwsRepresentation
             }
         }
 

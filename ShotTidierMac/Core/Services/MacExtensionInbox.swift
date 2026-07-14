@@ -17,7 +17,9 @@ import SwiftData
 final class MacExtensionInbox {
 
     /// Posted by SafariWebExtensionHandler after writing to the inbox.
-    static let notificationName = Notification.Name("com.mbx.ShotTidier.extensionInboxUpdated")
+    /// App-group-prefixed: sandboxed processes may only post distributed
+    /// notifications named under an application group they belong to.
+    static let notificationName = Notification.Name("group.com.mbx.ShotTidier.extensionInboxUpdated")
 
     /// Number of items brought in by the most recent import (for a UI banner).
     private(set) var lastImportCount = 0
@@ -73,7 +75,14 @@ final class MacExtensionInbox {
             imported += 1
         }
 
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            // Keep the inbox file so the import can be retried on the next
+            // launch/notification instead of silently losing the items.
+            context.rollback()
+            return
+        }
         AppGroupManager.clearPendingDrafts()
         guard imported > 0 else { return }
         lastImportCount = imported

@@ -20,7 +20,9 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     private static let logger = Logger(subsystem: "com.mbx.ShotTidier.SafariExtension", category: "native-messaging")
 
     /// Distributed notification the Mac app observes to import the inbox immediately.
-    private static let inboxNotificationName = "com.mbx.ShotTidier.extensionInboxUpdated"
+    /// Sandboxed processes may only post distributed notifications whose name is
+    /// prefixed with an application-group identifier they belong to.
+    private static let inboxNotificationName = "group.com.mbx.ShotTidier.extensionInboxUpdated"
 
     // MARK: - NSExtensionRequestHandling
 
@@ -58,12 +60,18 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     // MARK: - getStatus
 
     private static func statusPayload() -> [String: Any] {
+        // Built-ins come from the Swift source of truth so the panel's
+        // category list never drifts from ItemCategory.
+        let builtinCategories = ItemCategory.allCases.map {
+            ["key": $0.rawValue, "name": $0.localizedName]
+        }
         let customCategories = AppGroupManager.loadCustomCategories().map {
             ["key": $0.key, "name": $0.name]
         }
         return [
             "ok": true,
             "isPro": AppGroupManager.loadIsProStatus(),
+            "builtinCategories": builtinCategories,
             "customCategories": customCategories,
         ]
     }
