@@ -26,19 +26,19 @@ enum ItemCategory: String, CaseIterable, Codable, Hashable {
 
     var localizedName: String {
         switch self {
-        case .shopping:         return "Shopping"
-        case .places:           return "Places"
-        case .appsServices:     return "Apps & Services"
-        case .languageLearning: return "Language Learning"
-        case .prompts:          return "Prompts"
-        case .health:           return "Health"
-        case .recipes:          return "Recipes"
-        case .books:            return "Books"
-        case .movies:           return "Movies & TV Shows"
-        case .quotes:           return "Quotes"
-        case .articles:         return "Articles"
-        case .contacts:         return "Contacts"
-        case .tasks:            return "Tasks"
+        case .shopping:         return String(localized: "Shopping", bundle: AppLocale.bundle)
+        case .places:           return String(localized: "Places", bundle: AppLocale.bundle)
+        case .appsServices:     return String(localized: "Apps & Services", bundle: AppLocale.bundle)
+        case .languageLearning: return String(localized: "Language Learning", bundle: AppLocale.bundle)
+        case .prompts:          return String(localized: "Prompts", bundle: AppLocale.bundle)
+        case .health:           return String(localized: "Health", bundle: AppLocale.bundle)
+        case .recipes:          return String(localized: "Recipes", bundle: AppLocale.bundle)
+        case .books:            return String(localized: "Books", bundle: AppLocale.bundle)
+        case .movies:           return String(localized: "Movies & TV Shows", bundle: AppLocale.bundle)
+        case .quotes:           return String(localized: "Quotes", bundle: AppLocale.bundle)
+        case .articles:         return String(localized: "Articles", bundle: AppLocale.bundle)
+        case .contacts:         return String(localized: "Contacts", bundle: AppLocale.bundle)
+        case .tasks:            return String(localized: "Tasks", bundle: AppLocale.bundle)
         }
     }
 
@@ -100,121 +100,121 @@ enum ItemCategory: String, CaseIterable, Codable, Hashable {
         switch self {
         case .shopping:
             return FieldSchema(
-                titleLabel: "Product Name", titlePlaceholder: "e.g. Nike Air Max 270",
-                subtitleLabel: "Price", subtitlePlaceholder: "e.g. 99.99",
-                linkLabel: "Link", linkPlaceholder: "https://...",
-                extra1Label: "Store", extra1Placeholder: "Amazon / eBay / Etsy",
-                extra2Label: "Currency", extra2Placeholder: "USD / EUR / GBP",
-                notesLabel: "Notes", notesPlaceholder: "Additional information"
+                titleLabel: String(localized: "Product Name", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "e.g. Nike Air Max 270", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Price", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "e.g. 99.99", bundle: AppLocale.bundle),
+                linkLabel: String(localized: "Link", bundle: AppLocale.bundle), linkPlaceholder: String(localized: "https://...", bundle: AppLocale.bundle),
+                extra1Label: String(localized: "Store", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "Amazon / eBay / Etsy", bundle: AppLocale.bundle),
+                extra2Label: String(localized: "Currency", bundle: AppLocale.bundle), extra2Placeholder: String(localized: "USD / EUR / GBP", bundle: AppLocale.bundle),
+                notesLabel: String(localized: "Notes", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "Additional information", bundle: AppLocale.bundle)
             )
         case .places:
             return FieldSchema(
-                titleLabel: "Place Name", titlePlaceholder: "Café Paris / Louvre Museum",
-                subtitleLabel: "Address", subtitlePlaceholder: "123 Main St",
-                linkLabel: "Link / Maps", linkPlaceholder: "https://maps.apple.com/...",
-                extra1Label: "City", extra1Placeholder: "New York",
-                extra2Label: "Country", extra2Placeholder: "USA",
-                notesLabel: "Notes", notesPlaceholder: "Opening hours, description..."
+                titleLabel: String(localized: "Place Name", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "Café Paris / Louvre Museum", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Address", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "123 Main St", bundle: AppLocale.bundle),
+                linkLabel: String(localized: "Link / Maps", bundle: AppLocale.bundle), linkPlaceholder: String(localized: "https://maps.apple.com/...", bundle: AppLocale.bundle),
+                extra1Label: String(localized: "City", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "New York", bundle: AppLocale.bundle),
+                extra2Label: String(localized: "Country", bundle: AppLocale.bundle), extra2Placeholder: String(localized: "USA", bundle: AppLocale.bundle),
+                notesLabel: String(localized: "Notes", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "Opening hours, description...", bundle: AppLocale.bundle)
             )
         case .appsServices:
             return FieldSchema(
-                titleLabel: "Name", titlePlaceholder: "Notion / Figma / Telegram",
-                subtitleLabel: "Description", subtitlePlaceholder: "Brief description of the service",
-                linkLabel: "Link", linkPlaceholder: "https://...",
-                extra1Label: "Platform", extra1Placeholder: "iOS / Android / Web / macOS",
-                extra2Label: "Category", extra2Placeholder: "Productivity / Design",
-                notesLabel: "Notes", notesPlaceholder: "What I liked / why I need it"
+                titleLabel: String(localized: "Name", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "Notion / Figma / Telegram", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Description", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "Brief description of the service", bundle: AppLocale.bundle),
+                linkLabel: String(localized: "Link", bundle: AppLocale.bundle), linkPlaceholder: String(localized: "https://...", bundle: AppLocale.bundle),
+                extra1Label: String(localized: "Platform", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "iOS / Android / Web / macOS", bundle: AppLocale.bundle),
+                extra2Label: String(localized: "Category", bundle: AppLocale.bundle), extra2Placeholder: String(localized: "Productivity / Design", bundle: AppLocale.bundle),
+                notesLabel: String(localized: "Notes", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "What I liked / why I need it", bundle: AppLocale.bundle)
             )
         case .languageLearning:
             return FieldSchema(
-                titleLabel: "Word / Phrase / Text", titlePlaceholder: "Word or phrase to learn",
-                subtitleLabel: "Translation", subtitlePlaceholder: "Translation",
+                titleLabel: String(localized: "Word / Phrase / Text", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "Word or phrase to learn", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Translation", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "Translation", bundle: AppLocale.bundle),
                 linkLabel: nil, linkPlaceholder: nil,
-                extra1Label: "Language", extra1Placeholder: "English / Spanish",
-                extra2Label: "Usage Example", extra2Placeholder: "I need to leverage my skills",
-                notesLabel: "Context", notesPlaceholder: "Source, additional examples"
+                extra1Label: String(localized: "Language", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "English / Spanish", bundle: AppLocale.bundle),
+                extra2Label: String(localized: "Usage Example", bundle: AppLocale.bundle), extra2Placeholder: String(localized: "I need to leverage my skills", bundle: AppLocale.bundle),
+                notesLabel: String(localized: "Context", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "Source, additional examples", bundle: AppLocale.bundle)
             )
         case .prompts:
             return FieldSchema(
-                titleLabel: "Prompt Text", titlePlaceholder: "Act as a professional...",
-                subtitleLabel: "Purpose", subtitlePlaceholder: "What it is used for",
+                titleLabel: String(localized: "Prompt Text", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "Act as a professional...", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Purpose", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "What it is used for", bundle: AppLocale.bundle),
                 linkLabel: nil, linkPlaceholder: nil,
-                extra1Label: "AI Tool", extra1Placeholder: "ChatGPT / Claude / Midjourney",
+                extra1Label: String(localized: "AI Tool", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "ChatGPT / Claude / Midjourney", bundle: AppLocale.bundle),
                 extra2Label: nil, extra2Placeholder: nil,
-                notesLabel: "Notes", notesPlaceholder: "Results, improvements"
+                notesLabel: String(localized: "Notes", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "Results, improvements", bundle: AppLocale.bundle)
             )
         case .health:
             return FieldSchema(
-                titleLabel: "Tip / Information", titlePlaceholder: "Health-related text",
-                subtitleLabel: "Type", subtitlePlaceholder: "Medication / Exercise / Diet",
+                titleLabel: String(localized: "Tip / Information", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "Health-related text", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Type", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "Medication / Exercise / Diet", bundle: AppLocale.bundle),
                 linkLabel: nil, linkPlaceholder: nil,
-                extra1Label: "Source", extra1Placeholder: "Doctor / App / Article",
+                extra1Label: String(localized: "Source", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "Doctor / App / Article", bundle: AppLocale.bundle),
                 extra2Label: nil, extra2Placeholder: nil,
-                notesLabel: "Additional", notesPlaceholder: "Dosage, contraindications..."
+                notesLabel: String(localized: "Additional", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "Dosage, contraindications...", bundle: AppLocale.bundle)
             )
         case .recipes:
             return FieldSchema(
-                titleLabel: "Dish Name", titlePlaceholder: "Pasta Carbonara / Caesar Salad",
-                subtitleLabel: "Ingredients", subtitlePlaceholder: "List of ingredients",
-                linkLabel: "Recipe Link", linkPlaceholder: "https://...",
-                extra1Label: "Cooking Time", extra1Placeholder: "30 min",
-                extra2Label: "Cuisine", extra2Placeholder: "Italian / Mexican",
-                notesLabel: "Steps", notesPlaceholder: "1. Chop... 2. Fry..."
+                titleLabel: String(localized: "Dish Name", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "Pasta Carbonara / Caesar Salad", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Ingredients", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "List of ingredients", bundle: AppLocale.bundle),
+                linkLabel: String(localized: "Recipe Link", bundle: AppLocale.bundle), linkPlaceholder: String(localized: "https://...", bundle: AppLocale.bundle),
+                extra1Label: String(localized: "Cooking Time", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "30 min", bundle: AppLocale.bundle),
+                extra2Label: String(localized: "Cuisine", bundle: AppLocale.bundle), extra2Placeholder: String(localized: "Italian / Mexican", bundle: AppLocale.bundle),
+                notesLabel: String(localized: "Steps", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "1. Chop... 2. Fry...", bundle: AppLocale.bundle)
             )
         case .books:
             return FieldSchema(
-                titleLabel: "Book Title", titlePlaceholder: "The Great Gatsby",
-                subtitleLabel: "Author", subtitlePlaceholder: "F. Scott Fitzgerald",
-                linkLabel: "Buy / Read", linkPlaceholder: "https://...",
-                extra1Label: "Genre", extra1Placeholder: "Novel / Non-fiction / Biography",
-                extra2Label: "Year", extra2Placeholder: "2024",
-                notesLabel: "Notes", notesPlaceholder: "Impressions, quotes..."
+                titleLabel: String(localized: "Book Title", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "The Great Gatsby", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Author", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "F. Scott Fitzgerald", bundle: AppLocale.bundle),
+                linkLabel: String(localized: "Buy / Read", bundle: AppLocale.bundle), linkPlaceholder: String(localized: "https://...", bundle: AppLocale.bundle),
+                extra1Label: String(localized: "Genre", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "Novel / Non-fiction / Biography", bundle: AppLocale.bundle),
+                extra2Label: String(localized: "Year", bundle: AppLocale.bundle), extra2Placeholder: String(localized: "2024", bundle: AppLocale.bundle),
+                notesLabel: String(localized: "Notes", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "Impressions, quotes...", bundle: AppLocale.bundle)
             )
         case .movies:
             return FieldSchema(
-                titleLabel: "Title", titlePlaceholder: "Inception / Succession",
-                subtitleLabel: "Platform", subtitlePlaceholder: "Netflix / HBO / Apple TV+",
-                linkLabel: "Watch", linkPlaceholder: "https://...",
-                extra1Label: "Genre", extra1Placeholder: "Thriller / Comedy / Documentary",
-                extra2Label: "Year", extra2Placeholder: "2024",
-                notesLabel: "Notes", notesPlaceholder: "Why I want to watch it..."
+                titleLabel: String(localized: "Title", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "Inception / Succession", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Platform", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "Netflix / HBO / Apple TV+", bundle: AppLocale.bundle),
+                linkLabel: String(localized: "Watch", bundle: AppLocale.bundle), linkPlaceholder: String(localized: "https://...", bundle: AppLocale.bundle),
+                extra1Label: String(localized: "Genre", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "Thriller / Comedy / Documentary", bundle: AppLocale.bundle),
+                extra2Label: String(localized: "Year", bundle: AppLocale.bundle), extra2Placeholder: String(localized: "2024", bundle: AppLocale.bundle),
+                notesLabel: String(localized: "Notes", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "Why I want to watch it...", bundle: AppLocale.bundle)
             )
         case .quotes:
             return FieldSchema(
-                titleLabel: "Quote", titlePlaceholder: "Quote text",
-                subtitleLabel: "Author", subtitlePlaceholder: "Author name",
-                linkLabel: "Source", linkPlaceholder: "Book / Article / URL",
+                titleLabel: String(localized: "Quote", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "Quote text", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Author", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "Author name", bundle: AppLocale.bundle),
+                linkLabel: String(localized: "Source", bundle: AppLocale.bundle), linkPlaceholder: String(localized: "Book / Article / URL", bundle: AppLocale.bundle),
                 extra1Label: nil, extra1Placeholder: nil,
                 extra2Label: nil, extra2Placeholder: nil,
-                notesLabel: "Notes", notesPlaceholder: "Why this quote matters"
+                notesLabel: String(localized: "Notes", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "Why this quote matters", bundle: AppLocale.bundle)
             )
         case .articles:
             return FieldSchema(
-                titleLabel: "Article Title", titlePlaceholder: "Article headline",
-                subtitleLabel: "Source / Publication", subtitlePlaceholder: "Medium / TechCrunch / Wired",
-                linkLabel: "Link", linkPlaceholder: "https://...",
-                extra1Label: "Topic", extra1Placeholder: "Technology / Science / Business",
+                titleLabel: String(localized: "Article Title", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "Article headline", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Source / Publication", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "Medium / TechCrunch / Wired", bundle: AppLocale.bundle),
+                linkLabel: String(localized: "Link", bundle: AppLocale.bundle), linkPlaceholder: String(localized: "https://...", bundle: AppLocale.bundle),
+                extra1Label: String(localized: "Topic", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "Technology / Science / Business", bundle: AppLocale.bundle),
                 extra2Label: nil, extra2Placeholder: nil,
-                notesLabel: "Summary", notesPlaceholder: "Key points of the article"
+                notesLabel: String(localized: "Summary", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "Key points of the article", bundle: AppLocale.bundle)
             )
         case .contacts:
             return FieldSchema(
-                titleLabel: "Name", titlePlaceholder: "John Smith",
-                subtitleLabel: "Phone", subtitlePlaceholder: "+1 (555) 000-0000",
-                linkLabel: "Email", linkPlaceholder: "email@example.com",
-                extra1Label: "Company", extra1Placeholder: "Company name",
-                extra2Label: "Position", extra2Placeholder: "CEO / Designer / Developer",
-                notesLabel: "Notes", notesPlaceholder: "Where we met, what we discussed",
+                titleLabel: String(localized: "Name", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "John Smith", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Phone", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "+1 (555) 000-0000", bundle: AppLocale.bundle),
+                linkLabel: String(localized: "Email", bundle: AppLocale.bundle), linkPlaceholder: String(localized: "email@example.com", bundle: AppLocale.bundle),
+                extra1Label: String(localized: "Company", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "Company name", bundle: AppLocale.bundle),
+                extra2Label: String(localized: "Position", bundle: AppLocale.bundle), extra2Placeholder: String(localized: "CEO / Designer / Developer", bundle: AppLocale.bundle),
+                notesLabel: String(localized: "Notes", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "Where we met, what we discussed", bundle: AppLocale.bundle),
                 isLinkEmail: true
             )
         case .tasks:
             return FieldSchema(
-                titleLabel: "Task", titlePlaceholder: "Task description",
-                subtitleLabel: "Due Date", subtitlePlaceholder: "May 25 / end of week",
+                titleLabel: String(localized: "Task", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "Task description", bundle: AppLocale.bundle),
+                subtitleLabel: String(localized: "Due Date", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "May 25 / end of week", bundle: AppLocale.bundle),
                 linkLabel: nil, linkPlaceholder: nil,
-                extra1Label: "Priority", extra1Placeholder: "High / Medium / Low",
+                extra1Label: String(localized: "Priority", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "High / Medium / Low", bundle: AppLocale.bundle),
                 extra2Label: nil, extra2Placeholder: nil,
-                notesLabel: "Details", notesPlaceholder: "Additional task details"
+                notesLabel: String(localized: "Details", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "Additional task details", bundle: AppLocale.bundle)
             )
         }
     }

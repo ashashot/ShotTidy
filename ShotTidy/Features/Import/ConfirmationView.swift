@@ -264,10 +264,7 @@ struct ConfirmationView: View {
     }
 
     private var duplicateSaveAlertMessage: String {
-        let count = selectedDuplicateCount
-        return count == 1
-            ? "1 item may already exist in your catalog. Save anyway?"
-            : "\(count) items may already exist in your catalog. Save anyway?"
+        String(localized: "\(selectedDuplicateCount) item(s) may already exist in your catalog. Save anyway?", bundle: AppLocale.bundle)
     }
 
     // MARK: - Save
@@ -604,9 +601,7 @@ struct DraftItemEditView: View {
                 case .success(let count):
                     HStack(spacing: 10) {
                         Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                        Text(count == 1
-                             ? "1 field filled — review and tap Done"
-                             : "\(count) fields filled — review and tap Done")
+                        Text("\(count) fields filled — review and tap Done")
                             .font(.subheadline.weight(.medium))
                         Spacer()
                     }

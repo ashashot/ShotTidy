@@ -73,6 +73,7 @@ struct ChecklistWidget: Widget {
             provider: ChecklistProvider()
         ) { entry in
             ChecklistWidgetView(entry: entry)
+                .environment(\.locale, WidgetDataReader.resolvedLocale)
                 .containerBackground(for: .widget) { Color(.systemBackground) }
         }
         .configurationDisplayName("Checklist")

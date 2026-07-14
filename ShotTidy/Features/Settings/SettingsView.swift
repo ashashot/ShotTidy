@@ -12,6 +12,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(SubscriptionManager.self) private var subManager
     @Environment(UsageManager.self)        private var usageManager
+    @Environment(LocalizationManager.self) private var localizationManager
 
     @Query private var allItems: [CatalogItem]
     /// Only count screenshots that actually have saved catalog items (same filter as ScreenshotsView).
@@ -30,6 +31,8 @@ struct SettingsView: View {
     @State private var showMailUnavailableAlert = false
 
     var body: some View {
+        @Bindable var localizationManager = localizationManager
+
         NavigationStack {
             Form {
 
@@ -45,7 +48,7 @@ struct SettingsView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Pro Plan")
                                     .font(.subheadline.weight(.semibold))
-                                Text("Unlimited screenshots · 10 enrichments/month")
+                                Text("Unlimited screenshots · \(UsageManager.proEnrichmentsPerPeriod) enrichments/month")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -57,7 +60,7 @@ struct SettingsView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Free Plan")
                                     .font(.subheadline.weight(.semibold))
-                                Text("5 screenshots/month · 1 enrichment credit")
+                                Text("\(UsageManager.freeScreenshotsPerPeriod) screenshots/month · \(UsageManager.freeInitialEnrichments) enrichment credit")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -232,6 +235,22 @@ struct SettingsView: View {
                     }
                 }
 
+                // MARK: - Language
+
+                Section {
+                    Picker(selection: $localizationManager.selectedLanguage) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(language.displayName).tag(language)
+                        }
+                    } label: {
+                        Label("Language", systemImage: "globe")
+                    }
+                } header: {
+                    Text("Language")
+                } footer: {
+                    Text("Choose a language, or leave it on System Default to follow your device's language settings.")
+                }
+
                 // MARK: - About
 
                 Section("About") {
@@ -338,7 +357,7 @@ struct SettingsView: View {
             if subManager.isProActive {
                 usageManager.onSubscriptionActivated()
             } else {
-                restoreError = "No active subscription found."
+                restoreError = String(localized: "No active subscription found.", bundle: AppLocale.bundle)
             }
         } catch {
             restoreError = error.localizedDescription

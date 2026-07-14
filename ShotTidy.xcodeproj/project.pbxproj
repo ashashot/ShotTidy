@@ -65,6 +65,14 @@
 			);
 			target = DE10BB542FCD69A1005897E9 /* ShotTidyWidgetExtension */;
 		};
+		DE10BB8A2FCD6C00005897E9 /* Exceptions for "ShotTidy" folder in "ShotTidyWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Core/Services/AppLocale.swift,
+				Models/ItemCategory.swift,
+			);
+			target = DE10BB542FCD69A1005897E9 /* ShotTidyWidgetExtension */;
+		};
 		DE327FCE2FC1B4170090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidy" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -82,10 +90,13 @@
 		DE327FFF2FC1BA940090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidyShare" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Core/Extensions/Color+Hex.swift",
 				"Core/Extensions/UIImage+Extensions.swift",
 				Core/Services/AppGroupManager.swift,
+				Core/Services/AppLocale.swift,
 				Core/Services/SupabaseAuthManager.swift,
 				Models/CatalogItem.swift,
+				Models/CategoryDescriptor.swift,
 				Models/ItemCategory.swift,
 				Models/Screenshot.swift,
 				Models/UserCategory.swift,
@@ -108,6 +119,7 @@
 			exceptions = (
 				DE327FCE2FC1B4170090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidy" target */,
 				DE327FFF2FC1BA940090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidyShare" target */,
+				DE10BB8A2FCD6C00005897E9 /* Exceptions for "ShotTidy" folder in "ShotTidyWidgetExtension" target */,
 			);
 			path = ShotTidy;
 			sourceTree = "<group>";
@@ -282,6 +294,18 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
+				es,
+				"pt-BR",
+				"pt-PT",
+				tr,
+				ru,
+				it,
+				de,
+				fr,
+				ja,
+				ko,
+				hy,
 			);
 			mainGroup = DE327FB82FC1B4160090FC80;
 			minimizedProjectReferenceProxies = 1;

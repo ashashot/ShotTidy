@@ -143,12 +143,12 @@ final class ImportViewModel {
                     if let err = error as? OpenAIError,
                        case .refused = err {
                         // Refusal is non-fatal — just skip this screenshot
-                        let name = screenshot.originalFileName ?? "screenshot \(index + 1)"
-                        warnings.append("\(name): \(err.localizedDescription)")
+                        let name = screenshot.originalFileName ?? String(localized: "screenshot \(index + 1)", bundle: AppLocale.bundle)
+                        warnings.append(String(localized: "\(name): \(err.localizedDescription)", bundle: AppLocale.bundle))
                     } else if let err = error as? OpenAIError,
                               case .emptyResponse = err {
-                        let name = screenshot.originalFileName ?? "screenshot \(index + 1)"
-                        warnings.append("\(name): \(err.localizedDescription)")
+                        let name = screenshot.originalFileName ?? String(localized: "screenshot \(index + 1)", bundle: AppLocale.bundle)
+                        warnings.append(String(localized: "\(name): \(err.localizedDescription)", bundle: AppLocale.bundle))
                     } else {
                         // Network / HTTP errors — only shown if nothing was extracted
                         hardError = error.localizedDescription
@@ -278,7 +278,7 @@ final class ImportViewModel {
         do {
             try context.save()
         } catch {
-            persistenceError = "Failed to save items: \(error.localizedDescription)"
+            persistenceError = String(localized: "Failed to save items: \(error.localizedDescription)", bundle: AppLocale.bundle)
         }
     }
 

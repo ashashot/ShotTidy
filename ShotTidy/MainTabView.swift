@@ -237,8 +237,7 @@ struct MainTabView: View {
         AppGroupManager.clearPendingDrafts()
         syncCatalogIndex()  // refresh index so next Share Extension session sees these items
 
-        let word = imported == 1 ? "item" : "items"
-        importBanner = "✅ \(imported) \(word) added from Share"
+        importBanner = String(localized: "✅ \(imported) item(s) added from Share", bundle: AppLocale.bundle)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
             importBanner = nil

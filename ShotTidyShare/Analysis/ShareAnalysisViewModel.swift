@@ -21,8 +21,8 @@ enum ShareDuplicateLevel {
 
     var label: String {
         switch self {
-        case .high:   return "Likely duplicate"
-        case .medium: return "Possible duplicate"
+        case .high:   return String(localized: "Likely duplicate", bundle: AppLocale.bundle)
+        case .medium: return String(localized: "Possible duplicate", bundle: AppLocale.bundle)
         }
     }
 
@@ -163,7 +163,7 @@ final class ShareAnalysisViewModel {
         guard let link = urlString, !link.isEmpty else { return }
 
         for i in draftWrappers.indices {
-            let schema = ShareFieldSchema.make(for: draftWrappers[i].item.categoryKey)
+            let schema = ItemCategory.FieldSchema.resolved(for: draftWrappers[i].item.categoryKey)
             guard schema.linkLabel != nil,
                   !schema.isLinkEmail,
                   draftWrappers[i].item.link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

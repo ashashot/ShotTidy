@@ -34,22 +34,22 @@ enum OpenAIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidImage:
-            return "Failed to process the image."
+            return String(localized: "Failed to process the image.", bundle: AppLocale.bundle)
         case .quotaExceeded(let message):
             return message
         case .httpError(let code, _):
-            if code == 401 { return "Authorization error. Check your Supabase configuration." }
-            if code == 429 { return "Rate limit exceeded. Please wait a moment." }
-            if code == 500 { return "Server error. Make sure OPENAI_API_KEY is set in Supabase Secrets." }
-            return "Server error (\(code)). Please try again."
+            if code == 401 { return String(localized: "Authorization error. Check your Supabase configuration.", bundle: AppLocale.bundle) }
+            if code == 429 { return String(localized: "Rate limit exceeded. Please wait a moment.", bundle: AppLocale.bundle) }
+            if code == 500 { return String(localized: "Server error. Please try again later.", bundle: AppLocale.bundle) }
+            return String(localized: "Server error (\(code)). Please try again.", bundle: AppLocale.bundle)
         case .refused:
-            return "AI could not analyze this screenshot. Try a different image."
+            return String(localized: "AI could not analyze this screenshot. Try a different image.", bundle: AppLocale.bundle)
         case .emptyResponse:
-            return "Empty response from the API. Please try again."
+            return String(localized: "Empty response from the API. Please try again.", bundle: AppLocale.bundle)
         case .decodingFailed(let detail):
-            return "Failed to parse the response: \(detail)"
+            return String(localized: "Failed to parse the response: \(detail)", bundle: AppLocale.bundle)
         case .networkError(let err):
-            return "Network error: \(err.localizedDescription)"
+            return String(localized: "Network error: \(err.localizedDescription)", bundle: AppLocale.bundle)
         }
     }
 }
@@ -129,7 +129,7 @@ final class OpenAIAPIClient {
            let message = json["error"] as? String, !message.isEmpty {
             return message
         }
-        return "Rate limit exceeded. Please wait a moment."
+        return String(localized: "Rate limit exceeded. Please wait a moment.", bundle: AppLocale.bundle)
     }
 
     // MARK: - Parse

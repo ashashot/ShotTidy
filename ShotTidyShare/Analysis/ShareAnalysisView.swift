@@ -48,7 +48,7 @@ struct ShareAnalysisView: View {
             Group {
                 switch viewModel.phase {
                 case .extracting:
-                    loadingView(icon: "photo", text: "Loading image…")
+                    loadingView(icon: "photo", text: String(localized: "Loading image…", bundle: AppLocale.bundle))
                 case .analyzing:
                     analyzingView
                         .transition(.opacity)
@@ -60,7 +60,7 @@ struct ShareAnalysisView: View {
                 case .manualEntry:
                     manualEntryPromptView
                 case .saving:
-                    loadingView(icon: "checkmark.circle", text: "Saving…")
+                    loadingView(icon: "checkmark.circle", text: String(localized: "Saving…", bundle: AppLocale.bundle))
                 case .limitReached:
                     limitReachedView
                 }
@@ -141,10 +141,7 @@ struct ShareAnalysisView: View {
                     Button("Save Anyway") { performSave() }
                     Button("Cancel", role: .cancel) { }
                 } message: {
-                    let count = viewModel.selectedDuplicateCount
-                    Text(count == 1
-                         ? "1 item may already exist in your catalog. Save anyway?"
-                         : "\(count) items may already exist in your catalog. Save anyway?")
+                    Text("\(viewModel.selectedDuplicateCount) item(s) may already exist in your catalog. Save anyway?")
                 }
             }
         }
@@ -259,7 +256,7 @@ struct ShareAnalysisView: View {
                 Text("Analysis Complete")
                     .font(.headline)
 
-                Text("\(count) item\(count == 1 ? "" : "s") found")
+                Text("\(count) item(s) found")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -458,10 +455,8 @@ struct ShareAnalysisView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.caption)
-                    Text("Resets on ")
+                    Text("Resets on \(resets.formatted(date: .abbreviated, time: .omitted))")
                         .font(.caption)
-                    Text(resets, style: .date)
-                        .font(.caption.weight(.medium))
                 }
                 .foregroundStyle(.secondary)
                 .padding(.top, 4)

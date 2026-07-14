@@ -247,6 +247,6 @@ enum PurchaseError: LocalizedError {
     case productNotLoaded
 
     var errorDescription: String? {
-        "Product is not available yet. Please try again in a moment."
+        String(localized: "Product is not available yet. Please try again in a moment.", bundle: AppLocale.bundle)
     }
 }

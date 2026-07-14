@@ -299,9 +299,7 @@ struct ItemEditView: View {
                 case .success(let count):
                     HStack(spacing: 10) {
                         Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                        Text(count == 1
-                             ? "1 field filled — review and save"
-                             : "\(count) fields filled — review and save")
+                        Text("\(count) fields filled — review and save")
                             .font(.subheadline.weight(.medium))
                         Spacer()
                     }
@@ -409,7 +407,7 @@ struct ItemEditView: View {
         } header: {
             HStack(spacing: 5) {
                 Image(systemName: "exclamationmark.triangle.fill").font(.caption)
-                Text(duplicates.count == 1 ? "Possible Duplicate" : "Possible Duplicates (\(duplicates.count))")
+                Text("\(duplicates.count) Possible Duplicate(s)")
             }
             .foregroundStyle(.orange)
         } footer: {
@@ -420,10 +418,9 @@ struct ItemEditView: View {
     // MARK: - Alert message
 
     private var duplicateAlertMessage: String {
-        let names = duplicates.prefix(2).map { "\u{201C}\($0.item.title)\u{201D}" }.joined(separator: ", ")
-        return duplicates.count == 1
-            ? "An item with the same title already exists: \(names). Save anyway?"
-            : "\(duplicates.count) similar items already exist: \(names)\(duplicates.count > 2 ? "…" : ""). Save anyway?"
+        let names = duplicates.prefix(2).map { "\u{201C}\($0.item.title)\u{201D}" }
+        let joined = ListFormatter.localizedString(byJoining: names) + (duplicates.count > 2 ? "…" : "")
+        return String(localized: "\(duplicates.count) similar item(s) already exist: \(joined). Save anyway?", bundle: AppLocale.bundle)
     }
 
     // MARK: - Save

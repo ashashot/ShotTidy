@@ -40,6 +40,10 @@ enum WidgetDataReader {
         defaults.bool(forKey: "filter.hideCompleted.\(key)")
     }
 
+    // MARK: - Language override (mirrors the main app's Settings choice)
+
+    static var resolvedLocale: Locale { AppLocale.current }
+
     // MARK: - Interactive toggle queue
 
     /// Queues a completion toggle for the given item, then optimistically flips

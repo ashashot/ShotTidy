@@ -200,12 +200,12 @@ struct CategoryEditorView: View {
 
     private var fieldsSection: some View {
         Section {
-            labeledField("Primary field (required)", text: $titleLabel, placeholder: "Title")
-            labeledField("Second field", text: $subtitleLabel, placeholder: "Leave empty to hide")
-            labeledField("Link field", text: $linkLabel, placeholder: "Leave empty to hide")
-            labeledField("Third field", text: $extra1Label, placeholder: "Leave empty to hide")
-            labeledField("Fourth field", text: $extra2Label, placeholder: "Leave empty to hide")
-            labeledField("Notes field", text: $notesLabel, placeholder: "Leave empty to hide")
+            labeledField(String(localized: "Primary field (required)", bundle: AppLocale.bundle), text: $titleLabel, placeholder: String(localized: "Title", bundle: AppLocale.bundle))
+            labeledField(String(localized: "Second field", bundle: AppLocale.bundle), text: $subtitleLabel, placeholder: String(localized: "Leave empty to hide", bundle: AppLocale.bundle))
+            labeledField(String(localized: "Link field", bundle: AppLocale.bundle), text: $linkLabel, placeholder: String(localized: "Leave empty to hide", bundle: AppLocale.bundle))
+            labeledField(String(localized: "Third field", bundle: AppLocale.bundle), text: $extra1Label, placeholder: String(localized: "Leave empty to hide", bundle: AppLocale.bundle))
+            labeledField(String(localized: "Fourth field", bundle: AppLocale.bundle), text: $extra2Label, placeholder: String(localized: "Leave empty to hide", bundle: AppLocale.bundle))
+            labeledField(String(localized: "Notes field", bundle: AppLocale.bundle), text: $notesLabel, placeholder: String(localized: "Leave empty to hide", bundle: AppLocale.bundle))
             TextField("AI sorting hint (optional)", text: $aiHint, axis: .vertical)
                 .lineLimit(2, reservesSpace: false)
         } header: {
@@ -221,7 +221,7 @@ struct CategoryEditorView: View {
 
     private func labeledField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(label.uppercased())
+            Text(label.uppercased(with: .current))
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.secondary)
             TextField(placeholder, text: text)
@@ -291,7 +291,7 @@ struct CategoryEditorView: View {
         guard subManager.isProActive else { showPaywall = true; return }
         guard usageManager.canSuggestCategoryFields(isPro: subManager.isProActive) else {
             withAnimation {
-                suggestState = .failure("You've used all AI field suggestions for this period.")
+                suggestState = .failure(String(localized: "You've used all AI field suggestions for this period.", bundle: AppLocale.bundle))
             }
             return
         }

@@ -37,7 +37,7 @@ struct ScreenshotsView: View {
     var body: some View {
         NavigationStack {
             screenshotsContent
-                .navigationTitle(screenshots.isEmpty ? "Screenshots" : "\(screenshots.count) \(screenshots.count == 1 ? "Screenshot" : "Screenshots")")
+                .navigationTitle(screenshots.isEmpty ? String(localized: "Screenshots", bundle: AppLocale.bundle) : String(localized: "\(screenshots.count) Screenshot(s)", bundle: AppLocale.bundle))
                 .navigationDestination(item: $selectedScreenshot) { screenshot in
                     ScreenshotDetailView(screenshot: screenshot)
                 }
@@ -49,7 +49,7 @@ struct ScreenshotsView: View {
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
-                .alert("Delete \(selectedIDs.count) \(selectedIDs.count == 1 ? "Screenshot" : "Screenshots")?",
+                .alert(String(localized: "Delete \(selectedIDs.count) Screenshot(s)?", bundle: AppLocale.bundle),
                        isPresented: $showBatchDeleteAlert) {
                     Button("Delete", role: .destructive) { deleteSelected() }
                     Button("Cancel", role: .cancel) {}
@@ -71,8 +71,8 @@ struct ScreenshotsView: View {
                     Image(systemName: "trash")
                     Text(
                         selectedIDs.isEmpty
-                            ? "Select Screenshots to Delete"
-                            : "Delete \(selectedIDs.count) \(selectedIDs.count == 1 ? "Screenshot" : "Screenshots")"
+                            ? String(localized: "Select Screenshots to Delete", bundle: AppLocale.bundle)
+                            : String(localized: "Delete \(selectedIDs.count) Screenshot(s)", bundle: AppLocale.bundle)
                     )
                 }
                 .font(.body.weight(.medium))

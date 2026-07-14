@@ -25,21 +25,21 @@ enum ShareAPIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidImage:
-            return "Could not process the image."
+            return String(localized: "Could not process the image.", bundle: AppLocale.bundle)
         case .networkError(let err):
-            return "Network error: \(err.localizedDescription)"
+            return String(localized: "Network error: \(err.localizedDescription)", bundle: AppLocale.bundle)
         case .unauthorized:
-            return "Authorization error. Check your Supabase configuration."
+            return String(localized: "Authorization error. Check your Supabase configuration.", bundle: AppLocale.bundle)
         case .rateLimited:
-            return "Too many requests. Please wait a moment."
+            return String(localized: "Too many requests. Please wait a moment.", bundle: AppLocale.bundle)
         case .serverError(let code):
-            return "Server error (\(code)). Please try again."
+            return String(localized: "Server error (\(code)). Please try again.", bundle: AppLocale.bundle)
         case .refused:
-            return "AI could not analyze this screenshot."
+            return String(localized: "AI could not analyze this screenshot.", bundle: AppLocale.bundle)
         case .emptyResponse:
-            return "Empty response. Please try again."
+            return String(localized: "Empty response. Please try again.", bundle: AppLocale.bundle)
         case .decodingFailed:
-            return "Could not parse the AI response. Please try again."
+            return String(localized: "Could not parse the AI response. Please try again.", bundle: AppLocale.bundle)
         }
     }
 }

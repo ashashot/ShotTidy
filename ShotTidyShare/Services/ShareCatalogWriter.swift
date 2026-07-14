@@ -81,6 +81,6 @@ enum ShareCatalogError: LocalizedError {
     case containerUnavailable
 
     var errorDescription: String? {
-        "The App Group container is unavailable."
+        String(localized: "The App Group container is unavailable.", bundle: AppLocale.bundle)
     }
 }

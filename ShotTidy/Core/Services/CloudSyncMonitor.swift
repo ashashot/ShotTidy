@@ -90,7 +90,7 @@ final class CloudSyncMonitor {
             updateLastSyncDate(event.endDate ?? Date())
         } else {
             fallbackTask?.cancel()
-            state = .error(event.error?.localizedDescription ?? "Unknown iCloud error")
+            state = .error(event.error?.localizedDescription ?? String(localized: "Unknown iCloud error", bundle: AppLocale.bundle))
         }
     }
 

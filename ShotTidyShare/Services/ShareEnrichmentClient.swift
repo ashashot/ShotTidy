@@ -35,10 +35,10 @@ enum ShareEnrichmentError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .networkError(let e): return "Network error: \(e.localizedDescription)"
-        case .serverError(let c):  return "Server error (\(c)). Please try again."
-        case .decodingFailed:      return "Could not parse search results."
-        case .noFieldsFound:       return "No additional information found."
+        case .networkError(let e): return String(localized: "Network error: \(e.localizedDescription)", bundle: AppLocale.bundle)
+        case .serverError(let c):  return String(localized: "Server error (\(c)). Please try again.", bundle: AppLocale.bundle)
+        case .decodingFailed:      return String(localized: "Could not parse search results.", bundle: AppLocale.bundle)
+        case .noFieldsFound:       return String(localized: "No additional information found.", bundle: AppLocale.bundle)
         }
     }
 }
@@ -58,11 +58,11 @@ final class ShareEnrichmentClient {
     }
 
     /// Searches the web for missing fields of a `PendingDraftItem`.
-    /// `schema` is the `ShareFieldSchema` for the item's category — used to decide
-    /// which fields to include in the request.
+    /// `schema` is the `ItemCategory.FieldSchema` for the item's category — used to
+    /// decide which fields to include in the request.
     func enrich(
         item: PendingDraftItem,
-        schema: ShareFieldSchema
+        schema: ItemCategory.FieldSchema
     ) async throws -> ShareEnrichedFields {
 
         var body: [String: String] = [

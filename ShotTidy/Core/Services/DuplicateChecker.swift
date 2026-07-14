@@ -24,8 +24,8 @@ enum DuplicateConfidence {
 
     var label: String {
         switch self {
-        case .high:   return "Likely duplicate"
-        case .medium: return "Possible duplicate"
+        case .high:   return String(localized: "Likely duplicate", bundle: AppLocale.bundle)
+        case .medium: return String(localized: "Possible duplicate", bundle: AppLocale.bundle)
         }
     }
 
@@ -55,7 +55,7 @@ struct DuplicateMatch: Identifiable {
     let matchedFields: [String]
 
     var reason: String {
-        matchedFields.joined(separator: " + ")
+        ListFormatter.localizedString(byJoining: matchedFields)
     }
 }
 
@@ -106,7 +106,7 @@ enum DuplicateChecker {
             // Title is required for any match
             guard itemTitle == normalizedTitle else { continue }
 
-            var matchedFields: [String] = ["Title"]
+            var matchedFields: [String] = [String(localized: "Title", bundle: AppLocale.bundle)]
             var confidence: DuplicateConfidence = .medium
 
             // Subtitle match → boost confidence
@@ -118,7 +118,7 @@ enum DuplicateChecker {
                 .lowercased()
             if let s = normalizedSub, let is_ = itemSub,
                !s.isEmpty, !is_.isEmpty, s == is_ {
-                matchedFields.append("Subtitle")
+                matchedFields.append(String(localized: "Subtitle", bundle: AppLocale.bundle))
                 confidence = .high
             }
 
@@ -131,7 +131,7 @@ enum DuplicateChecker {
                 .lowercased()
             if let l = normalizedLink, let il = itemLink,
                !l.isEmpty, !il.isEmpty, l == il {
-                matchedFields.append("Link")
+                matchedFields.append(String(localized: "Link", bundle: AppLocale.bundle))
                 confidence = .high
             }
 

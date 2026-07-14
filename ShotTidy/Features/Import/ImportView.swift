@@ -215,7 +215,7 @@ struct ImportView: View {
             // Bottom panel
             VStack(spacing: 10) {
                 let count = viewModel.selectedImages.count
-                Text("\(count) \(count == 1 ? "screenshot" : "screenshots") selected")
+                Text("\(count) screenshot(s) selected")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
@@ -370,7 +370,7 @@ struct ImportView: View {
                     Text("Analysis Complete")
                         .font(.headline)
 
-                    Text("\(completionCount) item\(completionCount == 1 ? "" : "s") found")
+                    Text("\(completionCount) item(s) found")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -415,7 +415,7 @@ struct ImportView: View {
                 .font(.caption)
             Text(remaining == 0
                  ? "Free limit reached. Upgrade to analyze more screenshots."
-                 : "Only \(remaining) screenshot\(remaining == 1 ? "" : "s") left this month.")
+                 : "Only \(remaining) screenshot(s) left this month.")
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.primary)
             Spacer()

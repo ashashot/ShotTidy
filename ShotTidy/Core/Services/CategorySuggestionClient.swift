@@ -34,13 +34,13 @@ enum CategorySuggestionError: LocalizedError {
         case .quotaExceeded(let message):
             return message
         case .httpError(let code, _):
-            if code == 429 { return "Rate limit exceeded. Please wait a moment." }
-            if code == 500 { return "Server error. Please try again later." }
-            return "Server error (\(code)). Please try again."
+            if code == 429 { return String(localized: "Rate limit exceeded. Please wait a moment.", bundle: AppLocale.bundle) }
+            if code == 500 { return String(localized: "Server error. Please try again later.", bundle: AppLocale.bundle) }
+            return String(localized: "Server error (\(code)). Please try again.", bundle: AppLocale.bundle)
         case .decodingFailed(let detail):
-            return "Failed to parse the suggestion: \(detail)"
+            return String(localized: "Failed to parse the suggestion: \(detail)", bundle: AppLocale.bundle)
         case .networkError(let err):
-            return "Network error: \(err.localizedDescription)"
+            return String(localized: "Network error: \(err.localizedDescription)", bundle: AppLocale.bundle)
         }
     }
 }
@@ -92,7 +92,7 @@ final class CategorySuggestionClient {
 
         func str(_ key: String) -> String { (json[key] as? String) ?? "" }
 
-        let title = str("titleLabel").isEmpty ? "Title" : str("titleLabel")
+        let title = str("titleLabel").isEmpty ? String(localized: "Title", bundle: AppLocale.bundle) : str("titleLabel")
         let icon  = str("iconName").isEmpty ? "tag.fill" : str("iconName")
 
         return SuggestedCategoryLayout(

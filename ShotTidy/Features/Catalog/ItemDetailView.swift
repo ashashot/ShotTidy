@@ -63,14 +63,14 @@ struct ItemDetailView: View {
 
                     if let v = item.subtitle, !v.isEmpty {
                         DetailField(
-                            label: schema.subtitleLabel ?? "Details",
+                            label: schema.subtitleLabel ?? String(localized: "Details", bundle: AppLocale.bundle),
                             value: v,
                             highlighted: recentlyFilledKeys.contains("subtitle")
                         )
                     }
                     if let v = item.link, !v.isEmpty {
                         DetailField(
-                            label: schema.linkLabel ?? "Link",
+                            label: schema.linkLabel ?? String(localized: "Link", bundle: AppLocale.bundle),
                             value: v,
                             isLink: !schema.isLinkEmail,
                             isEmail: schema.isLinkEmail,
@@ -79,21 +79,21 @@ struct ItemDetailView: View {
                     }
                     if let v = item.extra1, !v.isEmpty {
                         DetailField(
-                            label: schema.extra1Label ?? "Extra",
+                            label: schema.extra1Label ?? String(localized: "Extra", bundle: AppLocale.bundle),
                             value: v,
                             highlighted: recentlyFilledKeys.contains("extra1")
                         )
                     }
                     if let v = item.extra2, !v.isEmpty {
                         DetailField(
-                            label: schema.extra2Label ?? "Extra 2",
+                            label: schema.extra2Label ?? String(localized: "Extra 2", bundle: AppLocale.bundle),
                             value: v,
                             highlighted: recentlyFilledKeys.contains("extra2")
                         )
                     }
                     if let v = item.notes, !v.isEmpty {
                         DetailField(
-                            label: schema.notesLabel ?? "Notes",
+                            label: schema.notesLabel ?? String(localized: "Notes", bundle: AppLocale.bundle),
                             value: v,
                             multiline: true,
                             highlighted: recentlyFilledKeys.contains("notes")
@@ -229,9 +229,7 @@ struct ItemDetailView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                    Text(count == 1
-                         ? "1 field filled automatically"
-                         : "\(count) fields filled automatically")
+                    Text("\(count) fields filled automatically")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.primary)
                     Spacer()
@@ -500,7 +498,7 @@ private struct DetailField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(label.uppercased())
+            Text(label.uppercased(with: .current))
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .tracking(0.5)

@@ -83,7 +83,7 @@ struct ScreenshotDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("\(linkedItems.count) \(linkedItems.count == 1 ? "item" : "items")")
+                Text("\(linkedItems.count) items")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

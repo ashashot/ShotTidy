@@ -15,6 +15,7 @@ struct ShotTidyApp: App {
     @State private var usageManager        = UsageManager()
     @State private var categoryStore       = CategoryStore()
     @State private var updateService       = AppUpdateService()
+    @State private var localizationManager = LocalizationManager()
 
     // MARK: - Init
 
@@ -88,6 +89,8 @@ struct ShotTidyApp: App {
                 .environment(subscriptionManager)
                 .environment(usageManager)
                 .environment(categoryStore)
+                .environment(localizationManager)
+                .environment(\.locale, localizationManager.resolvedLocale)
                 .task {
                     // Load StoreKit products and verify subscription status on launch.
                     await subscriptionManager.onLaunch()

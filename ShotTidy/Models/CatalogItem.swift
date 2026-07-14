@@ -88,8 +88,8 @@ final class CatalogItem {
 
     /// Label for the completion toggle, or nil when the category is not completable.
     var completionLabel: String? {
-        if categoryRaw == ItemCategory.tasks.rawValue { return "Completed" }
-        if categoryRaw == ItemCategory.shopping.rawValue { return "Purchased" }
+        if categoryRaw == ItemCategory.tasks.rawValue { return String(localized: "Completed", bundle: AppLocale.bundle) }
+        if categoryRaw == ItemCategory.shopping.rawValue { return String(localized: "Purchased", bundle: AppLocale.bundle) }
         return nil
     }
 
@@ -126,11 +126,11 @@ final class CatalogItem {
     var calendarEventNotes: String {
         let schema = category.fieldSchema
         var parts: [String] = []
-        if let v = subtitle, !v.isEmpty  { parts.append("\(schema.subtitleLabel ?? "Details"): \(v)") }
-        if let v = link,     !v.isEmpty  { parts.append("\(schema.linkLabel ?? "Link"): \(v)") }
+        if let v = subtitle, !v.isEmpty  { parts.append("\(schema.subtitleLabel ?? String(localized: "Details", bundle: AppLocale.bundle)): \(v)") }
+        if let v = link,     !v.isEmpty  { parts.append("\(schema.linkLabel ?? String(localized: "Link", bundle: AppLocale.bundle)): \(v)") }
         if let v = extra1,   !v.isEmpty  { parts.append("\(schema.extra1Label ?? ""): \(v)".trimmingCharacters(in: .whitespaces)) }
         if let v = extra2,   !v.isEmpty  { parts.append("\(schema.extra2Label ?? ""): \(v)".trimmingCharacters(in: .whitespaces)) }
-        if let v = notes,    !v.isEmpty  { parts.append("\(schema.notesLabel ?? "Notes"): \(v)") }
+        if let v = notes,    !v.isEmpty  { parts.append("\(schema.notesLabel ?? String(localized: "Notes", bundle: AppLocale.bundle)): \(v)") }
         return parts.filter { !$0.hasPrefix(": ") }.joined(separator: "\n")
     }
 
