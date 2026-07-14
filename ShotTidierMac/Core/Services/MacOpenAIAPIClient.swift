@@ -3,19 +3,14 @@
 //  ShotTidierMac
 //
 //  Screenshot analysis via Supabase Edge Function.
-//  Uses NSImage instead of UIImage.
+//  Uses NSImage instead of UIImage; transport and response parsing are shared
+//  (SupabaseFunctionClient).
 //
 
 import Foundation
 import AppKit
 
-// MARK: - Shared types (iOS counterparts live in OpenAIAPIClient.swift)
-
-struct CategoryPromptInfo: Encodable {
-    let key: String
-    let name: String
-    let hint: String
-}
+// MARK: - Errors (iOS counterpart lives in OpenAIAPIClient.swift)
 
 enum OpenAIError: LocalizedError {
     case invalidImage
@@ -45,6 +40,17 @@ enum OpenAIError: LocalizedError {
             return "Failed to parse the response: \(detail)"
         case .networkError(let err):
             return "Network error: \(err.localizedDescription)"
+        }
+    }
+
+    init(_ transportError: SupabaseFunctionClient.TransportError) {
+        switch transportError {
+        case .network(let err):            self = .networkError(err)
+        case .http(let code, let message): self = .httpError(code, message ?? "")
+        case .quotaExceeded(let message):  self = .quotaExceeded(message)
+        case .refused(let refusal):        self = .refused(refusal)
+        case .emptyResponse:               self = .emptyResponse
+        case .decodingFailed(let detail):  self = .decodingFailed(detail)
         }
     }
 }
@@ -79,99 +85,24 @@ final class MacOpenAIAPIClient {
             }
         }
 
-        var request = URLRequest(url: Config.analyzeEndpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        request.timeoutInterval = 60
-
-        let token = await SupabaseAuthManager.shared.bearerToken()
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
-        var (data, response) = try await send(request)
-
-        // Expired session — refresh once and retry.
-        if let http = response as? HTTPURLResponse, http.statusCode == 401,
-           let fresh = await SupabaseAuthManager.shared.recoverFromAuthFailure() {
-            request.setValue("Bearer \(fresh)", forHTTPHeaderField: "Authorization")
-            (data, response) = try await send(request)
-        }
-
-        if let http = response as? HTTPURLResponse, http.statusCode != 200 {
-            let bodyStr = String(data: data, encoding: .utf8) ?? ""
-            if http.statusCode == 429 {
-                throw OpenAIError.quotaExceeded(Self.serverErrorMessage(from: data))
-            }
-            throw OpenAIError.httpError(http.statusCode, bodyStr)
-        }
-
-        return try parseItems(from: data, screenshotId: screenshotId)
-    }
-
-    private func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
         do {
-            return try await URLSession.shared.data(for: request)
-        } catch {
-            throw OpenAIError.networkError(error)
-        }
-    }
-
-    /// Extracts the "error" message from a JSON error body, with a fallback.
-    private static func serverErrorMessage(from data: Data) -> String {
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let message = json["error"] as? String, !message.isEmpty {
-            return message
-        }
-        return "Rate limit exceeded. Please wait a moment."
-    }
-
-    // MARK: - Parse
-
-    private func parseItems(from data: Data, screenshotId: UUID?) throws -> [DraftItem] {
-        guard
-            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let choices = json["choices"] as? [[String: Any]],
-            let message = choices.first?["message"] as? [String: Any]
-        else {
-            throw OpenAIError.decodingFailed("Unexpected API response format")
-        }
-
-        if let refusal = message["refusal"] as? String, !refusal.isEmpty {
-            throw OpenAIError.refused(refusal)
-        }
-
-        guard let content = message["content"] as? String else {
-            throw OpenAIError.emptyResponse
-        }
-
-        guard
-            let contentData = content.data(using: .utf8),
-            let contentJson = try? JSONSerialization.jsonObject(with: contentData) as? [String: Any],
-            let items = contentJson["items"] as? [[String: Any]]
-        else {
-            let preview = String(content.prefix(120))
-            throw OpenAIError.decodingFailed("Expected an items array. Got: \(preview)")
-        }
-
-        return items.compactMap { dict -> DraftItem? in
-            guard
-                let categoryStr = dict["category"] as? String,
-                !categoryStr.isEmpty,
-                let title = dict["title"] as? String,
-                !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            else { return nil }
-
-            return DraftItem(
-                categoryKey: categoryStr,
-                title: title,
-                subtitle: dict["subtitle"] as? String ?? "",
-                link: dict["link"] as? String ?? "",
-                extra1: dict["extra1"] as? String ?? "",
-                extra2: dict["extra2"] as? String ?? "",
-                notes: dict["notes"] as? String ?? "",
-                suggestedCategoryName: dict["suggestedCategoryName"] as? String ?? "",
-                sourceScreenshotId: screenshotId
-            )
+            let data = try await SupabaseFunctionClient.postJSON(body, to: Config.analyzeEndpoint)
+            let items = try SupabaseFunctionClient.openAIItems(from: data)
+            return items.map { dict in
+                DraftItem(
+                    categoryKey: dict["category"] ?? "",
+                    title: dict["title"] ?? "",
+                    subtitle: dict["subtitle"] ?? "",
+                    link: dict["link"] ?? "",
+                    extra1: dict["extra1"] ?? "",
+                    extra2: dict["extra2"] ?? "",
+                    notes: dict["notes"] ?? "",
+                    suggestedCategoryName: dict["suggestedCategoryName"] ?? "",
+                    sourceScreenshotId: screenshotId
+                )
+            }
+        } catch let transportError as SupabaseFunctionClient.TransportError {
+            throw OpenAIError(transportError)
         }
     }
 }

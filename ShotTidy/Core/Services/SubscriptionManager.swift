@@ -21,28 +21,19 @@ final class SubscriptionManager {
     // MARK: - Product IDs
 
     enum ProductID {
-        static let proMonthly     = "com.mbx.shottidier.pro_monthly"
-        static let enrichments10  = "com.mbx.shottidier.enrichments_10"
-        static let enrichments30  = "com.mbx.shottidier.enrichments_30"
-        static let enrichments75  = "com.mbx.shottidier.enrichments_75"
+        static let proMonthly     = SubscriptionProducts.proMonthly
+        static let enrichments10  = SubscriptionProducts.enrichments10
+        static let enrichments30  = SubscriptionProducts.enrichments30
+        static let enrichments75  = SubscriptionProducts.enrichments75
 
-        static var all: Set<String> {
-            [proMonthly, enrichments10, enrichments30, enrichments75]
-        }
-        static var packs: Set<String> {
-            [enrichments10, enrichments30, enrichments75]
-        }
+        static var all: Set<String>   { SubscriptionProducts.all }
+        static var packs: Set<String> { SubscriptionProducts.packs }
     }
 
     // MARK: - Credit amounts per pack
 
     static func credits(for productID: String) -> Int {
-        switch productID {
-        case ProductID.enrichments10: return 10
-        case ProductID.enrichments30: return 30
-        case ProductID.enrichments75: return 75
-        default: return 0
-        }
+        SubscriptionProducts.credits(for: productID)
     }
 
     // MARK: - Observable state

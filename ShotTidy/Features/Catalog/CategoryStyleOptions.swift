@@ -9,18 +9,8 @@ import SwiftUI
 
 enum CategoryStyleOptions {
 
-    /// Selectable SF Symbols for custom categories.
-    static let icons: [String] = [
-        "tag.fill", "star.fill", "heart.fill", "flag.fill", "bookmark.fill",
-        "wineglass.fill", "cup.and.saucer.fill", "fork.knife", "birthday.cake.fill", "carrot.fill",
-        "dumbbell.fill", "figure.run", "bicycle", "sportscourt.fill", "trophy.fill",
-        "pawprint.fill", "leaf.fill", "tree.fill", "camera.fill", "music.note",
-        "gamecontroller.fill", "paintbrush.fill", "hammer.fill", "wrench.and.screwdriver.fill", "lightbulb.fill",
-        "airplane", "car.fill", "house.fill", "building.2.fill", "globe",
-        "gift.fill", "creditcard.fill", "bag.fill", "shippingbox.fill", "key.fill",
-        "graduationcap.fill", "briefcase.fill", "stethoscope", "pills.fill", "cross.case.fill",
-        "tshirt.fill", "eyeglasses", "scissors", "comb.fill", "sparkles",
-    ]
+    /// Selectable SF Symbols for custom categories (shared with macOS).
+    static let icons: [String] = CategoryStyleIcons.all
 
     /// Selectable colors (stored as hex).
     static let colors: [Color] = [

@@ -15,23 +15,14 @@ final class MacSubscriptionManager {
 
     // MARK: - Constants
 
-    nonisolated static let proProductID = "com.mbx.shottidier.pro_monthly"
-    nonisolated static let packProductIDs: Set<String> = [
-        "com.mbx.shottidier.enrichments_10",
-        "com.mbx.shottidier.enrichments_30",
-        "com.mbx.shottidier.enrichments_75",
-    ]
+    nonisolated static let proProductID = SubscriptionProducts.proMonthly
+    nonisolated static var packProductIDs: Set<String> { SubscriptionProducts.packs }
     nonisolated private static let proStatusKey = "subscription.isPro"
 
     // MARK: - Credit amounts per pack
 
     nonisolated static func credits(for productID: String) -> Int {
-        switch productID {
-        case "com.mbx.shottidier.enrichments_10": return 10
-        case "com.mbx.shottidier.enrichments_30": return 30
-        case "com.mbx.shottidier.enrichments_75": return 75
-        default: return 0
-        }
+        SubscriptionProducts.credits(for: productID)
     }
 
     // MARK: - State

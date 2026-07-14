@@ -10,15 +10,7 @@
 import Foundation
 import UIKit
 
-// MARK: - Custom category payload
-
-/// Lightweight category info sent to the analysis function so the AI can match
-/// (and suggest) user-defined categories.
-struct CategoryPromptInfo: Encodable {
-    let key: String
-    let name: String
-    let hint: String
-}
+// CategoryPromptInfo lives in SupabaseFunctionClient.swift (shared across targets).
 
 // MARK: - Errors
 

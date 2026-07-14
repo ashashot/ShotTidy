@@ -111,79 +111,24 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             }
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        request.timeoutInterval = 60
-
-        let token = await SupabaseAuthManager.shared.bearerToken()
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
-        var data: Data
-        var response: URLResponse
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            let data = try await SupabaseFunctionClient.postJSON(body, to: url)
+            let items = try SupabaseFunctionClient.openAIItems(from: data)
+            return ["ok": true, "items": items]
+        } catch let transportError as SupabaseFunctionClient.TransportError {
+            switch transportError {
+            case .quotaExceeded(let message):
+                return ["ok": false, "code": "quota_exceeded", "error": message]
+            case .network(let err):
+                return ["ok": false, "error": "Network error: \(err.localizedDescription)"]
+            case .http(let code, let message):
+                return ["ok": false, "error": message ?? "Server error (\(code))."]
+            case .refused, .emptyResponse, .decodingFailed:
+                return ["ok": false, "error": "Could not parse the AI response. Please try again."]
+            }
         } catch {
-            return ["ok": false, "error": "Network error: \(error.localizedDescription)"]
+            return ["ok": false, "error": error.localizedDescription]
         }
-
-        // Expired session — refresh once and retry.
-        if let http = response as? HTTPURLResponse, http.statusCode == 401,
-           let fresh = await SupabaseAuthManager.shared.recoverFromAuthFailure() {
-            request.setValue("Bearer \(fresh)", forHTTPHeaderField: "Authorization")
-            do {
-                (data, response) = try await URLSession.shared.data(for: request)
-            } catch {
-                return ["ok": false, "error": "Network error: \(error.localizedDescription)"]
-            }
-        }
-
-        if let http = response as? HTTPURLResponse, http.statusCode != 200 {
-            let serverMessage = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])
-                .flatMap { $0?["error"] as? String }
-            if http.statusCode == 429 {
-                return [
-                    "ok": false,
-                    "code": "quota_exceeded",
-                    "error": serverMessage ?? "Rate limit exceeded. Please wait a moment.",
-                ]
-            }
-            return ["ok": false, "error": serverMessage ?? "Server error (\(http.statusCode))."]
-        }
-
-        // Parse the raw OpenAI payload: choices[0].message.content → { items: [...] }
-        guard
-            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let choices = json["choices"] as? [[String: Any]],
-            let messageDict = choices.first?["message"] as? [String: Any],
-            let content = messageDict["content"] as? String,
-            let contentData = content.data(using: .utf8),
-            let contentJson = try? JSONSerialization.jsonObject(with: contentData) as? [String: Any],
-            let rawItems = contentJson["items"] as? [[String: Any]]
-        else {
-            return ["ok": false, "error": "Could not parse the AI response. Please try again."]
-        }
-
-        // Keep only string fields so the payload stays plist-serializable.
-        let items: [[String: String]] = rawItems.compactMap { dict in
-            guard
-                let category = dict["category"] as? String, !category.isEmpty,
-                let title = dict["title"] as? String,
-                !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            else { return nil }
-            return [
-                "category": category,
-                "title": title,
-                "subtitle": dict["subtitle"] as? String ?? "",
-                "link": dict["link"] as? String ?? "",
-                "extra1": dict["extra1"] as? String ?? "",
-                "extra2": dict["extra2"] as? String ?? "",
-                "notes": dict["notes"] as? String ?? "",
-            ]
-        }
-
-        return ["ok": true, "items": items]
     }
 
     // MARK: - saveItems
