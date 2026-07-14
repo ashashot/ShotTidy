@@ -15,6 +15,7 @@ struct MacItemDetailView: View {
 
     @State private var showEdit = false
     @State private var showDeleteAlert = false
+    @State private var showEnrichmentStore = false
     @State private var enrichmentState: EnrichmentState = .idle
     @State private var recentlyFilledKeys: Set<String> = []
 
@@ -129,6 +130,9 @@ struct MacItemDetailView: View {
         }
         .sheet(isPresented: $showEdit) {
             MacItemEditView(descriptor: descriptor, item: item)
+        }
+        .sheet(isPresented: $showEnrichmentStore) {
+            MacEnrichmentStoreView()
         }
         .alert("Delete Item?", isPresented: $showDeleteAlert) {
             Button("Delete", role: .destructive) {
@@ -246,9 +250,7 @@ struct MacItemDetailView: View {
 
     private func runEnrichment() {
         guard usageManager.canEnrich() else {
-            withAnimation {
-                enrichmentState = .failure("No enrichment credits left. Purchase credits to continue.")
-            }
+            showEnrichmentStore = true
             return
         }
 

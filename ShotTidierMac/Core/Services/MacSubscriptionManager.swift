@@ -16,17 +16,43 @@ final class MacSubscriptionManager {
     // MARK: - Constants
 
     nonisolated static let proProductID = "com.mbx.shottidier.pro_monthly"
+    nonisolated static let packProductIDs: Set<String> = [
+        "com.mbx.shottidier.enrichments_10",
+        "com.mbx.shottidier.enrichments_30",
+        "com.mbx.shottidier.enrichments_75",
+    ]
     nonisolated private static let proStatusKey = "subscription.isPro"
+
+    // MARK: - Credit amounts per pack
+
+    nonisolated static func credits(for productID: String) -> Int {
+        switch productID {
+        case "com.mbx.shottidier.enrichments_10": return 10
+        case "com.mbx.shottidier.enrichments_30": return 30
+        case "com.mbx.shottidier.enrichments_75": return 75
+        default: return 0
+        }
+    }
 
     // MARK: - State
 
     private(set) var isProActive: Bool = false
     private(set) var needsRestartForSyncChange = false
-    private(set) var proProduct: Product?
+    private(set) var products: [Product] = []
     private(set) var isPurchasing = false
     private(set) var isRestoring = false
     var purchaseError: String?
     private(set) var diagnostic = ""
+
+    var proProduct: Product? {
+        products.first { $0.id == Self.proProductID }
+    }
+
+    var packProducts: [Product] {
+        products
+            .filter { Self.packProductIDs.contains($0.id) }
+            .sorted { $0.price < $1.price }
+    }
 
     // MARK: - Private
 
@@ -46,7 +72,7 @@ final class MacSubscriptionManager {
         // API calls and purchase appAccountToken linking.
         Task { _ = await SupabaseAuthManager.shared.bearerToken() }
         await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.loadProduct() }
+            group.addTask { await self.loadProducts() }
             group.addTask { await self.refreshSubscriptionStatus() }
         }
     }
@@ -57,10 +83,12 @@ final class MacSubscriptionManager {
 
     // MARK: - Product loading
 
-    func loadProduct() async {
+    func loadProducts() async {
         do {
-            let products = try await Product.products(for: [Self.proProductID])
-            proProduct = products.first
+            let loaded = try await Product.products(
+                for: Self.packProductIDs.union([Self.proProductID])
+            )
+            products = loaded.sorted { $0.price < $1.price }
         } catch {
             // non-critical — paywall will show spinner or no price
         }
@@ -96,6 +124,28 @@ final class MacSubscriptionManager {
             }
         } catch {
             purchaseError = error.localizedDescription
+        }
+    }
+
+    // MARK: - Purchase enrichment pack
+
+    /// Returns the number of enrichment credits granted (0 on cancel / failure).
+    func purchasePack(_ product: Product) async throws -> Int {
+        var options: Set<Product.PurchaseOption> = []
+        if let userId = await SupabaseAuthManager.shared.currentUserId() {
+            options.insert(.appAccountToken(userId))
+        }
+
+        let result = try await product.purchase(options: options)
+        switch result {
+        case .success(let verification):
+            let tx = try checkVerified(verification)
+            await tx.finish()
+            return Self.credits(for: tx.productID)
+        case .userCancelled, .pending:
+            return 0
+        @unknown default:
+            return 0
         }
     }
 
