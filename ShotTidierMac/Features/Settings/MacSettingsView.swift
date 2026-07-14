@@ -135,6 +135,7 @@ struct MacSettingsView: View {
                         .foregroundStyle(.red)
                 }
 
+                #if DEBUG
                 if !subscriptionManager.diagnostic.isEmpty {
                     Text(subscriptionManager.diagnostic)
                         .font(.system(.caption2, design: .monospaced))
@@ -144,6 +145,7 @@ struct MacSettingsView: View {
                         .background(Color(.windowBackgroundColor))
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
+                #endif
 
                 HStack(spacing: 8) {
                     // Subscribe button

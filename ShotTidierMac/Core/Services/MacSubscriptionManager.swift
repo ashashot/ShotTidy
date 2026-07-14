@@ -210,7 +210,8 @@ final class MacSubscriptionManager {
             }
         }
 
-        diagnostic = "entitlements:\(totalEntitlements) unverified:\(unverifiedCount) active:\(active)\nIDs: \(foundIDs.isEmpty ? "none" : foundIDs.joined(separator: ", "))\nexpected: \(Self.proProductID)"
+        let storefront = await Storefront.current
+        diagnostic = "entitlements:\(totalEntitlements) unverified:\(unverifiedCount) active:\(active)\nIDs: \(foundIDs.isEmpty ? "none" : foundIDs.joined(separator: ", "))\nexpected: \(Self.proProductID)\nstorefront: \(storefront?.countryCode ?? "unknown")"
 
         // Keep the server-side subscription record in sync (once per launch).
         if active, let jws = proJWS, !didLinkSubscriptionThisSession {
