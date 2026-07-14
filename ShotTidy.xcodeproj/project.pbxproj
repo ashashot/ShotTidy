@@ -111,6 +111,7 @@
 				"Core/Extensions/Color+Hex.swift",
 				Core/Services/AppGroupManager.swift,
 				Core/Services/AppLocale.swift,
+				Core/Services/AppUpdateService.swift,
 				Core/Services/CategoryStore.swift,
 				Core/Services/CategorySuggestionClient.swift,
 				Core/Services/EnrichmentAPIClient.swift,

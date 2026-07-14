@@ -16,6 +16,7 @@ struct ShotTidierMacApp: App {
     @State private var subscriptionManager = MacSubscriptionManager()
     @State private var syncMonitor = MacCloudSyncMonitor()
     @State private var usageManager = UsageManager()
+    @State private var updateService = AppUpdateService()
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -70,7 +71,15 @@ struct ShotTidierMacApp: App {
                     await subscriptionManager.onLaunch()
                     // Check rolling 30-day reset now that we know the subscription state.
                     usageManager.performRollingReset(isPro: subscriptionManager.isProActive)
+                    // Check remote config for a required update (runs in background).
+                    await updateService.check()
                 }
+                .overlay {
+                    if updateService.state == .required {
+                        MacForceUpdateView()
+                    }
+                }
+                .animation(.easeInOut(duration: 0.3), value: updateService.state == .required)
                 .alert(
                     "Restart Required",
                     isPresented: .init(
