@@ -22,6 +22,10 @@ final class MacExtensionInbox {
     /// Number of items brought in by the most recent import (for a UI banner).
     private(set) var lastImportCount = 0
 
+    /// Increments on every successful import so the UI can react even when
+    /// two consecutive imports bring the same item count.
+    private(set) var importEvent = 0
+
     private var modelContext: ModelContext?
     private var observer: NSObjectProtocol?
 
@@ -71,6 +75,8 @@ final class MacExtensionInbox {
 
         try? context.save()
         AppGroupManager.clearPendingDrafts()
+        guard imported > 0 else { return }
         lastImportCount = imported
+        importEvent += 1
     }
 }

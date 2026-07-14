@@ -18,6 +18,8 @@ struct ShotTidierMacApp: App {
     @State private var usageManager = UsageManager()
     @State private var updateService = AppUpdateService()
     @State private var extensionInbox = MacExtensionInbox()
+    @State private var showImportBanner = false
+    @State private var bannerDismissTask: Task<Void, Never>?
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -61,6 +63,23 @@ struct ShotTidierMacApp: App {
         return container
     }()
 
+    /// Transient confirmation shown when the Safari extension delivers items.
+    private var importBanner: some View {
+        Label(
+            extensionInbox.lastImportCount == 1
+                ? "1 item added from Safari"
+                : "\(extensionInbox.lastImportCount) items added from Safari",
+            systemImage: "checkmark.circle.fill"
+        )
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(.green)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.regularMaterial, in: Capsule())
+        .padding(.top, 12)
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -77,6 +96,20 @@ struct ShotTidierMacApp: App {
                     usageManager.performRollingReset(isPro: subscriptionManager.isProActive)
                     // Check remote config for a required update (runs in background).
                     await updateService.check()
+                }
+                .overlay(alignment: .top) {
+                    if showImportBanner {
+                        importBanner
+                    }
+                }
+                .onChange(of: extensionInbox.importEvent) {
+                    guard extensionInbox.importEvent > 0 else { return }
+                    withAnimation(.spring(duration: 0.35)) { showImportBanner = true }
+                    bannerDismissTask?.cancel()
+                    bannerDismissTask = Task {
+                        try? await Task.sleep(for: .seconds(3.5))
+                        withAnimation(.easeOut(duration: 0.3)) { showImportBanner = false }
+                    }
                 }
                 .overlay {
                     if updateService.state == .required {
