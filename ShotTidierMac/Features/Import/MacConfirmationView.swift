@@ -19,8 +19,11 @@ struct MacConfirmationView: View {
 
     @State private var editingIndex: Int? = nil
 
+    // MARK: - New-category creation (from AI suggestion)
+    @State private var newCategoryName: String? = nil
+
     private var selectedCount: Int {
-        viewModel.draftItems.filter { $0.isSelected && $0.isValid }.count
+        viewModel.draftItems.filter { $0.isSelected && $0.isValid && !$0.needsNewCategory }.count
     }
 
     private var groupedItems: [(CategoryDescriptor, [Int])] {
@@ -31,6 +34,11 @@ struct MacConfirmationView: View {
             }
             return indices.isEmpty ? nil : (descriptor, indices)
         }
+    }
+
+    /// Drafts the AI could not fit into any existing category ("__new__").
+    private var newCategoryIndices: [Int] {
+        viewModel.draftItems.indices.filter { viewModel.draftItems[$0].needsNewCategory }
     }
 
     var body: some View {
@@ -56,6 +64,33 @@ struct MacConfirmationView: View {
                                     Text(descriptor.name)
                                         .fontWeight(.semibold)
                                 }
+                            }
+                        }
+
+                        if !newCategoryIndices.isEmpty {
+                            Section {
+                                ForEach(newCategoryIndices, id: \.self) { index in
+                                    DraftItemRow(
+                                        draft: $viewModel.draftItems[index],
+                                        schema: CategoryDescriptor.unresolved(key: DraftItem.newCategoryKey).fieldSchema,
+                                        onEdit: { editingIndex = index },
+                                        onCreateCategory: {
+                                            let name = viewModel.draftItems[index].suggestedCategoryName
+                                            if !name.isEmpty { newCategoryName = name }
+                                        }
+                                    )
+                                }
+                            } header: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "sparkles")
+                                        .foregroundStyle(.purple)
+                                    Text("Suggested New Categories")
+                                        .fontWeight(.semibold)
+                                }
+                            } footer: {
+                                Text("Create the suggested category to include these items in the save.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -113,6 +148,31 @@ struct MacConfirmationView: View {
             )) { editID in
                 MacDraftEditView(draft: $viewModel.draftItems[editID.index])
             }
+            .sheet(item: Binding(
+                get: { newCategoryName.map { NewCategoryContext(name: $0) } },
+                set: { newCategoryName = $0?.name }
+            )) { ctx in
+                MacCategoryEditorView(prefillName: ctx.name) { newKey in
+                    assignDraftsWithSuggestion(named: ctx.name, toKey: newKey)
+                }
+            }
+        }
+    }
+
+    // MARK: - New-category assignment
+
+    /// After a category is created from a suggestion, reassign every draft that
+    /// carried that suggested name to the new category key.
+    private func assignDraftsWithSuggestion(named name: String, toKey key: String) {
+        let target = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        for i in viewModel.draftItems.indices {
+            let draft = viewModel.draftItems[i]
+            guard draft.needsNewCategory,
+                  draft.suggestedCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    .lowercased() == target
+            else { continue }
+            viewModel.draftItems[i].categoryKey = key
+            viewModel.draftItems[i].suggestedCategoryName = ""
         }
     }
 
@@ -132,12 +192,20 @@ private struct DraftEditID: Identifiable {
     var id: Int { index }
 }
 
+// MARK: - NewCategoryContext
+
+private struct NewCategoryContext: Identifiable {
+    let name: String
+    var id: String { name }
+}
+
 // MARK: - DraftItemRow
 
 private struct DraftItemRow: View {
     @Binding var draft: DraftItem
     let schema: ItemCategory.FieldSchema
     let onEdit: () -> Void
+    var onCreateCategory: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 12) {
@@ -161,9 +229,21 @@ private struct DraftItemRow: View {
                         .foregroundStyle(.blue)
                         .lineLimit(1)
                 }
+                if draft.needsNewCategory && !draft.suggestedCategoryName.isEmpty {
+                    Label("New: \(draft.suggestedCategoryName)", systemImage: "sparkles")
+                        .font(.caption)
+                        .foregroundStyle(.purple)
+                }
             }
 
             Spacer()
+
+            if let onCreateCategory {
+                Button("Create Category") { onCreateCategory() }
+                    .buttonStyle(.borderless)
+                    .font(.caption)
+                    .foregroundStyle(.purple)
+            }
 
             Button("Edit") { onEdit() }
                 .buttonStyle(.borderless)

@@ -319,9 +319,10 @@ struct MacImportView: View {
         }
 
         Task {
-            // allowNewCategory stays off: MacConfirmationView has no UI yet to
-            // resolve "__new__" drafts into a created category (unlike iOS).
-            await viewModel.analyzeImages(customCategories: customPayload)
+            await viewModel.analyzeImages(
+                customCategories: customPayload,
+                allowNewCategory: subManager.isProActive
+            )
             if !viewModel.draftItems.isEmpty {
                 // Consume quota for the screenshots that were submitted
                 usageManager.consumeScreenshots(count: count)

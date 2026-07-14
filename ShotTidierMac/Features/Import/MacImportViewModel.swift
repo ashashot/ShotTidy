@@ -30,7 +30,10 @@ final class MacImportViewModel {
 
     // MARK: - Analysis
 
-    func analyzeImages(customCategories: [CategoryPromptInfo] = []) async {
+    func analyzeImages(
+        customCategories: [CategoryPromptInfo] = [],
+        allowNewCategory: Bool = false
+    ) async {
         guard !selectedImages.isEmpty else { return }
         guard let ctx = modelContext else { return }
 
@@ -62,6 +65,7 @@ final class MacImportViewModel {
                 let extracted = try await MacOpenAIAPIClient.shared.analyzeScreenshot(
                     image,
                     customCategories: customCategories,
+                    allowNewCategory: allowNewCategory,
                     screenshotId: screenshot.id
                 )
                 draftItems.append(contentsOf: extracted)
