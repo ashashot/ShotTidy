@@ -24,6 +24,10 @@ struct ShareAnalysisView: View {
     @State private var showDuplicateSaveAlert = false
     @State private var saveErrorMessage: String? = nil
 
+    // Manual entry state
+    @State private var manualDraft = PendingDraftItem(categoryKey: "shopping", title: "")
+    @State private var showManualEditSheet = false
+
     // MARK: - Analysis animation state
 
     /// Toggled to trigger the checkmark bounce on the completion screen.
@@ -44,7 +48,7 @@ struct ShareAnalysisView: View {
             Group {
                 switch viewModel.phase {
                 case .extracting:
-                    loadingView(icon: "photo", text: "Loading image…")
+                    loadingView(icon: "photo", text: String(localized: "Loading image…", bundle: AppLocale.bundle))
                 case .analyzing:
                     analyzingView
                         .transition(.opacity)
@@ -53,18 +57,16 @@ struct ShareAnalysisView: View {
                         .transition(.scale(scale: 0.7).combined(with: .opacity))
                 case .results:
                     resultsView
-                case .noItems:
-                    emptyView
-                case .error(let message):
-                    errorView(message: message)
+                case .manualEntry:
+                    manualEntryPromptView
                 case .saving:
-                    loadingView(icon: "checkmark.circle", text: "Saving…")
+                    loadingView(icon: "checkmark.circle", text: String(localized: "Saving…", bundle: AppLocale.bundle))
                 case .limitReached:
                     limitReachedView
                 }
             }
             .animation(.spring(response: 0.45, dampingFraction: 0.7), value: viewModel.phase)
-            .navigationTitle("ShotTidy")
+            .navigationTitle("ShotTidier")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
         }
@@ -81,6 +83,14 @@ struct ShareAnalysisView: View {
             Button("Close") { onCancel() }
         } message: {
             Text(saveErrorMessage ?? "")
+        }
+        .sheet(isPresented: $showManualEditSheet, onDismiss: {
+            let trimmed = manualDraft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                viewModel.commitManualDraft(manualDraft)
+            }
+        }) {
+            ShareEditView(item: $manualDraft)
         }
         // Force update overlay — shown when a mandatory update is detected.
         .overlay {
@@ -131,10 +141,7 @@ struct ShareAnalysisView: View {
                     Button("Save Anyway") { performSave() }
                     Button("Cancel", role: .cancel) { }
                 } message: {
-                    let count = viewModel.selectedDuplicateCount
-                    Text(count == 1
-                         ? "1 item may already exist in your catalog. Save anyway?"
-                         : "\(count) items may already exist in your catalog. Save anyway?")
+                    Text("\(viewModel.selectedDuplicateCount) item(s) may already exist in your catalog. Save anyway?")
                 }
             }
         }
@@ -249,7 +256,7 @@ struct ShareAnalysisView: View {
                 Text("Analysis Complete")
                     .font(.headline)
 
-                Text("\(count) item\(count == 1 ? "" : "s") found")
+                Text("\(count) item(s) found")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -369,25 +376,53 @@ struct ShareAnalysisView: View {
         .listRowBackground(dupLevel == nil ? nil : Color.orange.opacity(0.07))
     }
 
-    // MARK: - Empty
+    // MARK: - Manual entry prompt
 
-    private var emptyView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "questionmark.circle")
-                .font(.system(size: 52))
-                .foregroundStyle(.secondary)
-            Text("Nothing Found")
-                .font(.title3.weight(.semibold))
-            Text("The screenshot didn't contain any recognizable catalog items.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+    private var manualEntryPromptView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color(.systemFill))
+                        .frame(width: 88, height: 88)
+                    Image(systemName: "sparkles.slash")
+                        .font(.system(size: 36, weight: .light))
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(spacing: 6) {
+                    Text("Nothing Recognized")
+                        .font(.title3.weight(.semibold))
+                    Text("AI couldn't detect any data in this screenshot. Add the item manually.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+            }
+
+            Button {
+                manualDraft = PendingDraftItem(categoryKey: "shopping", title: "")
+                showManualEditSheet = true
+            } label: {
+                Label("Add Manually", systemImage: "plus.circle.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(.blue)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Limit reached
+    // MARK: - Limit Reached
 
     private var limitReachedView: some View {
         let usage  = ShareUsageManager.shared
@@ -420,10 +455,8 @@ struct ShareAnalysisView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.caption)
-                    Text("Resets on ")
+                    Text("Resets on \(resets.formatted(date: .abbreviated, time: .omitted))")
                         .font(.caption)
-                    Text(resets, style: .date)
-                        .font(.caption.weight(.medium))
                 }
                 .foregroundStyle(.secondary)
                 .padding(.top, 4)
@@ -434,7 +467,7 @@ struct ShareAnalysisView: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 18))
                     .foregroundStyle(.blue)
-                Text("Open ShotTidy → Settings to upgrade to Pro for unlimited analyses.")
+                Text("Open ShotTidier → Settings to upgrade to Pro for unlimited analyses.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -452,21 +485,4 @@ struct ShareAnalysisView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Error
-
-    private func errorView(message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 52))
-                .foregroundStyle(.orange)
-            Text("Analysis Failed")
-                .font(.title3.weight(.semibold))
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
 }

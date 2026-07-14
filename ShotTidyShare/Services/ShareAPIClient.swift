@@ -25,21 +25,21 @@ enum ShareAPIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidImage:
-            return "Could not process the image."
+            return String(localized: "Could not process the image.", bundle: AppLocale.bundle)
         case .networkError(let err):
-            return "Network error: \(err.localizedDescription)"
+            return String(localized: "Network error: \(err.localizedDescription)", bundle: AppLocale.bundle)
         case .unauthorized:
-            return "Authorization error. Check your Supabase configuration."
+            return String(localized: "Authorization error. Check your Supabase configuration.", bundle: AppLocale.bundle)
         case .rateLimited:
-            return "Too many requests. Please wait a moment."
+            return String(localized: "Too many requests. Please wait a moment.", bundle: AppLocale.bundle)
         case .serverError(let code):
-            return "Server error (\(code)). Please try again."
+            return String(localized: "Server error (\(code)). Please try again.", bundle: AppLocale.bundle)
         case .refused:
-            return "AI could not analyze this screenshot."
+            return String(localized: "AI could not analyze this screenshot.", bundle: AppLocale.bundle)
         case .emptyResponse:
-            return "Empty response. Please try again."
+            return String(localized: "Empty response. Please try again.", bundle: AppLocale.bundle)
         case .decodingFailed:
-            return "Could not parse the AI response. Please try again."
+            return String(localized: "Could not parse the AI response. Please try again.", bundle: AppLocale.bundle)
         }
     }
 }
@@ -82,16 +82,29 @@ final class ShareAPIClient {
 
         var request = URLRequest(url: analyzeEndpoint)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 60
 
-        let (data, response): (Data, URLResponse)
+        let token = await SupabaseAuthManager.shared.bearerToken()
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        var (data, response): (Data, URLResponse)
         do {
             (data, response) = try await URLSession.shared.data(for: request)
         } catch {
             throw ShareAPIError.networkError(error)
+        }
+
+        // Expired session — refresh once and retry.
+        if let http = response as? HTTPURLResponse, http.statusCode == 401,
+           let fresh = await SupabaseAuthManager.shared.recoverFromAuthFailure() {
+            request.setValue("Bearer \(fresh)", forHTTPHeaderField: "Authorization")
+            do {
+                (data, response) = try await URLSession.shared.data(for: request)
+            } catch {
+                throw ShareAPIError.networkError(error)
+            }
         }
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
@@ -157,7 +170,12 @@ final class ShareAPIClient {
         guard maxSide > maxDimension else { return image }
         let scale = maxDimension / maxSide
         let newSize = CGSize(width: size.width * scale, height: size.height * scale)
-        let renderer = UIGraphicsImageRenderer(size: newSize)
+        // Force scale 1 so the output pixel size equals newSize; the default
+        // renderer format uses the screen scale (2–3x), which would produce
+        // an image 2–3x larger than requested.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
         return renderer.image { _ in
             image.draw(in: CGRect(origin: .zero, size: newSize))
         }

@@ -78,6 +78,9 @@ final class SubscriptionManager {
     // MARK: - Launch sequence (call once from App)
 
     func onLaunch() async {
+        // Warm up the anonymous auth session so the user id is ready for
+        // API calls and purchase appAccountToken linking.
+        Task { _ = await SupabaseAuthManager.shared.bearerToken() }
         await loadProducts()
         await refreshSubscriptionStatus()
     }
@@ -123,6 +126,7 @@ final class SubscriptionManager {
 
     func refreshSubscriptionStatus() async {
         var active = false
+        var proJWS: String? = nil
         var totalEntitlements = 0
         var unverifiedCount = 0
         var foundProductIDs: [String] = []
@@ -134,6 +138,7 @@ final class SubscriptionManager {
                 foundProductIDs.append(tx.productID)
                 if tx.productID == ProductID.proMonthly && tx.revocationDate == nil {
                     active = true
+                    proJWS = result.jwsRepresentation
                 }
             case .unverified(_, let error):
                 unverifiedCount += 1
@@ -141,7 +146,9 @@ final class SubscriptionManager {
             }
         }
 
-        // Fallback: check subscription status via Product API (helps in Sandbox)
+        // Fallback: check subscription status via Product API (helps in Sandbox).
+        // No JWS is available on this path — server linking is skipped and will
+        // catch up on the next launch or via App Store Server Notifications.
         if !active {
             for product in products where product.id == ProductID.proMonthly {
                 if let statuses = try? await product.subscription?.status {
@@ -156,6 +163,15 @@ final class SubscriptionManager {
 
         lastDiagnostic = "Entitlements: \(totalEntitlements), unverified: \(unverifiedCount), IDs: \(foundProductIDs.joined(separator: "|")), active: \(active)"
 
+        // Keep the server-side subscription record in sync (once per launch).
+        if active, let jws = proJWS, !didLinkSubscriptionThisSession {
+            didLinkSubscriptionThisSession = true
+            linkSubscriptionOnServer(jws: jws)
+        }
+
+        // Read the persisted Pro status BEFORE updating it — this is the value
+        // ModelContainer was configured with at launch, so it reflects whether
+        // CloudKit sync is currently active in the running container.
         let containerWasConfiguredAsPro = AppGroupManager.loadIsProStatus()
         isProActive = active
         AppGroupManager.saveIsProStatus(active)
@@ -181,12 +197,20 @@ final class SubscriptionManager {
         defer { isPurchasing = false }
         purchaseError = nil
 
-        let result = try await product.purchase()
+        // Tie the purchase to the anonymous Supabase user so App Store Server
+        // Notifications can attribute it server-side (appAccountToken).
+        var options: Set<Product.PurchaseOption> = []
+        if let userId = await SupabaseAuthManager.shared.currentUserId() {
+            options.insert(.appAccountToken(userId))
+        }
+
+        let result = try await product.purchase(options: options)
 
         switch result {
         case .success(let verification):
             let tx = try checkVerified(verification)
             if tx.productID == ProductID.proMonthly {
+                linkSubscriptionOnServer(jws: verification.jwsRepresentation)
                 await refreshSubscriptionStatus()
             }
             await tx.finish()
@@ -219,6 +243,31 @@ final class SubscriptionManager {
         case .verified(let value): return value
         }
     }
+
+    // MARK: - Server-side subscription linking
+
+    /// Guards against re-linking on every status refresh within one launch.
+    private var didLinkSubscriptionThisSession = false
+
+    /// Sends the signed transaction to the link-subscription Edge Function so
+    /// the server can associate this device's anonymous user with the Pro
+    /// subscription. Fire-and-forget: the server upsert is idempotent, and
+    /// failures are non-critical (the next launch or ASSN will sync it).
+    private func linkSubscriptionOnServer(jws: String) {
+        guard let url = URL(string: "\(Config.supabaseURL)/functions/v1/link-subscription") else { return }
+        Task.detached {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try? JSONSerialization.data(
+                withJSONObject: ["signedTransaction": jws]
+            )
+            request.timeoutInterval = 30
+            let token = await SupabaseAuthManager.shared.bearerToken()
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            _ = try? await URLSession.shared.data(for: request)
+        }
+    }
 }
 
 // MARK: - Purchase errors
@@ -227,6 +276,6 @@ enum PurchaseError: LocalizedError {
     case productNotLoaded
 
     var errorDescription: String? {
-        "Product is not available yet. Please try again in a moment."
+        String(localized: "Product is not available yet. Please try again in a moment.", bundle: AppLocale.bundle)
     }
 }

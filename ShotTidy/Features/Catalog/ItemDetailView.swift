@@ -9,6 +9,7 @@
 import SwiftUI
 import SwiftData
 import MapKit
+import EventKitUI
 
 struct ItemDetailView: View {
     @Bindable var item: CatalogItem
@@ -21,6 +22,9 @@ struct ItemDetailView: View {
     @State private var showEdit = false
     @State private var showDeleteAlert = false
     @State private var showEnrichmentStore = false
+
+    // MARK: - Calendar state
+    @ObservedObject private var calendarService: CalendarService = CalendarService.shared
 
     // MARK: - Enrichment state
     @State private var enrichmentState: EnrichmentState = .idle
@@ -59,14 +63,14 @@ struct ItemDetailView: View {
 
                     if let v = item.subtitle, !v.isEmpty {
                         DetailField(
-                            label: schema.subtitleLabel ?? "Details",
+                            label: schema.subtitleLabel ?? String(localized: "Details", bundle: AppLocale.bundle),
                             value: v,
                             highlighted: recentlyFilledKeys.contains("subtitle")
                         )
                     }
                     if let v = item.link, !v.isEmpty {
                         DetailField(
-                            label: schema.linkLabel ?? "Link",
+                            label: schema.linkLabel ?? String(localized: "Link", bundle: AppLocale.bundle),
                             value: v,
                             isLink: !schema.isLinkEmail,
                             isEmail: schema.isLinkEmail,
@@ -75,25 +79,32 @@ struct ItemDetailView: View {
                     }
                     if let v = item.extra1, !v.isEmpty {
                         DetailField(
-                            label: schema.extra1Label ?? "Extra",
+                            label: schema.extra1Label ?? String(localized: "Extra", bundle: AppLocale.bundle),
                             value: v,
                             highlighted: recentlyFilledKeys.contains("extra1")
                         )
                     }
                     if let v = item.extra2, !v.isEmpty {
                         DetailField(
-                            label: schema.extra2Label ?? "Extra 2",
+                            label: schema.extra2Label ?? String(localized: "Extra 2", bundle: AppLocale.bundle),
                             value: v,
                             highlighted: recentlyFilledKeys.contains("extra2")
                         )
                     }
                     if let v = item.notes, !v.isEmpty {
                         DetailField(
-                            label: schema.notesLabel ?? "Notes",
+                            label: schema.notesLabel ?? String(localized: "Notes", bundle: AppLocale.bundle),
                             value: v,
                             multiline: true,
                             highlighted: recentlyFilledKeys.contains("notes")
                         )
+                    }
+                }
+
+                // Add to Calendar button — shown when any field contains a parseable date
+                if item.calendarDate != nil {
+                    AddToCalendarButton(color: descriptor.color) {
+                        calendarService.addToCalendar(item: item)
                     }
                 }
 
@@ -158,6 +169,24 @@ struct ItemDetailView: View {
         .sheet(isPresented: $showEnrichmentStore) {
             EnrichmentStoreView()
         }
+        .sheet(isPresented: $calendarService.showEditor) {
+            if calendarService.pendingEvent != nil {
+                CalendarEventEditorView(service: calendarService) {
+                    calendarService.showEditor = false
+                }
+                .ignoresSafeArea()
+            }
+        }
+        .alert("Calendar Access Denied", isPresented: $calendarService.showDeniedAlert) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Please allow ShotTidy to access your calendar in Settings.")
+        }
         .alert("Delete item?", isPresented: $showDeleteAlert) {
             Button("Delete", role: .destructive) {
                 modelContext.delete(item)
@@ -200,9 +229,7 @@ struct ItemDetailView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                    Text(count == 1
-                         ? "1 field filled automatically"
-                         : "\(count) fields filled automatically")
+                    Text("\(count) fields filled automatically")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.primary)
                     Spacer()
@@ -427,6 +454,38 @@ struct SourceScreenshotCard: View {
     }
 }
 
+// MARK: - AddToCalendarButton
+
+private struct AddToCalendarButton: View {
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: "calendar.badge.plus")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Add to Calendar")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundStyle(color)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .background(color.opacity(0.09))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(color.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - DetailField
 
 private struct DetailField: View {
@@ -439,7 +498,7 @@ private struct DetailField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(label.uppercased())
+            Text(label.uppercased(with: .current))
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .tracking(0.5)

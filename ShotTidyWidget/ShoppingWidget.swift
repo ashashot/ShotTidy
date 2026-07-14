@@ -63,6 +63,7 @@ struct ShoppingWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ShoppingProvider()) { entry in
             ShoppingWidgetView(entry: entry)
+                .environment(\.locale, WidgetDataReader.resolvedLocale)
                 .containerBackground(for: .widget) { Color(.systemBackground) }
         }
         .configurationDisplayName("Shopping List")

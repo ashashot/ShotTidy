@@ -3,8 +3,9 @@
 //  ShotTidyShare
 //
 //  Edit form for a PendingDraftItem inside the Share Extension.
-//  Self-contained — mirrors ItemCategory.FieldSchema from the main app
-//  without importing any main-app types.
+//  Category names and field schema come from the main app's ItemCategory /
+//  CategoryDescriptor (cross-compiled into this target) so both targets stay
+//  in sync automatically instead of maintaining a second, drifting copy.
 //
 
 import SwiftUI
@@ -17,21 +18,9 @@ struct ShareCategoryOption: Identifiable {
     let name: String
     let icon: String
 
-    static let builtIn: [ShareCategoryOption] = [
-        .init(key: "shopping",         name: "Shopping",          icon: "cart.fill"),
-        .init(key: "places",           name: "Places",            icon: "mappin.circle.fill"),
-        .init(key: "appsServices",     name: "Apps & Services",   icon: "app.fill"),
-        .init(key: "languageLearning", name: "Language Learning", icon: "textformat.abc"),
-        .init(key: "prompts",          name: "Prompts",           icon: "text.bubble.fill"),
-        .init(key: "health",           name: "Health",            icon: "heart.fill"),
-        .init(key: "recipes",          name: "Recipes",           icon: "fork.knife"),
-        .init(key: "books",            name: "Books",             icon: "book.fill"),
-        .init(key: "movies",           name: "Movies & TV Shows", icon: "play.rectangle.fill"),
-        .init(key: "quotes",           name: "Quotes",            icon: "quote.bubble.fill"),
-        .init(key: "articles",         name: "Articles",          icon: "newspaper.fill"),
-        .init(key: "contacts",         name: "Contacts",          icon: "person.circle.fill"),
-        .init(key: "tasks",            name: "Tasks",             icon: "checkmark.circle.fill"),
-    ]
+    static let builtIn: [ShareCategoryOption] = ItemCategory.allCases.map {
+        .init(key: $0.rawValue, name: $0.localizedName, icon: $0.icon)
+    }
 
     /// Custom categories shared from the main app via the App Group.
     static var custom: [ShareCategoryOption] {
@@ -50,177 +39,14 @@ struct ShareCategoryOption: Identifiable {
     typealias DisplayInfo = (name: String, icon: String, color: Color)
 
     static func displayInfo(for key: String) -> DisplayInfo {
-        switch key {
-        case "shopping":         return ("Shopping",          "cart.fill",               .orange)
-        case "places":           return ("Places",            "mappin.circle.fill",       Color(red: 0.88, green: 0.18, blue: 0.18))
-        case "appsServices":     return ("Apps & Services",   "app.fill",                 .blue)
-        case "languageLearning": return ("Language Learning", "textformat.abc",            Color(red: 0.18, green: 0.75, blue: 0.35))
-        case "prompts":          return ("Prompts",           "text.bubble.fill",         .purple)
-        case "health":           return ("Health",            "heart.fill",               .pink)
-        case "recipes":          return ("Recipes",           "fork.knife",               Color(red: 0.92, green: 0.67, blue: 0.12))
-        case "books":            return ("Books",             "book.fill",                Color(red: 0.6, green: 0.38, blue: 0.18))
-        case "movies":           return ("Movies & TV",       "play.rectangle.fill",      .indigo)
-        case "quotes":           return ("Quotes",            "quote.bubble.fill",        .teal)
-        case "articles":         return ("Articles",          "newspaper.fill",           Color(red: 0.0, green: 0.65, blue: 0.85))
-        case "contacts":         return ("Contacts",          "person.circle.fill",       Color(red: 0.12, green: 0.72, blue: 0.72))
-        case "tasks":            return ("Tasks",             "checkmark.circle.fill",    Color(red: 0.48, green: 0.48, blue: 0.56))
-        default:
-            // Custom category — look it up in the App Group snapshot.
-            if let custom = custom.first(where: { $0.key == key }) {
-                return (custom.name, custom.icon, Color(red: 0.56, green: 0.56, blue: 0.58))
-            }
-            return ("Other", "tag.fill", .gray)
+        if let category = ItemCategory(rawValue: key) {
+            return (category.localizedName, category.icon, category.color)
         }
-    }
-}
-
-// MARK: - Field schema (mirrors ItemCategory.FieldSchema from the main app)
-
-struct ShareFieldSchema {
-    let titleLabel: String
-    let titlePlaceholder: String
-    let subtitleLabel: String?
-    let subtitlePlaceholder: String?
-    let linkLabel: String?
-    let linkPlaceholder: String?
-    let extra1Label: String?
-    let extra1Placeholder: String?
-    let extra2Label: String?
-    let extra2Placeholder: String?
-    let notesLabel: String?
-    let notesPlaceholder: String?
-    var isLinkEmail: Bool = false
-
-    static func make(for key: String) -> ShareFieldSchema {
-        switch key {
-        case "shopping":
-            return .init(
-                titleLabel: "Product Name",    titlePlaceholder: "e.g. Nike Air Max 270",
-                subtitleLabel: "Price",        subtitlePlaceholder: "e.g. 99.99",
-                linkLabel: "Link",             linkPlaceholder: "https://...",
-                extra1Label: "Store",          extra1Placeholder: "Amazon / eBay / Etsy",
-                extra2Label: "Currency",       extra2Placeholder: "USD / EUR / GBP",
-                notesLabel: "Notes",           notesPlaceholder: "Additional information"
-            )
-        case "places":
-            return .init(
-                titleLabel: "Place Name",      titlePlaceholder: "Café Paris / Louvre Museum",
-                subtitleLabel: "Address",      subtitlePlaceholder: "123 Main St",
-                linkLabel: "Link / Maps",      linkPlaceholder: "https://maps.apple.com/...",
-                extra1Label: "City",           extra1Placeholder: "New York",
-                extra2Label: "Country",        extra2Placeholder: "USA",
-                notesLabel: "Notes",           notesPlaceholder: "Opening hours, description..."
-            )
-        case "appsServices":
-            return .init(
-                titleLabel: "Name",            titlePlaceholder: "Notion / Figma / Telegram",
-                subtitleLabel: "Description",  subtitlePlaceholder: "Brief description",
-                linkLabel: "Link",             linkPlaceholder: "https://...",
-                extra1Label: "Platform",       extra1Placeholder: "iOS / Android / Web",
-                extra2Label: "Category",       extra2Placeholder: "Productivity / Design",
-                notesLabel: "Notes",           notesPlaceholder: "Why I need it"
-            )
-        case "languageLearning":
-            return .init(
-                titleLabel: "Word / Phrase",   titlePlaceholder: "Word or phrase to learn",
-                subtitleLabel: "Translation",  subtitlePlaceholder: "Translation",
-                linkLabel: nil,                linkPlaceholder: nil,
-                extra1Label: "Language",       extra1Placeholder: "English / Spanish",
-                extra2Label: "Example",        extra2Placeholder: "Example sentence",
-                notesLabel: "Context",         notesPlaceholder: "Source, notes"
-            )
-        case "prompts":
-            return .init(
-                titleLabel: "Prompt Text",     titlePlaceholder: "Act as a professional...",
-                subtitleLabel: "Purpose",      subtitlePlaceholder: "What it is used for",
-                linkLabel: nil,                linkPlaceholder: nil,
-                extra1Label: "AI Tool",        extra1Placeholder: "ChatGPT / Claude / Midjourney",
-                extra2Label: nil,              extra2Placeholder: nil,
-                notesLabel: "Notes",           notesPlaceholder: "Results, improvements"
-            )
-        case "health":
-            return .init(
-                titleLabel: "Tip / Info",      titlePlaceholder: "Health-related text",
-                subtitleLabel: "Type",         subtitlePlaceholder: "Medication / Exercise / Diet",
-                linkLabel: nil,                linkPlaceholder: nil,
-                extra1Label: "Source",         extra1Placeholder: "Doctor / App / Article",
-                extra2Label: nil,              extra2Placeholder: nil,
-                notesLabel: "Additional",      notesPlaceholder: "Dosage, notes..."
-            )
-        case "recipes":
-            return .init(
-                titleLabel: "Dish Name",       titlePlaceholder: "Pasta Carbonara",
-                subtitleLabel: "Ingredients",  subtitlePlaceholder: "List of ingredients",
-                linkLabel: "Recipe Link",      linkPlaceholder: "https://...",
-                extra1Label: "Cooking Time",   extra1Placeholder: "30 min",
-                extra2Label: "Cuisine",        extra2Placeholder: "Italian / Mexican",
-                notesLabel: "Steps",           notesPlaceholder: "1. Chop... 2. Fry..."
-            )
-        case "books":
-            return .init(
-                titleLabel: "Book Title",      titlePlaceholder: "The Great Gatsby",
-                subtitleLabel: "Author",       subtitlePlaceholder: "F. Scott Fitzgerald",
-                linkLabel: "Buy / Read",       linkPlaceholder: "https://...",
-                extra1Label: "Genre",          extra1Placeholder: "Novel / Non-fiction",
-                extra2Label: "Year",           extra2Placeholder: "2024",
-                notesLabel: "Notes",           notesPlaceholder: "Impressions, quotes..."
-            )
-        case "movies":
-            return .init(
-                titleLabel: "Title",           titlePlaceholder: "Inception / Succession",
-                subtitleLabel: "Platform",     subtitlePlaceholder: "Netflix / HBO / Apple TV+",
-                linkLabel: "Watch",            linkPlaceholder: "https://...",
-                extra1Label: "Genre",          extra1Placeholder: "Thriller / Comedy",
-                extra2Label: "Year",           extra2Placeholder: "2024",
-                notesLabel: "Notes",           notesPlaceholder: "Why I want to watch it..."
-            )
-        case "quotes":
-            return .init(
-                titleLabel: "Quote",           titlePlaceholder: "Quote text",
-                subtitleLabel: "Author",       subtitlePlaceholder: "Author name",
-                linkLabel: "Source",           linkPlaceholder: "Book / Article / URL",
-                extra1Label: nil,              extra1Placeholder: nil,
-                extra2Label: nil,              extra2Placeholder: nil,
-                notesLabel: "Notes",           notesPlaceholder: "Why this matters"
-            )
-        case "articles":
-            return .init(
-                titleLabel: "Article Title",   titlePlaceholder: "Article headline",
-                subtitleLabel: "Source",       subtitlePlaceholder: "Medium / TechCrunch",
-                linkLabel: "Link",             linkPlaceholder: "https://...",
-                extra1Label: "Topic",          extra1Placeholder: "Technology / Science",
-                extra2Label: nil,              extra2Placeholder: nil,
-                notesLabel: "Summary",         notesPlaceholder: "Key points"
-            )
-        case "contacts":
-            return .init(
-                titleLabel: "Name",            titlePlaceholder: "John Smith",
-                subtitleLabel: "Phone",        subtitlePlaceholder: "+1 (555) 000-0000",
-                linkLabel: "Email",            linkPlaceholder: "email@example.com",
-                extra1Label: "Company",        extra1Placeholder: "Company name",
-                extra2Label: "Position",       extra2Placeholder: "CEO / Designer",
-                notesLabel: "Notes",           notesPlaceholder: "Where we met",
-                isLinkEmail: true
-            )
-        case "tasks":
-            return .init(
-                titleLabel: "Task",            titlePlaceholder: "Task description",
-                subtitleLabel: "Due Date",     subtitlePlaceholder: "May 25 / end of week",
-                linkLabel: nil,                linkPlaceholder: nil,
-                extra1Label: "Priority",       extra1Placeholder: "High / Medium / Low",
-                extra2Label: nil,              extra2Placeholder: nil,
-                notesLabel: "Details",         notesPlaceholder: "Additional details"
-            )
-        default:
-            return .init(
-                titleLabel: "Title",           titlePlaceholder: "Title",
-                subtitleLabel: "Subtitle",     subtitlePlaceholder: nil,
-                linkLabel: "Link",             linkPlaceholder: "https://...",
-                extra1Label: "Extra 1",        extra1Placeholder: nil,
-                extra2Label: "Extra 2",        extra2Placeholder: nil,
-                notesLabel: "Notes",           notesPlaceholder: nil
-            )
+        // Custom category — look it up in the App Group snapshot.
+        if let custom = custom.first(where: { $0.key == key }) {
+            return (custom.name, custom.icon, Color(red: 0.56, green: 0.56, blue: 0.58))
         }
+        return (String(localized: "Other", bundle: AppLocale.bundle), "tag.fill", .gray)
     }
 }
 
@@ -236,7 +62,7 @@ struct ShareEditView: View {
     // Share Extension can't launch a purchase sheet — show balance inline only.
     private var usageManager: ShareUsageManager { ShareUsageManager.shared }
 
-    private var schema: ShareFieldSchema { ShareFieldSchema.make(for: item.categoryKey) }
+    private var schema: ItemCategory.FieldSchema { ItemCategory.FieldSchema.resolved(for: item.categoryKey) }
     private var categoryColor: Color { ShareCategoryOption.displayInfo(for: item.categoryKey).color }
 
     /// True when title is set and at least one schema-defined optional field is empty.
@@ -368,7 +194,7 @@ struct ShareEditView: View {
                             HStack(spacing: 10) {
                                 Image(systemName: "cart.circle.fill")
                                     .foregroundStyle(.secondary)
-                                Text("No enrichment credits left. Open ShotTidy to buy more.")
+                                Text("No enrichment credits left. Open ShotTidier to buy more.")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(2)
@@ -423,9 +249,7 @@ struct ShareEditView: View {
                 case .success(let count):
                     HStack(spacing: 10) {
                         Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                        Text(count == 1
-                             ? "1 field filled — review and tap Done"
-                             : "\(count) fields filled — review and tap Done")
+                        Text("\(count) fields filled — review and tap Done")
                             .font(.subheadline.weight(.medium))
                         Spacer()
                     }

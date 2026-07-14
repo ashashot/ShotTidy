@@ -154,9 +154,15 @@ struct EnrichmentStoreView: View {
                     Text("Get 10 credits every 30 days with Pro")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
-                    Text("Plus unlimited screenshot analysis — $4.99/mo")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Group {
+                        if let price = subManager.proProduct?.displayPrice {
+                            Text("Plus unlimited screenshot analysis — \(price)/mo")
+                        } else {
+                            Text("Plus unlimited screenshot analysis")
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
 
                 Spacer()

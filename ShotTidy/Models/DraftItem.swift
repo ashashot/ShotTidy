@@ -96,7 +96,7 @@ struct DraftItem: Identifiable, Equatable {
 
     var displayTitle: String {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Untitled" : trimmed
+        return trimmed.isEmpty ? String(localized: "Untitled", bundle: AppLocale.bundle) : trimmed
     }
 
     // MARK: - Convert to CatalogItem

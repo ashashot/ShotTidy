@@ -52,7 +52,7 @@ extension ItemCategory.FieldSchema {
             let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
             return t.isEmpty ? nil : t
         }
-        let title = clean(titleLabel) ?? "Title"
+        let title = clean(titleLabel) ?? String(localized: "Title", bundle: AppLocale.bundle)
         let subtitle = clean(subtitleLabel)
         let link = clean(linkLabel)
         let extra1 = clean(extra1Label)
@@ -61,11 +61,11 @@ extension ItemCategory.FieldSchema {
 
         return ItemCategory.FieldSchema(
             titleLabel: title,
-            titlePlaceholder: "Enter \(title.lowercased())",
+            titlePlaceholder: String(localized: "Enter \(title.lowercased())", bundle: AppLocale.bundle),
             subtitleLabel: subtitle,
             subtitlePlaceholder: subtitle,
             linkLabel: link,
-            linkPlaceholder: link.map { _ in "https://..." },
+            linkPlaceholder: link.map { _ in String(localized: "https://...", bundle: AppLocale.bundle) },
             extra1Label: extra1,
             extra1Placeholder: extra1,
             extra2Label: extra2,
@@ -79,13 +79,21 @@ extension ItemCategory.FieldSchema {
     /// (e.g. its custom category was deleted but items still reference it).
     static var fallback: ItemCategory.FieldSchema {
         ItemCategory.FieldSchema(
-            titleLabel: "Title", titlePlaceholder: "Title",
-            subtitleLabel: "Details", subtitlePlaceholder: "Details",
-            linkLabel: "Link", linkPlaceholder: "https://...",
-            extra1Label: "Extra", extra1Placeholder: "Extra",
-            extra2Label: "Extra 2", extra2Placeholder: "Extra 2",
-            notesLabel: "Notes", notesPlaceholder: "Notes"
+            titleLabel: String(localized: "Title", bundle: AppLocale.bundle), titlePlaceholder: String(localized: "Title", bundle: AppLocale.bundle),
+            subtitleLabel: String(localized: "Details", bundle: AppLocale.bundle), subtitlePlaceholder: String(localized: "Details", bundle: AppLocale.bundle),
+            linkLabel: String(localized: "Link", bundle: AppLocale.bundle), linkPlaceholder: String(localized: "https://...", bundle: AppLocale.bundle),
+            extra1Label: String(localized: "Extra", bundle: AppLocale.bundle), extra1Placeholder: String(localized: "Extra", bundle: AppLocale.bundle),
+            extra2Label: String(localized: "Extra 2", bundle: AppLocale.bundle), extra2Placeholder: String(localized: "Extra 2", bundle: AppLocale.bundle),
+            notesLabel: String(localized: "Notes", bundle: AppLocale.bundle), notesPlaceholder: String(localized: "Notes", bundle: AppLocale.bundle)
         )
+    }
+
+    /// Resolves the field schema for any raw category key — built-in categories
+    /// use their own schema, anything else (including custom categories, which
+    /// don't carry per-field label overrides) falls back to the generic schema.
+    /// Used by the Share Extension / Widget so all 3 targets share one definition.
+    static func resolved(for key: String) -> ItemCategory.FieldSchema {
+        ItemCategory(rawValue: key)?.fieldSchema ?? .fallback
     }
 }
 
@@ -138,7 +146,7 @@ extension CategoryDescriptor {
     static func unresolved(key: String) -> CategoryDescriptor {
         CategoryDescriptor(
             key: key,
-            name: "Other",
+            name: String(localized: "Other", bundle: AppLocale.bundle),
             iconName: "tag.fill",
             color: Color(.systemGray),
             isCustom: true,

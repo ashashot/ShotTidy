@@ -21,8 +21,8 @@ enum ShareDuplicateLevel {
 
     var label: String {
         switch self {
-        case .high:   return "Likely duplicate"
-        case .medium: return "Possible duplicate"
+        case .high:   return String(localized: "Likely duplicate", bundle: AppLocale.bundle)
+        case .medium: return String(localized: "Possible duplicate", bundle: AppLocale.bundle)
         }
     }
 
@@ -55,8 +55,8 @@ final class ShareAnalysisViewModel {
         /// Brief "success" phase shown after analysis finds items, before .results.
         case complete(count: Int)
         case results
-        case noItems
-        case error(String)
+        /// AI returned no items, or analysis failed — user adds the item manually.
+        case manualEntry
         case saving
         /// Free screenshot quota exhausted for the current 30-day period.
         case limitReached
@@ -114,7 +114,7 @@ final class ShareAnalysisViewModel {
         // Step 1: extract image from share payload
         phase = .extracting
         guard let image = await extractImage(from: inputItems) else {
-            phase = .error("Could not load the image from share data.")
+            phase = .manualEntry
             return
         }
         capturedImage = image
@@ -126,7 +126,7 @@ final class ShareAnalysisViewModel {
             if items.isEmpty {
                 // Consume the quota slot even for "no items" — the API call was made
                 usage.consumeScreenshots(count: 1)
-                phase = .noItems
+                phase = .manualEntry
             } else {
                 usage.consumeScreenshots(count: 1)
                 draftWrappers = items.map { DraftWrapper(item: $0) }
@@ -140,7 +140,7 @@ final class ShareAnalysisViewModel {
             }
         } catch {
             // Network / server error — do NOT consume quota (no successful API call)
-            phase = .error(error.localizedDescription)
+            phase = .manualEntry
         }
     }
 
@@ -163,7 +163,7 @@ final class ShareAnalysisViewModel {
         guard let link = urlString, !link.isEmpty else { return }
 
         for i in draftWrappers.indices {
-            let schema = ShareFieldSchema.make(for: draftWrappers[i].item.categoryKey)
+            let schema = ItemCategory.FieldSchema.resolved(for: draftWrappers[i].item.categoryKey)
             guard schema.linkLabel != nil,
                   !schema.isLinkEmail,
                   draftWrappers[i].item.link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -232,6 +232,16 @@ final class ShareAnalysisViewModel {
         }
 
         return nil
+    }
+
+    // MARK: - Manual entry
+
+    /// Called after the user fills in a draft manually.
+    /// Adds it to draftWrappers and transitions to the results review screen.
+    func commitManualDraft(_ draft: PendingDraftItem) {
+        draftWrappers = [DraftWrapper(item: draft)]
+        checkDuplicates()
+        phase = .results
     }
 
     // MARK: - Save selected

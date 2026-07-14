@@ -82,6 +82,7 @@ struct CategoryListWidget: Widget {
             provider: CategoryListProvider()
         ) { entry in
             CategoryListWidgetView(entry: entry)
+                .environment(\.locale, WidgetDataReader.resolvedLocale)
                 .containerBackground(for: .widget) { Color(.systemBackground) }
         }
         .configurationDisplayName("Category List")

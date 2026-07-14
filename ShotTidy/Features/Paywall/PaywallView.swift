@@ -162,42 +162,44 @@ struct PaywallView: View {
 
             FeatureRow(
                 icon: "photo.stack.fill", color: .blue,
-                title: "Screenshot Analysis",
-                free: "5 / 30 days", pro: "Unlimited"
+                title: String(localized: "Screenshot Analysis", bundle: AppLocale.bundle),
+                free: String(localized: "5 / 30 days", bundle: AppLocale.bundle),
+                pro: String(localized: "Unlimited", bundle: AppLocale.bundle)
             )
             Divider().padding(.leading, 50)
 
             FeatureRow(
                 icon: "magnifyingglass.circle.fill", color: .purple,
-                title: "Find Missing Info",
-                free: "1 credit", pro: "10 / 30 days"
+                title: String(localized: "Find Missing Info", bundle: AppLocale.bundle),
+                free: String(localized: "1 credit", bundle: AppLocale.bundle),
+                pro: String(localized: "10 / 30 days", bundle: AppLocale.bundle)
             )
             Divider().padding(.leading, 50)
 
             FeatureRow(
                 icon: "folder.badge.plus", color: .green,
-                title: "Custom Categories",
+                title: String(localized: "Custom Categories", bundle: AppLocale.bundle),
                 free: "-", pro: "✓"
             )
             Divider().padding(.leading, 50)
 
             FeatureRow(
                 icon: "wand.and.stars", color: .pink,
-                title: "AI Category Fields",
-                free: "-", pro: "5 / 30 days"
+                title: String(localized: "AI Category Fields", bundle: AppLocale.bundle),
+                free: "-", pro: String(localized: "5 / 30 days", bundle: AppLocale.bundle)
             )
             Divider().padding(.leading, 50)
 
             FeatureRow(
                 icon: "icloud.fill", color: .cyan,
-                title: "CloudKit Sync",
+                title: String(localized: "CloudKit Sync", bundle: AppLocale.bundle),
                 free: "-", pro: "✓"
             )
             Divider().padding(.leading, 50)
 
             FeatureRow(
                 icon: "square.and.arrow.up.fill", color: .orange,
-                title: "Share Extension",
+                title: String(localized: "Share Extension", bundle: AppLocale.bundle),
                 free: "✓", pro: "✓"
             )
         }
@@ -306,7 +308,7 @@ struct PaywallView: View {
             if subManager.isProActive {
                 dismiss()
             } else {
-                errorMessage = "No active Pro subscription found for your Apple ID. Make sure you're signed in with the same account used to purchase."
+                errorMessage = String(localized: "No active subscription found.", bundle: AppLocale.bundle)
             }
         } catch {
             errorMessage = "Restore failed: \(error.localizedDescription). Make sure you're signed in with the same Apple ID used to purchase."

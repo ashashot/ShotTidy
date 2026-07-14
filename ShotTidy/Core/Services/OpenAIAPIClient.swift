@@ -25,6 +25,7 @@ struct CategoryPromptInfo: Encodable {
 enum OpenAIError: LocalizedError {
     case invalidImage
     case httpError(Int, String)
+    case quotaExceeded(String)    // 429 with a server-provided message
     case refused(String)          // content: null + refusal field
     case emptyResponse            // content: null without refusal
     case decodingFailed(String)
@@ -33,20 +34,22 @@ enum OpenAIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidImage:
-            return "Failed to process the image."
+            return String(localized: "Failed to process the image.", bundle: AppLocale.bundle)
+        case .quotaExceeded(let message):
+            return message
         case .httpError(let code, _):
-            if code == 401 { return "Authorization error. Check your Supabase configuration." }
-            if code == 429 { return "Rate limit exceeded. Please wait a moment." }
-            if code == 500 { return "Server error. Make sure OPENAI_API_KEY is set in Supabase Secrets." }
-            return "Server error (\(code)). Please try again."
+            if code == 401 { return String(localized: "Authorization error. Check your Supabase configuration.", bundle: AppLocale.bundle) }
+            if code == 429 { return String(localized: "Rate limit exceeded. Please wait a moment.", bundle: AppLocale.bundle) }
+            if code == 500 { return String(localized: "Server error. Please try again later.", bundle: AppLocale.bundle) }
+            return String(localized: "Server error (\(code)). Please try again.", bundle: AppLocale.bundle)
         case .refused:
-            return "AI could not analyze this screenshot. Try a different image."
+            return String(localized: "AI could not analyze this screenshot. Try a different image.", bundle: AppLocale.bundle)
         case .emptyResponse:
-            return "Empty response from the API. Please try again."
+            return String(localized: "Empty response from the API. Please try again.", bundle: AppLocale.bundle)
         case .decodingFailed(let detail):
-            return "Failed to parse the response: \(detail)"
+            return String(localized: "Failed to parse the response: \(detail)", bundle: AppLocale.bundle)
         case .networkError(let err):
-            return "Network error: \(err.localizedDescription)"
+            return String(localized: "Network error: \(err.localizedDescription)", bundle: AppLocale.bundle)
         }
     }
 }
@@ -85,24 +88,48 @@ final class OpenAIAPIClient {
 
         var request = URLRequest(url: Config.analyzeEndpoint)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 60
 
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await URLSession.shared.data(for: request)
-        } catch {
-            throw OpenAIError.networkError(error)
+        let token = await SupabaseAuthManager.shared.bearerToken()
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        var (data, response) = try await send(request)
+
+        // Expired session — refresh once and retry.
+        if let http = response as? HTTPURLResponse, http.statusCode == 401,
+           let fresh = await SupabaseAuthManager.shared.recoverFromAuthFailure() {
+            request.setValue("Bearer \(fresh)", forHTTPHeaderField: "Authorization")
+            (data, response) = try await send(request)
         }
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             let bodyStr = String(data: data, encoding: .utf8) ?? ""
+            if http.statusCode == 429 {
+                throw OpenAIError.quotaExceeded(Self.serverErrorMessage(from: data))
+            }
             throw OpenAIError.httpError(http.statusCode, bodyStr)
         }
 
         return try parseItems(from: data, screenshotId: screenshotId)
+    }
+
+    private func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        do {
+            return try await URLSession.shared.data(for: request)
+        } catch {
+            throw OpenAIError.networkError(error)
+        }
+    }
+
+    /// Extracts the "error" message from a JSON error body, with a fallback.
+    private static func serverErrorMessage(from data: Data) -> String {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let message = json["error"] as? String, !message.isEmpty {
+            return message
+        }
+        return String(localized: "Rate limit exceeded. Please wait a moment.", bundle: AppLocale.bundle)
     }
 
     // MARK: - Parse

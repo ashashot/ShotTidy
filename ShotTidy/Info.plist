@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDisplayName</key>
+	<string>ShotTidier</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -13,6 +15,12 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>ShotTidy needs calendar access to add reminders and events from your catalog items.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>ShotTidy needs calendar access to add reminders and events from your catalog items.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take a photo to attach as a reference screenshot for the catalog item.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

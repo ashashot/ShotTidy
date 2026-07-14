@@ -49,7 +49,7 @@ struct CategoryCardView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
             } else {
-                Text(count == 1 ? "1 item" : "\(count) items")
+                Text("\(count) items")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }

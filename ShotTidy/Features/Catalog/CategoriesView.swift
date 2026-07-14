@@ -16,19 +16,28 @@ struct CategoriesView: View {
     @Environment(CategoryStore.self) private var categoryStore
 
     @State private var showCategoryManager = false
+    @State private var showManualAdd = false
     /// Cached hide-completed flags; refreshed on appear so count badges stay in sync.
     @State private var hideCompleted: [String: Bool] = [:]
 
     private let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
     /// Built-in categories first, then custom ones — each with its visible item count.
+    /// Counts are aggregated in a single pass over the items instead of
+    /// filtering the full array once per category.
     private var categoryCounts: [(CategoryDescriptor, Int)] {
-        categoryStore.allDescriptors.map { descriptor in
+        var totalCounts: [String: Int] = [:]
+        var activeCounts: [String: Int] = [:]
+        for item in allItems {
+            totalCounts[item.categoryRaw, default: 0] += 1
+            if !item.isCompleted {
+                activeCounts[item.categoryRaw, default: 0] += 1
+            }
+        }
+        return categoryStore.allDescriptors.map { descriptor in
             let shouldHide = hideCompleted[descriptor.key] ?? false
-            let count = allItems.filter {
-                $0.categoryRaw == descriptor.key && (!shouldHide || !$0.isCompleted)
-            }.count
-            return (descriptor, count)
+            let counts = shouldHide ? activeCounts : totalCounts
+            return (descriptor, counts[descriptor.key] ?? 0)
         }
     }
 
@@ -68,8 +77,17 @@ struct CategoriesView: View {
                     .accessibilityLabel("Manage Categories")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showImport = true
+                    Menu {
+                        Button {
+                            showManualAdd = true
+                        } label: {
+                            Label("Add Manually", systemImage: "pencil")
+                        }
+                        Button {
+                            showImport = true
+                        } label: {
+                            Label("Import Screenshots", systemImage: "photo.badge.plus")
+                        }
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
@@ -79,6 +97,9 @@ struct CategoriesView: View {
             }
             .sheet(isPresented: $showCategoryManager) {
                 CategoryManagerView()
+            }
+            .sheet(isPresented: $showManualAdd) {
+                ManualAddView()
             }
         }
     }

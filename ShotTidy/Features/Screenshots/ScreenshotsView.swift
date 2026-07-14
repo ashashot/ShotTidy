@@ -37,7 +37,7 @@ struct ScreenshotsView: View {
     var body: some View {
         NavigationStack {
             screenshotsContent
-                .navigationTitle(screenshots.isEmpty ? "Screenshots" : "\(screenshots.count) \(screenshots.count == 1 ? "Screenshot" : "Screenshots")")
+                .navigationTitle(screenshots.isEmpty ? String(localized: "Screenshots", bundle: AppLocale.bundle) : String(localized: "\(screenshots.count) Screenshot(s)", bundle: AppLocale.bundle))
                 .navigationDestination(item: $selectedScreenshot) { screenshot in
                     ScreenshotDetailView(screenshot: screenshot)
                 }
@@ -49,7 +49,7 @@ struct ScreenshotsView: View {
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
-                .alert("Delete \(selectedIDs.count) \(selectedIDs.count == 1 ? "Screenshot" : "Screenshots")?",
+                .alert(String(localized: "Delete \(selectedIDs.count) Screenshot(s)?", bundle: AppLocale.bundle),
                        isPresented: $showBatchDeleteAlert) {
                     Button("Delete", role: .destructive) { deleteSelected() }
                     Button("Cancel", role: .cancel) {}
@@ -71,8 +71,8 @@ struct ScreenshotsView: View {
                     Image(systemName: "trash")
                     Text(
                         selectedIDs.isEmpty
-                            ? "Select Screenshots to Delete"
-                            : "Delete \(selectedIDs.count) \(selectedIDs.count == 1 ? "Screenshot" : "Screenshots")"
+                            ? String(localized: "Select Screenshots to Delete", bundle: AppLocale.bundle)
+                            : String(localized: "Delete \(selectedIDs.count) Screenshot(s)", bundle: AppLocale.bundle)
                     )
                 }
                 .font(.body.weight(.medium))
@@ -138,12 +138,14 @@ struct ScreenshotsView: View {
                     count: Self.columnCount
                 )
 
+                let confirmedCounts = self.confirmedCounts
+
                 ScrollView {
                     LazyVGrid(columns: gridColumns, spacing: s) {
                         ForEach(screenshots) { screenshot in
                             ScreenshotCell(
                                 screenshot: screenshot,
-                                extractedCount: confirmedCount(for: screenshot),
+                                extractedCount: confirmedCounts[screenshot.id] ?? 0,
                                 cellWidth: cellWidth,
                                 cellHeight: cellHeight,
                                 isEditing: isEditing,
@@ -174,8 +176,16 @@ struct ScreenshotsView: View {
 
     // MARK: - Helpers
 
-    private func confirmedCount(for screenshot: Screenshot) -> Int {
-        allItems.filter { $0.sourceScreenshotId == screenshot.id }.count
+    /// Confirmed-item counts per screenshot, aggregated in a single pass
+    /// instead of filtering the full item array once per grid cell.
+    private var confirmedCounts: [UUID: Int] {
+        var counts: [UUID: Int] = [:]
+        for item in allItems {
+            if let sid = item.sourceScreenshotId {
+                counts[sid, default: 0] += 1
+            }
+        }
+        return counts
     }
 
     private func toggleSelection(for screenshot: Screenshot) {

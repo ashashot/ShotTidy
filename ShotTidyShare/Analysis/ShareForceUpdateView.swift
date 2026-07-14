@@ -38,7 +38,7 @@ struct ShareForceUpdateView: View {
                     .padding(.top, 24)
 
                 // Body
-                Text("A new version of ShotTidy is available.\nPlease update the app to continue using it.")
+                Text("A new version of ShotTidier is available.\nPlease update the app to continue using it.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

@@ -88,8 +88,8 @@ final class CatalogItem {
 
     /// Label for the completion toggle, or nil when the category is not completable.
     var completionLabel: String? {
-        if categoryRaw == ItemCategory.tasks.rawValue { return "Completed" }
-        if categoryRaw == ItemCategory.shopping.rawValue { return "Purchased" }
+        if categoryRaw == ItemCategory.tasks.rawValue { return String(localized: "Completed", bundle: AppLocale.bundle) }
+        if categoryRaw == ItemCategory.shopping.rawValue { return String(localized: "Purchased", bundle: AppLocale.bundle) }
         return nil
     }
 
@@ -97,6 +97,41 @@ final class CatalogItem {
     var category: ItemCategory {
         get { ItemCategory(rawValue: categoryRaw) ?? .tasks }
         set { categoryRaw = newValue.rawValue }
+    }
+
+    // MARK: - Calendar
+
+    /// Extracts a parseable date from any text field of the item.
+    /// Returns nil when no date-like string is found.
+    var calendarDate: Date? {
+        // For tasks, subtitle is the dedicated "Due Date" field — check it first
+        var candidates: [String?] = []
+        if categoryRaw == ItemCategory.tasks.rawValue {
+            candidates = [subtitle, notes, extra1]
+        } else {
+            candidates = [subtitle, extra1, notes]
+        }
+        let text = candidates.compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
+        guard !text.isEmpty,
+              let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
+        else { return nil }
+
+        let range = NSRange(text.startIndex..., in: text)
+        let matches = detector.matches(in: text, range: range)
+        let cutoff = Date().addingTimeInterval(-86400 * 365 * 2) // 2 years ago
+        return matches.compactMap { $0.date }.first { $0 > cutoff }
+    }
+
+    /// Formats all non-empty fields as a multi-line string for use in calendar event notes.
+    var calendarEventNotes: String {
+        let schema = category.fieldSchema
+        var parts: [String] = []
+        if let v = subtitle, !v.isEmpty  { parts.append("\(schema.subtitleLabel ?? String(localized: "Details", bundle: AppLocale.bundle)): \(v)") }
+        if let v = link,     !v.isEmpty  { parts.append("\(schema.linkLabel ?? String(localized: "Link", bundle: AppLocale.bundle)): \(v)") }
+        if let v = extra1,   !v.isEmpty  { parts.append("\(schema.extra1Label ?? ""): \(v)".trimmingCharacters(in: .whitespaces)) }
+        if let v = extra2,   !v.isEmpty  { parts.append("\(schema.extra2Label ?? ""): \(v)".trimmingCharacters(in: .whitespaces)) }
+        if let v = notes,    !v.isEmpty  { parts.append("\(schema.notesLabel ?? String(localized: "Notes", bundle: AppLocale.bundle)): \(v)") }
+        return parts.filter { !$0.hasPrefix(": ") }.joined(separator: "\n")
     }
 
     /// Returns true when at least one optional field that is defined in the

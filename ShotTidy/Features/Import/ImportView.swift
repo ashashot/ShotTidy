@@ -21,8 +21,10 @@ struct ImportView: View {
     @State private var viewModel = ImportViewModel()
     // Set to true only AFTER analyzeImages() completes,
     // guaranteeing that draftItems are populated on ConfirmationView's first render.
-    @State private var showConfirmation = false
-    @State private var showPaywall      = false
+    @State private var showConfirmation  = false
+    @State private var showPaywall       = false
+    @State private var showManualEntry   = false
+    @State private var manualEntryImage: UIImage? = nil
 
     // MARK: - Analysis animation state
 
@@ -67,13 +69,14 @@ struct ImportView: View {
                     }
                 }
             }
-            .alert("Analysis Error", isPresented: Binding(
-                get: { viewModel.analysisError != nil },
-                set: { if !$0 { viewModel.analysisError = nil } }
-            )) {
-                Button("OK") { viewModel.analysisError = nil }
-            } message: {
-                Text(viewModel.analysisError ?? "")
+            .sheet(isPresented: $showManualEntry) {
+                ManualEntrySheet(
+                    attachedImage: manualEntryImage,
+                    onSaved: {
+                        showManualEntry = false
+                        dismiss()
+                    }
+                )
             }
             .sheet(isPresented: $showConfirmation, onDismiss: {
                 viewModel.resetAfterConfirmation()
@@ -124,8 +127,11 @@ struct ImportView: View {
                 showConfirmation = true
                 showCompletion   = false
             } else {
-                // All screenshots failed or returned no data — clean up orphaned Screenshot records
+                // AI found nothing (or errored) — clean up and offer manual entry
                 viewModel.resetAfterConfirmation()
+                viewModel.analysisError = nil
+                manualEntryImage = viewModel.selectedImages.first
+                showManualEntry = true
             }
         }
     }
@@ -209,7 +215,7 @@ struct ImportView: View {
             // Bottom panel
             VStack(spacing: 10) {
                 let count = viewModel.selectedImages.count
-                Text("\(count) \(count == 1 ? "screenshot" : "screenshots") selected")
+                Text("\(count) screenshot(s) selected")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
@@ -364,7 +370,7 @@ struct ImportView: View {
                     Text("Analysis Complete")
                         .font(.headline)
 
-                    Text("\(completionCount) item\(completionCount == 1 ? "" : "s") found")
+                    Text("\(completionCount) item(s) found")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -409,7 +415,7 @@ struct ImportView: View {
                 .font(.caption)
             Text(remaining == 0
                  ? "Free limit reached. Upgrade to analyze more screenshots."
-                 : "Only \(remaining) screenshot\(remaining == 1 ? "" : "s") left this month.")
+                 : "Only \(remaining) screenshot(s) left this month.")
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.primary)
             Spacer()

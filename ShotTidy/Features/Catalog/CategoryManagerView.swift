@@ -63,7 +63,7 @@ struct CategoryManagerView: View {
                 }
                 Button("Cancel", role: .cancel) { deleteTarget = nil }
             } message: {
-                Text("Items in this category will be kept but shown under \u{201C}Other\u{201D}. This cannot be undone.")
+                Text("Items in this category will be kept but shown under \u{201C}\(String(localized: "Other", bundle: AppLocale.bundle))\u{201D}. This cannot be undone.")
             }
         }
     }

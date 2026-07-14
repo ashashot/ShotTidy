@@ -11,7 +11,7 @@ import SwiftUI
 
 final class ShareViewController: UIViewController {
 
-    private var hostingController: UIHostingController<ShareAnalysisView>?
+    private var hostingController: UIHostingController<AnyView>?
 
     // MARK: - Lifecycle
 
@@ -36,8 +36,9 @@ final class ShareViewController: UIViewController {
                 )
             }
         )
-
-        let hc = UIHostingController(rootView: analysisView)
+        // Mirrors the main app's language choice — same App Group preference, applied
+        // via .environment(\.locale) rather than a Bundle swap (see LocalizationManager).
+        let hc = UIHostingController(rootView: AnyView(analysisView.environment(\.locale, AppLocale.current)))
         addChild(hc)
         view.addSubview(hc.view)
         hc.view.translatesAutoresizingMaskIntoConstraints = false

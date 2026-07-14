@@ -52,7 +52,6 @@
 		DE10BB562FCD69A1005897E9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		DE10BB582FCD69A2005897E9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		DE10BB822FCD6ABE005897E9 /* ShotTidyWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShotTidyWidgetExtension.entitlements; sourceTree = "<group>"; };
-		DE327F002FC1B0000090FC80 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		DE327FC12FC1B4160090FC80 /* ShotTidy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShotTidy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotTidyShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE3282B92FC5798B0090FC80 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
@@ -64,6 +63,14 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+			);
+			target = DE10BB542FCD69A1005897E9 /* ShotTidyWidgetExtension */;
+		};
+		DE10BB8A2FCD6C00005897E9 /* Exceptions for "ShotTidy" folder in "ShotTidyWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Core/Services/AppLocale.swift,
+				Models/ItemCategory.swift,
 			);
 			target = DE10BB542FCD69A1005897E9 /* ShotTidyWidgetExtension */;
 		};
@@ -84,9 +91,13 @@
 		DE327FFF2FC1BA940090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidyShare" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Core/Extensions/Color+Hex.swift",
 				"Core/Extensions/UIImage+Extensions.swift",
 				Core/Services/AppGroupManager.swift,
+				Core/Services/AppLocale.swift,
+				Core/Services/SupabaseAuthManager.swift,
 				Models/CatalogItem.swift,
+				Models/CategoryDescriptor.swift,
 				Models/ItemCategory.swift,
 				Models/Screenshot.swift,
 				Models/UserCategory.swift,
@@ -126,6 +137,7 @@
 				DE327FCE2FC1B4170090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidy" target */,
 				DE327FFF2FC1BA940090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidyShare" target */,
 				DE4AC0032FC1B4160090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidierMac" target */,
+				DE10BB8A2FCD6C00005897E9 /* Exceptions for "ShotTidy" folder in "ShotTidyWidgetExtension" target */,
 			);
 			path = ShotTidy;
 			sourceTree = "<group>";
@@ -190,7 +202,6 @@
 				DE10BB5A2FCD69A2005897E9 /* ShotTidyWidget */,
 				DE4AC0022FC1B4160090FC80 /* ShotTidierMac */,
 				DE327FC22FC1B4160090FC80 /* Products */,
-				DE327F002FC1B0000090FC80 /* Secrets.xcconfig */,
 				DE3282B82FC5798B0090FC80 /* Frameworks */,
 			);
 			sourceTree = "<group>";
@@ -340,6 +351,18 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
+				es,
+				"pt-BR",
+				"pt-PT",
+				tr,
+				ru,
+				it,
+				de,
+				fr,
+				ja,
+				ko,
+				hy,
 			);
 			mainGroup = DE327FB82FC1B4160090FC80;
 			minimizedProjectReferenceProxies = 1;
@@ -451,7 +474,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.5;
+				MARKETING_VERSION = 1.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mbx.ShotTidier.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -483,7 +506,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.5;
+				MARKETING_VERSION = 1.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mbx.ShotTidier.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -498,7 +521,6 @@
 		};
 		DE327FD02FC1B4170090FC80 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = DE327F002FC1B0000090FC80 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -520,7 +542,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.5;
+				MARKETING_VERSION = 1.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mbx.ShotTidier;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -535,7 +557,6 @@
 		};
 		DE327FD12FC1B4170090FC80 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = DE327F002FC1B0000090FC80 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -557,7 +578,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.5;
+				MARKETING_VERSION = 1.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mbx.ShotTidier;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -710,7 +731,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.5;
+				MARKETING_VERSION = 1.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mbx.ShotTidier.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -740,7 +761,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.5;
+				MARKETING_VERSION = 1.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mbx.ShotTidier.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

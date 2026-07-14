@@ -97,6 +97,8 @@ final class UsageStore {
             "usage.screenshotsThisPeriod",
             "usage.enrichmentBalance",
             "usage.categorySuggestionsThisPeriod",
+            "usage.purchasedCredits",
+            "usage.proCredits",
         ]
         let doubleKeys = [
             "usage.periodStartDate",
@@ -372,6 +374,24 @@ enum AppGroupManager {
         sharedDefaults.bool(forKey: "filter.hideCompleted.\(key)")
     }
 
+    // MARK: - Language override (main app → Share Extension / Widget)
+
+    private nonisolated static let languageOverrideKey = "settings.languageOverride"
+
+    /// Persists the user's manual language choice. `nil` means "follow system language".
+    nonisolated static func saveLanguageOverride(_ localeIdentifier: String?) {
+        guard let localeIdentifier else {
+            sharedDefaults.removeObject(forKey: languageOverrideKey)
+            return
+        }
+        sharedDefaults.set(localeIdentifier, forKey: languageOverrideKey)
+    }
+
+    /// Locale identifier chosen in Settings, or `nil` if the user hasn't overridden the system language.
+    nonisolated static func loadLanguageOverride() -> String? {
+        sharedDefaults.string(forKey: languageOverrideKey)
+    }
+
     // MARK: - Startup cleanup
 
     /// Remove the legacy PendingImages directory left over from an older flow.
@@ -394,6 +414,6 @@ enum AppGroupError: LocalizedError {
     case containerUnavailable
 
     var errorDescription: String? {
-        "The App Group shared container is unavailable. Check the group.com.mbx.ShotTidier configuration."
+        String(localized: "The App Group shared container is unavailable. Check the group.com.mbx.ShotTidier configuration.", bundle: AppLocale.bundle)
     }
 }

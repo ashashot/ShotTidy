@@ -43,6 +43,7 @@ struct QuickImportWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: QuickImportProvider()) { entry in
             QuickImportWidgetView(entry: entry)
+                .environment(\.locale, WidgetDataReader.resolvedLocale)
                 .containerBackground(for: .widget) { Color(.systemBackground) }
         }
         .configurationDisplayName("Quick Import")
