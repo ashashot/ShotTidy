@@ -1,4 +1,6 @@
-/* content.css — ShotTidySafariExtension */
+/* content.css — ShotTidySafariExtension
+   Styles for the floating selection button (light DOM).
+   The panel renders inside a shadow root with its own styles. */
 
 .shottidier-selection-button {
     position: absolute;
@@ -15,19 +17,4 @@
 
 .shottidier-selection-button:hover {
     background: #3d68e0;
-}
-
-.shottidier-toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 2147483647;
-    max-width: 70vw;
-    padding: 10px 16px;
-    border-radius: 10px;
-    background: rgba(30, 30, 30, 0.92);
-    color: #ffffff;
-    font: 500 13px -apple-system, system-ui, sans-serif;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }

@@ -17,6 +17,7 @@ struct ShotTidierMacApp: App {
     @State private var syncMonitor = MacCloudSyncMonitor()
     @State private var usageManager = UsageManager()
     @State private var updateService = AppUpdateService()
+    @State private var extensionInbox = MacExtensionInbox()
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -68,6 +69,9 @@ struct ShotTidierMacApp: App {
                 .environment(syncMonitor)
                 .environment(usageManager)
                 .task {
+                    // Import items saved by the Safari extension (also subscribes
+                    // to live updates while the app is running).
+                    extensionInbox.start(context: sharedModelContainer.mainContext)
                     await subscriptionManager.onLaunch()
                     // Check rolling 30-day reset now that we know the subscription state.
                     usageManager.performRollingReset(isPro: subscriptionManager.isProActive)

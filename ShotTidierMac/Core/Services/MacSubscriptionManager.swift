@@ -223,6 +223,9 @@ final class MacSubscriptionManager {
         isProActive = active
         UserDefaults.standard.set(active, forKey: Self.proStatusKey)
         UserDefaults.standard.synchronize()
+        // Mirror into the App Group so the Safari extension can read the Pro
+        // flag (its process cannot see this app's standard defaults).
+        AppGroupManager.saveIsProStatus(active)
 
         if containerWasConfiguredAsPro != active {
             needsRestartForSyncChange = true

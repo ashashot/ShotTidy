@@ -7,16 +7,23 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5AFE5AFE00000000000000A1 /* ShotTidySafariExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5AFE5AFE0000000000000001 /* ShotTidySafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DE10BB572FCD69A2005897E9 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE10BB562FCD69A1005897E9 /* WidgetKit.framework */; };
 		DE10BB592FCD69A2005897E9 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE10BB582FCD69A2005897E9 /* SwiftUI.framework */; };
 		DE10BB682FCD69A2005897E9 /* ShotTidyWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DE10BB552FCD69A1005897E9 /* ShotTidyWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DE10BB832FCD6B83005897E9 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE10BB562FCD69A1005897E9 /* WidgetKit.framework */; };
 		DE327FF82FC1B9400090FC80 /* ShotTidyShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DE3282BA2FC5798B0090FC80 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE3282B92FC5798B0090FC80 /* StoreKit.framework */; };
-		5AFE5AFE00000000000000A1 /* ShotTidySafariExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5AFE5AFE0000000000000001 /* ShotTidySafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		5AFE5AFE00000000000000A2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DE327FB92FC1B4160090FC80 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5AFE5AFE0000000000000002;
+			remoteInfo = ShotTidySafariExtension;
+		};
 		DE10BB662FCD69A2005897E9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = DE327FB92FC1B4160090FC80 /* Project object */;
@@ -31,16 +38,20 @@
 			remoteGlobalIDString = DE327FED2FC1B9400090FC80;
 			remoteInfo = ShotTidyShare;
 		};
-		5AFE5AFE00000000000000A2 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = DE327FB92FC1B4160090FC80 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 5AFE5AFE0000000000000002;
-			remoteInfo = ShotTidySafariExtension;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		5AFE5AFE00000000000000A0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5AFE5AFE00000000000000A1 /* ShotTidySafariExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DE327FFD2FC1B9400090FC80 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -53,20 +64,10 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		5AFE5AFE00000000000000A0 /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				5AFE5AFE00000000000000A1 /* ShotTidySafariExtension.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		5AFE5AFE0000000000000001 /* ShotTidySafariExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotTidySafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE10BB552FCD69A1005897E9 /* ShotTidyWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotTidyWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE10BB562FCD69A1005897E9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		DE10BB582FCD69A2005897E9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -75,10 +76,26 @@
 		DE327FEE2FC1B9400090FC80 /* ShotTidyShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotTidyShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE3282B92FC5798B0090FC80 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		DE4AC0012FC1B4160090FC80 /* ShotTidierMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShotTidierMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		5AFE5AFE0000000000000001 /* ShotTidySafariExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShotTidySafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5AFE5AFE00000000000000A4 /* Exceptions for "ShotTidySafariExtension" folder in "ShotTidySafariExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 5AFE5AFE0000000000000002 /* ShotTidySafariExtension */;
+		};
+		5AFE5AFE00000000000000A5 /* Exceptions for "ShotTidy" folder in "ShotTidySafariExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Core/Config.swift,
+				Core/Services/AppGroupManager.swift,
+				Core/Services/AppLocale.swift,
+				Core/Services/SupabaseAuthManager.swift,
+			);
+			target = 5AFE5AFE0000000000000002 /* ShotTidySafariExtension */;
+		};
 		DE10BB6C2FCD69A2005897E9 /* Exceptions for "ShotTidyWidget" folder in "ShotTidyWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -146,16 +163,17 @@
 			);
 			target = DE4AC0072FC1B4160090FC80 /* ShotTidierMac */;
 		};
-		5AFE5AFE00000000000000A4 /* Exceptions for "ShotTidySafariExtension" folder in "ShotTidySafariExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 5AFE5AFE0000000000000002 /* ShotTidySafariExtension */;
-		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		5AFE5AFE0000000000000006 /* ShotTidySafariExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				5AFE5AFE00000000000000A4 /* Exceptions for "ShotTidySafariExtension" folder in "ShotTidySafariExtension" target */,
+			);
+			path = ShotTidySafariExtension;
+			sourceTree = "<group>";
+		};
 		DE10BB5A2FCD69A2005897E9 /* ShotTidyWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -171,6 +189,7 @@
 				DE327FFF2FC1BA940090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidyShare" target */,
 				DE10BB8A2FCD6C00005897E9 /* Exceptions for "ShotTidy" folder in "ShotTidyWidgetExtension" target */,
 				DE4AC0032FC1B4160090FC80 /* Exceptions for "ShotTidy" folder in "ShotTidierMac" target */,
+				5AFE5AFE00000000000000A5 /* Exceptions for "ShotTidy" folder in "ShotTidySafariExtension" target */,
 			);
 			path = ShotTidy;
 			sourceTree = "<group>";
@@ -188,17 +207,16 @@
 			path = ShotTidierMac;
 			sourceTree = "<group>";
 		};
-		5AFE5AFE0000000000000006 /* ShotTidySafariExtension */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				5AFE5AFE00000000000000A4 /* Exceptions for "ShotTidySafariExtension" folder in "ShotTidySafariExtension" target */,
-			);
-			path = ShotTidySafariExtension;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		5AFE5AFE0000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DE10BB522FCD69A1005897E9 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -225,13 +243,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		DE4AC0052FC1B4160090FC80 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5AFE5AFE0000000000000008 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -280,6 +291,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		5AFE5AFE0000000000000002 /* ShotTidySafariExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5AFE5AFE0000000000000003 /* Build configuration list for PBXNativeTarget "ShotTidySafariExtension" */;
+			buildPhases = (
+				5AFE5AFE0000000000000007 /* Sources */,
+				5AFE5AFE0000000000000008 /* Frameworks */,
+				5AFE5AFE0000000000000009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5AFE5AFE0000000000000006 /* ShotTidySafariExtension */,
+			);
+			name = ShotTidySafariExtension;
+			packageProductDependencies = (
+			);
+			productName = ShotTidySafariExtension;
+			productReference = 5AFE5AFE0000000000000001 /* ShotTidySafariExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		DE10BB542FCD69A1005897E9 /* ShotTidyWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DE10BB692FCD69A2005897E9 /* Build configuration list for PBXNativeTarget "ShotTidyWidgetExtension" */;
@@ -373,28 +406,6 @@
 			productReference = DE4AC0012FC1B4160090FC80 /* ShotTidierMac.app */;
 			productType = "com.apple.product-type.application";
 		};
-		5AFE5AFE0000000000000002 /* ShotTidySafariExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 5AFE5AFE0000000000000003 /* Build configuration list for PBXNativeTarget "ShotTidySafariExtension" */;
-			buildPhases = (
-				5AFE5AFE0000000000000007 /* Sources */,
-				5AFE5AFE0000000000000008 /* Frameworks */,
-				5AFE5AFE0000000000000009 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				5AFE5AFE0000000000000006 /* ShotTidySafariExtension */,
-			);
-			name = ShotTidySafariExtension;
-			packageProductDependencies = (
-			);
-			productName = ShotTidySafariExtension;
-			productReference = 5AFE5AFE0000000000000001 /* ShotTidySafariExtension.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -455,6 +466,13 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		5AFE5AFE0000000000000009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DE10BB532FCD69A1005897E9 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -483,16 +501,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		5AFE5AFE0000000000000009 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5AFE5AFE0000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-/* End PBXResourcesBuildPhase section */
-
-/* Begin PBXSourcesBuildPhase section */
 		DE10BB512FCD69A1005897E9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -521,16 +539,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		5AFE5AFE0000000000000007 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		5AFE5AFE00000000000000A3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5AFE5AFE0000000000000002 /* ShotTidySafariExtension */;
+			targetProxy = 5AFE5AFE00000000000000A2 /* PBXContainerItemProxy */;
+		};
 		DE10BB672FCD69A2005897E9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = DE10BB542FCD69A1005897E9 /* ShotTidyWidgetExtension */;
@@ -541,14 +557,69 @@
 			target = DE327FED2FC1B9400090FC80 /* ShotTidyShare */;
 			targetProxy = DE327FF62FC1B9400090FC80 /* PBXContainerItemProxy */;
 		};
-		5AFE5AFE00000000000000A3 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 5AFE5AFE0000000000000002 /* ShotTidySafariExtension */;
-			targetProxy = 5AFE5AFE00000000000000A2 /* PBXContainerItemProxy */;
-		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		5AFE5AFE0000000000000004 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShotTidySafariExtension/ShotTidySafariExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FK4KSS322U;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShotTidySafariExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShotTidier;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2025 MBX Services LLC. All rights reserved.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mbx.ShotTidier.SafariExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		5AFE5AFE0000000000000005 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShotTidySafariExtension/ShotTidySafariExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FK4KSS322U;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShotTidySafariExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShotTidier;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2025 MBX Services LLC. All rights reserved.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mbx.ShotTidier.SafariExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		DE10BB6A2FCD69A2005897E9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -929,69 +1000,18 @@
 			};
 			name = Release;
 		};
-		5AFE5AFE0000000000000004 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = ShotTidySafariExtension/ShotTidySafariExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = FK4KSS322U;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ShotTidySafariExtension/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ShotTidier;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2025 MBX Services LLC. All rights reserved.";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@executable_path/../../../../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.0;
-				OTHER_LDFLAGS = (
-					"-framework",
-					SafariServices,
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.mbx.ShotTidier.SafariExtension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		5AFE5AFE0000000000000005 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = ShotTidySafariExtension/ShotTidySafariExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = FK4KSS322U;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ShotTidySafariExtension/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ShotTidier;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2025 MBX Services LLC. All rights reserved.";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@executable_path/../../../../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.0;
-				OTHER_LDFLAGS = (
-					"-framework",
-					SafariServices,
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.mbx.ShotTidier.SafariExtension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		5AFE5AFE0000000000000003 /* Build configuration list for PBXNativeTarget "ShotTidySafariExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5AFE5AFE0000000000000004 /* Debug */,
+				5AFE5AFE0000000000000005 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		DE10BB692FCD69A2005897E9 /* Build configuration list for PBXNativeTarget "ShotTidyWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1033,15 +1053,6 @@
 			buildConfigurations = (
 				DE4AC0082FC1B4160090FC80 /* Debug */,
 				DE4AC0092FC1B4160090FC80 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		5AFE5AFE0000000000000003 /* Build configuration list for PBXNativeTarget "ShotTidySafariExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				5AFE5AFE0000000000000004 /* Debug */,
-				5AFE5AFE0000000000000005 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
