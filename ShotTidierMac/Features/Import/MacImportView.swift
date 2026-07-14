@@ -16,10 +16,14 @@ struct MacImportView: View {
     @State private var showConfirmation = false
     @State private var showCompletion = false
     @State private var completionCount = 0
+    @State private var showLimitAlert = false
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openSettings) private var openSettings
     @Environment(CategoryStore.self) private var categoryStore
+    @Environment(MacSubscriptionManager.self) private var subManager
+    @Environment(UsageManager.self) private var usageManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -63,6 +67,12 @@ struct MacImportView: View {
         } message: {
             Text(viewModel.analysisError ?? "")
         }
+        .alert("Free Limit Reached", isPresented: $showLimitAlert) {
+            Button("Upgrade in Settings…") { openSettings() }
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("You've used all \(UsageManager.freeScreenshotsPerPeriod) free analyses for this 30-day period. Upgrade to Pro for unlimited analyses.")
+        }
         .sheet(isPresented: $showConfirmation, onDismiss: {
             viewModel.resetAfterConfirmation()
         }) {
@@ -102,9 +112,31 @@ struct MacImportView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .keyboardShortcut("o", modifiers: .command)
+
+            if !subManager.isProActive {
+                quotaBadge
+            }
         }
         .padding(48)
         .onDrop(of: [.image, .fileURL], isTargeted: nil, perform: handleDrop)
+    }
+
+    /// Pill showing remaining free screenshot analyses (free plan only).
+    private var quotaBadge: some View {
+        let remaining = usageManager.remainingScreenshots(isPro: false)
+        let total     = UsageManager.freeScreenshotsPerPeriod
+        return HStack(spacing: 6) {
+            Image(systemName: remaining > 0 ? "photo.stack" : "exclamationmark.circle.fill")
+                .font(.caption.weight(.semibold))
+            if remaining > 0 {
+                Text("\(remaining) of \(total) free analyses remaining (30-day period)")
+                    .font(.caption.weight(.medium))
+            } else {
+                Text("Free limit reached — upgrade for unlimited access")
+                    .font(.caption.weight(.medium))
+            }
+        }
+        .foregroundStyle(remaining > 0 ? Color.secondary : Color.red)
     }
 
     // MARK: - Preview grid
@@ -276,13 +308,24 @@ struct MacImportView: View {
     }
 
     private func startAnalysis() {
+        let count = viewModel.selectedImages.count
+        guard usageManager.canAnalyzeScreenshots(count: count, isPro: subManager.isProActive) else {
+            showLimitAlert = true
+            return
+        }
+
         let customPayload = categoryStore.customDescriptors.map {
             CategoryPromptInfo(key: $0.key, name: $0.name, hint: $0.aiHint ?? "")
         }
 
         Task {
+            // allowNewCategory stays off: MacConfirmationView has no UI yet to
+            // resolve "__new__" drafts into a created category (unlike iOS).
             await viewModel.analyzeImages(customCategories: customPayload)
             if !viewModel.draftItems.isEmpty {
+                // Consume quota for the screenshots that were submitted
+                usageManager.consumeScreenshots(count: count)
+
                 completionCount = viewModel.draftItems.count
                 showCompletion = true
                 try? await Task.sleep(for: .milliseconds(700))

@@ -16,6 +16,7 @@ struct MacSettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(MacSubscriptionManager.self) private var subscriptionManager
     @Environment(MacCloudSyncMonitor.self) private var syncMonitor
+    @Environment(UsageManager.self) private var usageManager
     @State private var showDeleteAlert = false
 
     var body: some View {
@@ -147,7 +148,12 @@ struct MacSettingsView: View {
                 HStack(spacing: 8) {
                     // Subscribe button
                     Button {
-                        Task { await subscriptionManager.purchasePro() }
+                        Task {
+                            await subscriptionManager.purchasePro()
+                            if subscriptionManager.isProActive {
+                                usageManager.onSubscriptionActivated()
+                            }
+                        }
                     } label: {
                         HStack(spacing: 6) {
                             if subscriptionManager.isPurchasing {
@@ -166,7 +172,12 @@ struct MacSettingsView: View {
 
                     // Restore button
                     Button {
-                        Task { await subscriptionManager.restorePurchases() }
+                        Task {
+                            await subscriptionManager.restorePurchases()
+                            if subscriptionManager.isProActive {
+                                usageManager.onSubscriptionActivated()
+                            }
+                        }
                     } label: {
                         HStack(spacing: 6) {
                             if subscriptionManager.isRestoring {

@@ -15,6 +15,7 @@ struct ShotTidierMacApp: App {
     @State private var categoryStore = CategoryStore()
     @State private var subscriptionManager = MacSubscriptionManager()
     @State private var syncMonitor = MacCloudSyncMonitor()
+    @State private var usageManager = UsageManager()
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -64,8 +65,11 @@ struct ShotTidierMacApp: App {
                 .environment(categoryStore)
                 .environment(subscriptionManager)
                 .environment(syncMonitor)
+                .environment(usageManager)
                 .task {
                     await subscriptionManager.onLaunch()
+                    // Check rolling 30-day reset now that we know the subscription state.
+                    usageManager.performRollingReset(isPro: subscriptionManager.isProActive)
                 }
                 .alert(
                     "Restart Required",
@@ -97,6 +101,7 @@ struct ShotTidierMacApp: App {
                 .modelContainer(sharedModelContainer)
                 .environment(subscriptionManager)
                 .environment(syncMonitor)
+                .environment(usageManager)
         }
     }
 }

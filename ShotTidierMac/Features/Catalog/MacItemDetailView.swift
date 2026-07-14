@@ -11,6 +11,7 @@ struct MacItemDetailView: View {
     @Bindable var item: CatalogItem
     @Environment(\.modelContext) private var modelContext
     @Environment(CategoryStore.self) private var categoryStore
+    @Environment(UsageManager.self) private var usageManager
 
     @State private var showEdit = false
     @State private var showDeleteAlert = false
@@ -153,7 +154,7 @@ struct MacItemDetailView: View {
                         Text("Find Missing Info")
                             .font(.subheadline.weight(.semibold))
                         Spacer()
-                        Text("AI Search")
+                        Text("AI Search · \(usageManager.enrichmentBalance)")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 8)
@@ -244,6 +245,16 @@ struct MacItemDetailView: View {
     // MARK: - Enrichment logic
 
     private func runEnrichment() {
+        guard usageManager.canEnrich() else {
+            withAnimation {
+                enrichmentState = .failure("No enrichment credits left. Purchase credits to continue.")
+            }
+            return
+        }
+
+        // Deduct one credit before the API call (matches iOS behavior)
+        usageManager.consumeEnrichment()
+
         withAnimation { enrichmentState = .loading }
         recentlyFilledKeys = []
 
