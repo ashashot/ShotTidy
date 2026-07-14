@@ -44,13 +44,19 @@ final class CategoryStore {
         syncToAppGroup()
     }
 
+    /// Payload written to the App Group on the previous sync — reload() runs on
+    /// every catalog edit, so skip the re-encode/write when nothing changed.
+    private var lastSyncedCategories: [SharedCategory]?
+
     /// Mirrors custom categories into the App Group so extension processes
     /// (iOS Share Extension, macOS Safari extension) can match and offer them.
     private func syncToAppGroup() {
         let shared = userCategories.map {
             SharedCategory(key: $0.key, name: $0.name, icon: $0.iconName, hint: $0.aiHint)
         }
+        guard shared != lastSyncedCategories else { return }
         AppGroupManager.saveCustomCategories(shared)
+        lastSyncedCategories = shared
     }
 
     // MARK: - Descriptor collections

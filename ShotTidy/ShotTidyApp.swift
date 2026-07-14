@@ -112,7 +112,6 @@ struct ShotTidyApp: App {
                 ) {
                     Button("Restart Now") {
                         subscriptionManager.acknowledgeRestartPrompt()
-                        AppGroupManager.sharedDefaults.synchronize()
                         exit(0)
                     }
                     Button("Later", role: .cancel) {

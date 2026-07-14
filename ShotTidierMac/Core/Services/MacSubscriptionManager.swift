@@ -37,7 +37,11 @@ final class MacSubscriptionManager {
     // MARK: - State
 
     private(set) var isProActive: Bool = false
+    /// True until the app is relaunched after a sync-config change —
+    /// drives the persistent hint in Settings. Not cleared by the alert.
     private(set) var needsRestartForSyncChange = false
+    /// Drives the one-time alert; cleared when the user acknowledges it.
+    private(set) var showRestartAlert = false
     private(set) var products: [Product] = []
     private(set) var isPurchasing = false
     private(set) var isRestoring = false
@@ -78,7 +82,7 @@ final class MacSubscriptionManager {
     }
 
     func acknowledgeRestartPrompt() {
-        needsRestartForSyncChange = false
+        showRestartAlert = false
     }
 
     // MARK: - Product loading
@@ -203,6 +207,11 @@ final class MacSubscriptionManager {
         if !active, let product = proProduct {
             if let statuses = try? await product.subscription?.status {
                 for status in statuses where status.state == .subscribed || status.state == .inGracePeriod {
+                    // Status covers the whole subscription GROUP — make sure
+                    // the underlying transaction is for this product.
+                    guard case .verified(let tx) = status.transaction,
+                          tx.productID == Self.proProductID,
+                          tx.revocationDate == nil else { continue }
                     active = true
                     foundIDs.append("via subscription.status")
                 }
@@ -215,8 +224,12 @@ final class MacSubscriptionManager {
             }
         }
 
+        #if DEBUG
         let storefront = await Storefront.current
+        #endif
+        #if DEBUG
         diagnostic = "entitlements:\(totalEntitlements) unverified:\(unverifiedCount) active:\(active)\nIDs: \(foundIDs.isEmpty ? "none" : foundIDs.joined(separator: ", "))\nexpected: \(Self.proProductID)\nstorefront: \(storefront?.countryCode ?? "unknown")"
+        #endif
 
         // Keep the server-side subscription record in sync (once per launch).
         if active, let jws = proJWS, !didLinkSubscriptionThisSession {
@@ -227,13 +240,13 @@ final class MacSubscriptionManager {
         let containerWasConfiguredAsPro = Self.loadIsProStatus()
         isProActive = active
         UserDefaults.standard.set(active, forKey: Self.proStatusKey)
-        UserDefaults.standard.synchronize()
         // Mirror into the App Group so the Safari extension can read the Pro
         // flag (its process cannot see this app's standard defaults).
         AppGroupManager.saveIsProStatus(active)
 
         if containerWasConfiguredAsPro != active {
             needsRestartForSyncChange = true
+            showRestartAlert = true
         }
     }
 

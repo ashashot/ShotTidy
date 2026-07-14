@@ -29,7 +29,14 @@ final class MacExtensionInbox {
     private(set) var importEvent = 0
 
     private var modelContext: ModelContext?
-    private var observer: NSObjectProtocol?
+    // nonisolated(unsafe): only mutated on the main actor (start), read in deinit.
+    nonisolated(unsafe) private var observer: NSObjectProtocol?
+
+    deinit {
+        if let observer {
+            DistributedNotificationCenter.default().removeObserver(observer)
+        }
+    }
 
     // MARK: - Lifecycle
 

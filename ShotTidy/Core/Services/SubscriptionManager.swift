@@ -150,10 +150,13 @@ final class SubscriptionManager {
         if !active {
             for product in products where product.id == ProductID.proMonthly {
                 if let statuses = try? await product.subscription?.status {
-                    for status in statuses {
-                        if status.state == .subscribed || status.state == .inGracePeriod {
-                            active = true
-                        }
+                    for status in statuses where status.state == .subscribed || status.state == .inGracePeriod {
+                        // Status covers the whole subscription GROUP — make sure
+                        // the underlying transaction is for this product.
+                        guard case .verified(let tx) = status.transaction,
+                              tx.productID == ProductID.proMonthly,
+                              tx.revocationDate == nil else { continue }
+                        active = true
                     }
                 }
             }
@@ -179,7 +182,6 @@ final class SubscriptionManager {
         let containerWasConfiguredAsPro = AppGroupManager.loadIsProStatus()
         isProActive = active
         AppGroupManager.saveIsProStatus(active)
-        AppGroupManager.sharedDefaults.synchronize()
 
         if containerWasConfiguredAsPro != active {
             needsRestartForSyncChange = true

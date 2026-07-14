@@ -256,7 +256,7 @@ struct PendingDraftItem: Codable, Identifiable {
 
 /// Lightweight snapshot of a user-defined category, written by the main app into
 /// the App Group so the Share Extension can match (and offer) custom categories.
-struct SharedCategory: Codable {
+struct SharedCategory: Codable, Equatable {
     let key: String
     let name: String
     let icon: String

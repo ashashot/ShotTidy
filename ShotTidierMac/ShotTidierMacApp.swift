@@ -91,11 +91,13 @@ struct ShotTidierMacApp: App {
                     // Import items saved by the Safari extension (also subscribes
                     // to live updates while the app is running).
                     extensionInbox.start(context: sharedModelContainer.mainContext)
+                    // The update check is independent — run it concurrently with
+                    // the StoreKit launch sequence.
+                    async let updateCheck: Void = updateService.check()
                     await subscriptionManager.onLaunch()
                     // Check rolling 30-day reset now that we know the subscription state.
                     usageManager.performRollingReset(isPro: subscriptionManager.isProActive)
-                    // Check remote config for a required update (runs in background).
-                    await updateService.check()
+                    await updateCheck
                 }
                 .overlay(alignment: .top) {
                     if showImportBanner {
@@ -120,7 +122,7 @@ struct ShotTidierMacApp: App {
                 .alert(
                     "Restart Required",
                     isPresented: .init(
-                        get: { subscriptionManager.needsRestartForSyncChange },
+                        get: { subscriptionManager.showRestartAlert },
                         set: { _ in subscriptionManager.acknowledgeRestartPrompt() }
                     )
                 ) {
@@ -136,11 +138,6 @@ struct ShotTidierMacApp: App {
                 }
         }
         .modelContainer(sharedModelContainer)
-        .commands {
-            CommandGroup(after: .newItem) {
-                EmptyView()
-            }
-        }
 
         Settings {
             MacSettingsView()
