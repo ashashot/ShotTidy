@@ -126,6 +126,14 @@ struct ImportView: View {
 
                 showConfirmation = true
                 showCompletion   = false
+            } else if viewModel.quotaExceededMessage != nil {
+                // Server rejected every screenshot for quota/rate-limit reasons — the
+                // client-side pre-check above can be stale, so this can still happen.
+                // Route to the paywall instead of the "add manually" fallback, which
+                // would otherwise hide the real reason from the user.
+                viewModel.resetAfterConfirmation()
+                viewModel.quotaExceededMessage = nil
+                showPaywall = true
             } else {
                 // AI found nothing (or errored) — clean up and offer manual entry
                 viewModel.resetAfterConfirmation()

@@ -20,6 +20,11 @@ final class ImportViewModel {
     // MARK: - Analysis state
     var isAnalyzing = false
     var analysisError: String? = nil
+    /// Non-nil when the server rejected every screenshot with a quota/rate-limit error (HTTP 429).
+    /// Distinct from `analysisError` so the UI can route to the paywall instead of the generic
+    /// "AI couldn't extract data, add manually" fallback — the client-side quota pre-check can be
+    /// stale relative to the server's own limit, so this can fire even when the pre-check passed.
+    var quotaExceededMessage: String? = nil
     /// Non-nil when a SwiftData save fails during confirmation — shown as an alert in the UI.
     var persistenceError: String? = nil
     var progressCurrent = 0
@@ -64,6 +69,7 @@ final class ImportViewModel {
 
         isAnalyzing = true
         analysisError = nil
+        quotaExceededMessage = nil
         warnings = []
         draftItems = []
         progressCurrent = 0
@@ -143,6 +149,11 @@ final class ImportViewModel {
                     screenshot.errorMessage = error.localizedDescription
 
                     if let err = error as? OpenAIError,
+                       case .quotaExceeded = err {
+                        // Server-side quota/rate limit — surfaced separately so the UI can
+                        // route to the paywall instead of the "add manually" fallback.
+                        quotaExceededMessage = err.localizedDescription
+                    } else if let err = error as? OpenAIError,
                        case .refused = err {
                         // Refusal is non-fatal — just skip this screenshot
                         let name = screenshot.originalFileName ?? String(localized: "screenshot \(index + 1)", bundle: AppLocale.bundle)
@@ -256,6 +267,7 @@ final class ImportViewModel {
         draftItems = []
         isAnalyzing = false
         analysisError = nil
+        quotaExceededMessage = nil
         persistenceError = nil
         warnings = []
         progressCurrent = 0
