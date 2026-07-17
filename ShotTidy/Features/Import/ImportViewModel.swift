@@ -109,13 +109,15 @@ final class ImportViewModel {
                 let index = job.index
                 let image = job.image
                 let screenshotId = job.screenshot.id
+                let imageLabel = job.screenshot.originalFileName ?? "screenshot_\(index + 1)"
                 group.addTask {
                     do {
                         let extracted = try await OpenAIAPIClient.shared.analyzeScreenshot(
                             image,
                             customCategories: customCategories,
                             allowNewCategory: allowNewCategory,
-                            screenshotId: screenshotId
+                            screenshotId: screenshotId,
+                            imageLabel: imageLabel
                         )
                         return (index, .success(extracted))
                     } catch {
