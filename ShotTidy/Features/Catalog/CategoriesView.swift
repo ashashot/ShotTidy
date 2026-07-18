@@ -17,6 +17,7 @@ struct CategoriesView: View {
 
     @State private var showCategoryManager = false
     @State private var showManualAdd = false
+    @State private var searchText = ""
     /// Cached hide-completed flags; refreshed on appear so count badges stay in sync.
     @State private var hideCompleted: [String: Bool] = [:]
 
@@ -43,21 +44,15 @@ struct CategoriesView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 14) {
-                    ForEach(categoryCounts, id: \.0) { category, count in
-                        NavigationLink(value: category) {
-                            CategoryCardView(category: category, count: count)
-                        }
-                        .buttonStyle(.plain)
-                    }
+            Group {
+                if searchText.isEmpty {
+                    categoryGrid
+                } else {
+                    GlobalSearchResultsView(items: allItems, query: searchText)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
             }
-            .background(Color(.systemGroupedBackground))
             .navigationTitle("Catalog")
+            .legacyGlobalSearch(text: $searchText)
             .onAppear { refreshHideCompleted() }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                 refreshHideCompleted()
@@ -104,6 +99,25 @@ struct CategoriesView: View {
         }
     }
 
+    // MARK: - Category Grid
+
+    private var categoryGrid: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 14) {
+                ForEach(categoryCounts, id: \.0) { category, count in
+                    NavigationLink(value: category) {
+                        CategoryCardView(category: category, count: count)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
     // MARK: - Helpers
 
     private func refreshHideCompleted() {
@@ -111,5 +125,21 @@ struct CategoriesView: View {
         hideCompleted = Dictionary(
             uniqueKeysWithValues: keys.map { ($0, AppGroupManager.hideCompleted(forCategory: $0)) }
         )
+    }
+}
+
+// MARK: - Legacy global search
+
+private extension View {
+    /// On iOS 26+ global search lives in the system search tab at the bottom
+    /// (see MainTabView), so no field is attached here. Earlier systems fall
+    /// back to a search field in the Catalog navigation bar.
+    @ViewBuilder
+    func legacyGlobalSearch(text: Binding<String>) -> some View {
+        if #available(iOS 26.0, *) {
+            self
+        } else {
+            self.searchable(text: text, prompt: "Search all items")
+        }
     }
 }
