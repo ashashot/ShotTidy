@@ -31,6 +31,11 @@ struct SettingsView: View {
     @State private var showMailUnavailableAlert = false
     @State private var showDiagnostic = false
 
+    /// Diagnostics is hidden by default — tap the version number 5x to reveal it.
+    /// Persisted so it doesn't need to be re-unlocked every launch.
+    @AppStorage("diagnostics.unlocked") private var diagnosticsUnlocked = false
+    @State private var versionTapCount = 0
+
     var body: some View {
         @Bindable var localizationManager = localizationManager
 
@@ -161,6 +166,22 @@ struct SettingsView: View {
                     }
                 }
 
+                // MARK: - Diagnostics (hidden — tap version 5x in About to reveal)
+
+                if diagnosticsUnlocked {
+                    Section {
+                        NavigationLink {
+                            AnalysisLogView()
+                        } label: {
+                            Label("Analysis Log", systemImage: "doc.text.magnifyingglass")
+                        }
+                    } header: {
+                        Text("Diagnostics")
+                    } footer: {
+                        Text("Review what happened during screenshot analysis — useful if AI detection seems off and you're asked to fill in details manually.")
+                    }
+                }
+
                 // MARK: - iCloud Sync
 
                 if subManager.isProActive {
@@ -262,6 +283,8 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                             .onTapGesture(count: 5) { showDiagnostic = true }
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture { registerVersionTap() }
                     Button {
                         sendFeedback()
                     } label: {
@@ -343,6 +366,7 @@ struct SettingsView: View {
         return "v\(version) (\(build))"
     }
 
+<<<<<<< HEAD
     // MARK: - Diagnostics (tap version label 5× to show)
 
     private var diagnosticText: String {
@@ -354,6 +378,16 @@ struct SettingsView: View {
         lastDiagnostic: \(subManager.lastDiagnostic.isEmpty ? "—" : subManager.lastDiagnostic)
         appVersion: \(appVersion)
         """
+=======
+    /// Tapping the version row 5x reveals the Diagnostics section.
+    private func registerVersionTap() {
+        guard !diagnosticsUnlocked else { return }
+        versionTapCount += 1
+        if versionTapCount >= 5 {
+            diagnosticsUnlocked = true
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        }
+>>>>>>> main
     }
 
     // MARK: - Feedback

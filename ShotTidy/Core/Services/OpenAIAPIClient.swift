@@ -59,11 +59,17 @@ final class OpenAIAPIClient {
         _ image: UIImage,
         customCategories: [CategoryPromptInfo] = [],
         allowNewCategory: Bool = false,
-        screenshotId: UUID? = nil
+        screenshotId: UUID? = nil,
+        imageLabel: String = "screenshot"
     ) async throws -> [DraftItem] {
 
         let resized = image.resized(toMaxDimension: 1024)
         guard let imageData = resized.jpegData(compressionQuality: 0.75) else {
+            await AnalysisLogger.shared.log(AnalysisLogEntry(
+                imageLabel: imageLabel,
+                outcome: .invalidImage,
+                message: "Failed to encode image as JPEG"
+            ))
             throw OpenAIError.invalidImage
         }
         let base64 = imageData.base64EncodedString()
@@ -87,30 +93,43 @@ final class OpenAIAPIClient {
         let token = await SupabaseAuthManager.shared.bearerToken()
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        var (data, response) = try await send(request)
+        var (data, response) = try await send(request, imageLabel: imageLabel)
 
         // Expired session — refresh once and retry.
         if let http = response as? HTTPURLResponse, http.statusCode == 401,
            let fresh = await SupabaseAuthManager.shared.recoverFromAuthFailure() {
             request.setValue("Bearer \(fresh)", forHTTPHeaderField: "Authorization")
-            (data, response) = try await send(request)
+            (data, response) = try await send(request, imageLabel: imageLabel)
         }
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             let bodyStr = String(data: data, encoding: .utf8) ?? ""
             if http.statusCode == 429 {
-                throw OpenAIError.quotaExceeded(Self.serverErrorMessage(from: data))
+                let message = Self.serverErrorMessage(from: data)
+                await AnalysisLogger.shared.log(AnalysisLogEntry(
+                    imageLabel: imageLabel, outcome: .quotaExceeded, message: message
+                ))
+                throw OpenAIError.quotaExceeded(message)
             }
+            await AnalysisLogger.shared.log(AnalysisLogEntry(
+                imageLabel: imageLabel,
+                outcome: .httpError,
+                message: "HTTP \(http.statusCode)",
+                detail: String(bodyStr.prefix(500))
+            ))
             throw OpenAIError.httpError(http.statusCode, bodyStr)
         }
 
-        return try parseItems(from: data, screenshotId: screenshotId)
+        return try await parseItems(from: data, screenshotId: screenshotId, imageLabel: imageLabel)
     }
 
-    private func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
+    private func send(_ request: URLRequest, imageLabel: String) async throws -> (Data, URLResponse) {
         do {
             return try await URLSession.shared.data(for: request)
         } catch {
+            await AnalysisLogger.shared.log(AnalysisLogEntry(
+                imageLabel: imageLabel, outcome: .networkError, message: error.localizedDescription
+            ))
             throw OpenAIError.networkError(error)
         }
     }
@@ -126,22 +145,34 @@ final class OpenAIAPIClient {
 
     // MARK: - Parse
 
-    private func parseItems(from data: Data, screenshotId: UUID?) throws -> [DraftItem] {
+    private func parseItems(from data: Data, screenshotId: UUID?, imageLabel: String) async throws -> [DraftItem] {
         guard
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             let choices = json["choices"] as? [[String: Any]],
             let message = choices.first?["message"] as? [String: Any]
         else {
+            await AnalysisLogger.shared.log(AnalysisLogEntry(
+                imageLabel: imageLabel,
+                outcome: .decodingFailed,
+                message: "Unexpected API response format",
+                detail: String(data: data, encoding: .utf8).map { String($0.prefix(500)) }
+            ))
             throw OpenAIError.decodingFailed("Unexpected API response format")
         }
 
         // Handle refusal (content: null + refusal field)
         if let refusal = message["refusal"] as? String, !refusal.isEmpty {
+            await AnalysisLogger.shared.log(AnalysisLogEntry(
+                imageLabel: imageLabel, outcome: .refused, message: refusal
+            ))
             throw OpenAIError.refused(refusal)
         }
 
         // content may be null if the model refused without an explicit refusal field
         guard let content = message["content"] as? String else {
+            await AnalysisLogger.shared.log(AnalysisLogEntry(
+                imageLabel: imageLabel, outcome: .emptyResponse, message: "content field was null"
+            ))
             throw OpenAIError.emptyResponse
         }
 
@@ -151,10 +182,16 @@ final class OpenAIAPIClient {
             let items = contentJson["items"] as? [[String: Any]]
         else {
             let preview = String(content.prefix(120))
+            await AnalysisLogger.shared.log(AnalysisLogEntry(
+                imageLabel: imageLabel,
+                outcome: .decodingFailed,
+                message: "Expected an items array",
+                detail: String(content.prefix(500))
+            ))
             throw OpenAIError.decodingFailed("Expected an items array. Got: \(preview)")
         }
 
-        return items.compactMap { dict -> DraftItem? in
+        let drafts = items.compactMap { dict -> DraftItem? in
             guard
                 let categoryStr = dict["category"] as? String,
                 !categoryStr.isEmpty,
@@ -176,5 +213,17 @@ final class OpenAIAPIClient {
                 sourceScreenshotId: screenshotId
             )
         }
+
+        await AnalysisLogger.shared.log(AnalysisLogEntry(
+            imageLabel: imageLabel,
+            outcome: drafts.isEmpty ? .emptyItems : .success,
+            itemCount: drafts.count,
+            message: drafts.isEmpty
+                ? "API returned an empty items array"
+                : "Extracted \(drafts.count) item(s)",
+            detail: drafts.isEmpty ? String(content.prefix(500)) : nil
+        ))
+
+        return drafts
     }
 }
