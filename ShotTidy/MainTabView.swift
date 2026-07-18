@@ -48,6 +48,8 @@ enum DeepLink {
 
 enum AppTab: Hashable {
     case catalog, screenshots, settings
+    /// System search tab — only reachable on iOS 26+.
+    case search
 }
 
 // MARK: - View
@@ -74,27 +76,12 @@ struct MainTabView: View {
     @Query private var userCategories: [UserCategory]
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            // MARK: Catalog
-            CategoriesView(showImport: $showImport, navigationPath: $catalogNavigationPath)
-                .tabItem {
-                    Label("Catalog", systemImage: "square.grid.2x2.fill")
-                }
-                .tag(AppTab.catalog)
-
-            // MARK: Screenshots
-            ScreenshotsView(showImport: $showImport)
-                .tabItem {
-                    Label("Screenshots", systemImage: "photo.stack.fill")
-                }
-                .tag(AppTab.screenshots)
-
-            // MARK: Settings
-            SettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: "gear")
-                }
-                .tag(AppTab.settings)
+        Group {
+            if #available(iOS 26.0, *) {
+                searchTabView
+            } else {
+                legacyTabView
+            }
         }
         .sheet(isPresented: $showImport) {
             ImportView()
@@ -145,6 +132,56 @@ struct MainTabView: View {
         .onOpenURL { url in
             guard let link = DeepLink(url: url) else { return }
             handleDeepLink(link)
+        }
+    }
+
+    // MARK: - Tab bars
+
+    /// iOS 26+: the system search tab shows the magnifying glass as a
+    /// standalone button separated from the tab bar; tapping it expands the
+    /// bottom search field while the other tabs collapse into one element.
+    @available(iOS 26.0, *)
+    private var searchTabView: some View {
+        TabView(selection: $selectedTab) {
+            Tab("Catalog", systemImage: "square.grid.2x2.fill", value: AppTab.catalog) {
+                CategoriesView(showImport: $showImport, navigationPath: $catalogNavigationPath)
+            }
+            Tab("Screenshots", systemImage: "photo.stack.fill", value: AppTab.screenshots) {
+                ScreenshotsView(showImport: $showImport)
+            }
+            Tab("Settings", systemImage: "gear", value: AppTab.settings) {
+                SettingsView()
+            }
+            Tab(value: AppTab.search, role: .search) {
+                GlobalSearchView()
+            }
+        }
+    }
+
+    /// Pre-iOS 26 fallback: classic tab bar; global search lives in the
+    /// Catalog navigation bar instead (see CategoriesView).
+    private var legacyTabView: some View {
+        TabView(selection: $selectedTab) {
+            // MARK: Catalog
+            CategoriesView(showImport: $showImport, navigationPath: $catalogNavigationPath)
+                .tabItem {
+                    Label("Catalog", systemImage: "square.grid.2x2.fill")
+                }
+                .tag(AppTab.catalog)
+
+            // MARK: Screenshots
+            ScreenshotsView(showImport: $showImport)
+                .tabItem {
+                    Label("Screenshots", systemImage: "photo.stack.fill")
+                }
+                .tag(AppTab.screenshots)
+
+            // MARK: Settings
+            SettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: "gear")
+                }
+                .tag(AppTab.settings)
         }
     }
 

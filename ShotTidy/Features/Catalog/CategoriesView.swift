@@ -17,8 +17,12 @@ struct CategoriesView: View {
 
     @State private var showCategoryManager = false
     @State private var showManualAdd = false
+<<<<<<< HEAD
     /// True once the content is scrolled; drives the top blur visibility.
     @State private var isScrolled = false
+=======
+    @State private var searchText = ""
+>>>>>>> feature/task-findepage
     /// Cached hide-completed flags; refreshed on appear so count badges stay in sync.
     @State private var hideCompleted: [String: Bool] = [:]
 
@@ -44,6 +48,7 @@ struct CategoriesView: View {
     }
 
     var body: some View {
+<<<<<<< HEAD
         GeometryReader { rootGeo in
             NavigationStack(path: $navigationPath) {
                 ScrollView {
@@ -67,6 +72,35 @@ struct CategoriesView: View {
                     geometry.contentOffset.y + geometry.contentInsets.top > 1
                 } action: { _, scrolled in
                     isScrolled = scrolled
+=======
+        NavigationStack(path: $navigationPath) {
+            Group {
+                if searchText.isEmpty {
+                    categoryGrid
+                } else {
+                    GlobalSearchResultsView(items: allItems, query: searchText)
+                }
+            }
+            .navigationTitle("Catalog")
+            .legacyGlobalSearch(text: $searchText)
+            .onAppear { refreshHideCompleted() }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                refreshHideCompleted()
+            }
+            .navigationDestination(for: CategoryDescriptor.self) { category in
+                CategoryListView(descriptor: category)
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showCategoryManager = true
+                    } label: {
+                        Image(systemName: "folder.badge.gearshape")
+                            .font(.body)
+                            .foregroundStyle(.blue)
+                    }
+                    .accessibilityLabel("Manage Categories")
+>>>>>>> feature/task-findepage
                 }
                 .overlay {
                     topBarBlur(statusBarHeight: rootGeo.safeAreaInsets.top)
@@ -120,6 +154,7 @@ struct CategoriesView: View {
         }
     }
 
+<<<<<<< HEAD
     /// Fixed-height top blur pinned to the physical top of the screen.
     /// The solid part covers the status bar and the compact navigation bar,
     /// then dissolves into the content with no hard edge. Sized from the root
@@ -147,6 +182,25 @@ struct CategoriesView: View {
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
+=======
+    // MARK: - Category Grid
+
+    private var categoryGrid: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 14) {
+                ForEach(categoryCounts, id: \.0) { category, count in
+                    NavigationLink(value: category) {
+                        CategoryCardView(category: category, count: count)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+        }
+        .background(Color(.systemGroupedBackground))
+>>>>>>> feature/task-findepage
     }
 
     // MARK: - Helpers
@@ -159,3 +213,21 @@ struct CategoriesView: View {
     }
 }
 
+<<<<<<< HEAD
+=======
+// MARK: - Legacy global search
+
+private extension View {
+    /// On iOS 26+ global search lives in the system search tab at the bottom
+    /// (see MainTabView), so no field is attached here. Earlier systems fall
+    /// back to a search field in the Catalog navigation bar.
+    @ViewBuilder
+    func legacyGlobalSearch(text: Binding<String>) -> some View {
+        if #available(iOS 26.0, *) {
+            self
+        } else {
+            self.searchable(text: text, prompt: "Search all items")
+        }
+    }
+}
+>>>>>>> feature/task-findepage
