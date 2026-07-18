@@ -32,11 +32,13 @@ struct ScreenshotsView: View {
     @State private var showBatchDeleteAlert = false
 
     private static let columnCount: Int = 3
-    private static let cellSpacing: CGFloat = 2
+    private static let cellSpacing: CGFloat = 10
+    private static let gridPadding: CGFloat = 16
 
     var body: some View {
         NavigationStack {
             screenshotsContent
+                .background(Color(.systemGroupedBackground))
                 .navigationTitle(screenshots.isEmpty ? String(localized: "Screenshots", bundle: AppLocale.bundle) : String(localized: "\(screenshots.count) Screenshot(s)", bundle: AppLocale.bundle))
                 .navigationDestination(item: $selectedScreenshot) { screenshot in
                     ScreenshotDetailView(screenshot: screenshot)
@@ -75,12 +77,21 @@ struct ScreenshotsView: View {
                             : String(localized: "Delete \(selectedIDs.count) Screenshot(s)", bundle: AppLocale.bundle)
                     )
                 }
-                .font(.body.weight(.medium))
-                .foregroundStyle(selectedIDs.isEmpty ? Color(.secondaryLabel) : Color.red)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(selectedIDs.isEmpty ? Color(.secondaryLabel) : .white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
+                .background(
+                    selectedIDs.isEmpty
+                        ? AnyShapeStyle(Color(.tertiarySystemFill))
+                        : AnyShapeStyle(Color.red),
+                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                )
             }
             .disabled(selectedIDs.isEmpty)
+            .animation(.easeInOut(duration: 0.15), value: selectedIDs.isEmpty)
+            .padding(.horizontal, Self.gridPadding)
+            .padding(.vertical, 10)
             .background(.bar)
         }
     }
@@ -119,11 +130,20 @@ struct ScreenshotsView: View {
     @ViewBuilder
     private var screenshotsContent: some View {
         if screenshots.isEmpty {
-            ContentUnavailableView(
-                "No Screenshots",
-                systemImage: "photo.stack",
-                description: Text("Screenshots appear here once you save\ncatalog items extracted from them.")
-            )
+            ContentUnavailableView {
+                Label("No Screenshots", systemImage: "photo.stack")
+            } description: {
+                Text("Screenshots appear here once you save\ncatalog items extracted from them.")
+            } actions: {
+                Button {
+                    showImport = true
+                } label: {
+                    Text("Import Screenshots")
+                        .font(.body.weight(.medium))
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+            }
         } else {
             // GeometryReader provides the available width so every cell gets
             // an explicit, fixed frame — the only reliable way to prevent
@@ -131,7 +151,7 @@ struct ScreenshotsView: View {
             GeometryReader { proxy in
                 let n = CGFloat(Self.columnCount)
                 let s = Self.cellSpacing
-                let cellWidth  = floor((proxy.size.width - s * (n - 1)) / n)
+                let cellWidth  = floor((proxy.size.width - Self.gridPadding * 2 - s * (n - 1)) / n)
                 let cellHeight = floor(cellWidth * 16 / 9)
                 let gridColumns = Array(
                     repeating: GridItem(.fixed(cellWidth), spacing: s),
@@ -143,21 +163,23 @@ struct ScreenshotsView: View {
                 ScrollView {
                     LazyVGrid(columns: gridColumns, spacing: s) {
                         ForEach(screenshots) { screenshot in
-                            ScreenshotCell(
-                                screenshot: screenshot,
-                                extractedCount: confirmedCounts[screenshot.id] ?? 0,
-                                cellWidth: cellWidth,
-                                cellHeight: cellHeight,
-                                isEditing: isEditing,
-                                isSelected: selectedIDs.contains(screenshot.id)
-                            )
-                            .onTapGesture {
+                            Button {
                                 if isEditing {
                                     toggleSelection(for: screenshot)
                                 } else {
                                     selectedScreenshot = screenshot
                                 }
+                            } label: {
+                                ScreenshotCell(
+                                    screenshot: screenshot,
+                                    extractedCount: confirmedCounts[screenshot.id] ?? 0,
+                                    cellWidth: cellWidth,
+                                    cellHeight: cellHeight,
+                                    isEditing: isEditing,
+                                    isSelected: selectedIDs.contains(screenshot.id)
+                                )
                             }
+                            .buttonStyle(ScreenshotCellButtonStyle())
                             .contextMenu {
                                 if !isEditing {
                                     Button("Delete", role: .destructive) {
@@ -167,6 +189,9 @@ struct ScreenshotsView: View {
                             }
                         }
                     }
+                    .padding(.horizontal, Self.gridPadding)
+                    .padding(.top, 8)
+                    .padding(.bottom, 24)
                     // Extra bottom padding so bottom bar doesn't overlap last row
                     if isEditing { Color.clear.frame(height: 60) }
                 }
@@ -216,6 +241,8 @@ private struct ScreenshotCell: View {
     var isEditing: Bool = false
     var isSelected: Bool = false
 
+    private static let cornerRadius: CGFloat = 14
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             // Thumbnail — explicit fixed frame prevents any size ambiguity
@@ -238,48 +265,72 @@ private struct ScreenshotCell: View {
             // Dim when selected
             .overlay {
                 if isSelected {
-                    Color.black.opacity(0.35)
+                    Color.black.opacity(0.3)
                 }
             }
 
-            // Badge with actual confirmed-item count (hidden during edit mode)
+            // Bottom scrim keeps the count legible over any thumbnail
             if extractedCount > 0 && !isEditing {
-                Text("\(extractedCount)")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(.blue)
-                    .clipShape(Capsule())
-                    .padding(5)
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.55)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(width: cellWidth, height: 52)
+                .allowsHitTesting(false)
+
+                HStack(spacing: 4) {
+                    Image(systemName: "square.stack.fill")
+                        .font(.system(size: 9, weight: .semibold))
+                    Text("\(extractedCount)")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8)
+                .padding(.bottom, 8)
             }
 
-            // Selection indicator (top-leading)
+            // Selection indicator — Photos-style, bottom-trailing
             if isEditing {
-                VStack {
-                    HStack {
-                        ZStack {
-                            Circle()
-                                .fill(isSelected ? Color.blue : Color.black.opacity(0.35))
-                                .frame(width: 24, height: 24)
-                            if isSelected {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(.white)
-                            } else {
-                                Circle()
-                                    .strokeBorder(.white, lineWidth: 2)
-                                    .frame(width: 24, height: 24)
-                            }
-                        }
-                        .padding(6)
-                        Spacer()
+                ZStack {
+                    if isSelected {
+                        Circle()
+                            .fill(.blue)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                    } else {
+                        Circle()
+                            .fill(.black.opacity(0.2))
+                        Circle()
+                            .strokeBorder(.white, lineWidth: 1.5)
                     }
-                    Spacer()
                 }
+                .frame(width: 22, height: 22)
+                .shadow(color: .black.opacity(0.25), radius: 2)
+                .padding(7)
             }
         }
         // Single explicit frame for the entire cell — LazyVGrid never needs to remeasure
         .frame(width: cellWidth, height: cellHeight)
+        .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
+                .strokeBorder(
+                    isSelected ? AnyShapeStyle(Color.blue) : AnyShapeStyle(.primary.opacity(0.08)),
+                    lineWidth: isSelected ? 2.5 : 1
+                )
+        }
+    }
+}
+
+// MARK: - ScreenshotCellButtonStyle
+
+/// Subtle scale-down press feedback; keeps the fixed cell frame intact.
+private struct ScreenshotCellButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
