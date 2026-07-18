@@ -366,7 +366,6 @@ struct SettingsView: View {
         return "v\(version) (\(build))"
     }
 
-<<<<<<< HEAD
     // MARK: - Diagnostics (tap version label 5× to show)
 
     private var diagnosticText: String {
@@ -378,7 +377,8 @@ struct SettingsView: View {
         lastDiagnostic: \(subManager.lastDiagnostic.isEmpty ? "—" : subManager.lastDiagnostic)
         appVersion: \(appVersion)
         """
-=======
+    }
+
     /// Tapping the version row 5x reveals the Diagnostics section.
     private func registerVersionTap() {
         guard !diagnosticsUnlocked else { return }
@@ -387,7 +387,6 @@ struct SettingsView: View {
             diagnosticsUnlocked = true
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }
->>>>>>> main
     }
 
     // MARK: - Feedback
