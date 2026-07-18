@@ -17,6 +17,8 @@ struct CategoriesView: View {
 
     @State private var showCategoryManager = false
     @State private var showManualAdd = false
+    /// True once the content is scrolled; drives the top blur visibility.
+    @State private var isScrolled = false
     /// Cached hide-completed flags; refreshed on appear so count badges stay in sync.
     @State private var hideCompleted: [String: Bool] = [:]
 
@@ -42,66 +44,109 @@ struct CategoriesView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 14) {
-                    ForEach(categoryCounts, id: \.0) { category, count in
-                        NavigationLink(value: category) {
-                            CategoryCardView(category: category, count: count)
+        GeometryReader { rootGeo in
+            NavigationStack(path: $navigationPath) {
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 14) {
+                        ForEach(categoryCounts, id: \.0) { category, count in
+                            NavigationLink(value: category) {
+                                CategoryCardView(category: category, count: count)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 24)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
-            }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Catalog")
-            .onAppear { refreshHideCompleted() }
-            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-                refreshHideCompleted()
-            }
-            .navigationDestination(for: CategoryDescriptor.self) { category in
-                CategoryListView(descriptor: category)
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showCategoryManager = true
-                    } label: {
-                        Image(systemName: "folder.badge.gearshape")
-                            .font(.body)
-                            .foregroundStyle(.blue)
-                    }
-                    .accessibilityLabel("Manage Categories")
+                .background(Color(.systemGroupedBackground))
+                .navigationTitle("Catalog")
+                .toolbarBackground(.hidden, for: .navigationBar)
+                .scrollEdgeEffectHidden(for: .top)
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    geometry.contentOffset.y + geometry.contentInsets.top > 1
+                } action: { _, scrolled in
+                    isScrolled = scrolled
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
+                .overlay {
+                    topBarBlur(statusBarHeight: rootGeo.safeAreaInsets.top)
+                        .opacity(isScrolled ? 1 : 0)
+                        .animation(.easeInOut(duration: 0.2), value: isScrolled)
+                }
+                .onAppear { refreshHideCompleted() }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                    refreshHideCompleted()
+                }
+                .navigationDestination(for: CategoryDescriptor.self) { category in
+                    CategoryListView(descriptor: category)
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
                         Button {
-                            showManualAdd = true
+                            showCategoryManager = true
                         } label: {
-                            Label("Add Manually", systemImage: "pencil")
+                            Image(systemName: "folder.badge.gearshape")
+                                .font(.body)
+                                .foregroundStyle(.blue)
                         }
-                        Button {
-                            showImport = true
+                        .accessibilityLabel("Manage Categories")
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            Button {
+                                showManualAdd = true
+                            } label: {
+                                Label("Add Manually", systemImage: "pencil")
+                            }
+                            Button {
+                                showImport = true
+                            } label: {
+                                Label("Import Screenshots", systemImage: "photo.badge.plus")
+                            }
                         } label: {
-                            Label("Import Screenshots", systemImage: "photo.badge.plus")
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(.blue)
                         }
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.blue)
                     }
                 }
-            }
-            .sheet(isPresented: $showCategoryManager) {
-                CategoryManagerView()
-            }
-            .sheet(isPresented: $showManualAdd) {
-                ManualAddView()
+                .sheet(isPresented: $showCategoryManager) {
+                    CategoryManagerView()
+                }
+                .sheet(isPresented: $showManualAdd) {
+                    ManualAddView()
+                }
             }
         }
+    }
+
+    /// Fixed-height top blur pinned to the physical top of the screen.
+    /// The solid part covers the status bar and the compact navigation bar,
+    /// then dissolves into the content with no hard edge. Sized from the root
+    /// safe area (status bar only) so it never swallows the large title at rest.
+    private func topBarBlur(statusBarHeight: CGFloat) -> some View {
+        let solidHeight = statusBarHeight + 44 // compact navigation bar height
+        let fadeHeight: CGFloat = 24
+        let totalHeight = solidHeight + fadeHeight
+        return VStack(spacing: 0) {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+//                .mask {
+//                    LinearGradient(
+//                        stops: [
+//                            .init(color: .black, location: 0),
+//                            .init(color: .black, location: solidHeight / totalHeight),
+//                            .init(color: .clear, location: 1)
+//                        ],
+//                        startPoint: .top,
+//                        endPoint: .bottom
+//                    )
+//                }
+                .frame(height: totalHeight)
+            Spacer(minLength: 0)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 
     // MARK: - Helpers
@@ -113,3 +158,4 @@ struct CategoriesView: View {
         )
     }
 }
+
