@@ -25,6 +25,10 @@ enum AnalysisLogOutcome: String, Codable {
     case quotaExceeded
     case networkError
     case invalidImage
+    /// On-device engine was selected but could not run (model missing, not eligible).
+    case engineUnavailable
+    /// Other on-device model failure (timeout, context window, unsupported language).
+    case engineError
 }
 
 // MARK: - AnalysisLogEntry
@@ -39,6 +43,9 @@ struct AnalysisLogEntry: Codable, Identifiable {
     /// Raw model response snippet, truncated — the most useful clue when the
     /// model silently returned nothing or malformed JSON.
     var detail: String? = nil
+    /// `AnalysisEngine.rawValue` that produced this entry. Optional so logs
+    /// written before engines existed still decode (they were all cloud).
+    var engine: String? = nil
 }
 
 // MARK: - AnalysisLogger

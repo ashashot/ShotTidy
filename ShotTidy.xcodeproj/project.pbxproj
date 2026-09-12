@@ -132,6 +132,8 @@
 			membershipExceptions = (
 				"Core/Extensions/Color+Hex.swift",
 				"Core/Extensions/UIImage+Extensions.swift",
+				Core/Services/Analysis/AnalysisEngine.swift,
+				Core/Services/Analysis/OnDeviceAnalysisEngine.swift,
 				Core/Services/AppGroupManager.swift,
 				Core/Services/AppLocale.swift,
 				Core/Services/SupabaseAuthManager.swift,

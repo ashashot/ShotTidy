@@ -17,6 +17,7 @@ struct ImportView: View {
     @Environment(SubscriptionManager.self) private var subManager
     @Environment(UsageManager.self)        private var usageManager
     @Environment(CategoryStore.self)       private var categoryStore
+    @Environment(AnalysisEngineSettings.self) private var engineSettings
 
     @State private var viewModel = ImportViewModel()
     // Set to true only AFTER analyzeImages() completes,
@@ -92,6 +93,7 @@ struct ImportView: View {
         }
         .onAppear {
             viewModel.modelContext = modelContext
+            engineSettings.refreshAvailability()
         }
     }
 
@@ -99,7 +101,14 @@ struct ImportView: View {
 
     private func startAnalysis() {
         let count = viewModel.selectedImages.count
-        guard usageManager.canAnalyzeScreenshots(count: count, isPro: subManager.isProActive) else {
+        engineSettings.refreshAvailability()
+        let preferredEngine = engineSettings.selectedEngine
+        let plannedEngine = ScreenshotAnalysisService.resolve(preferred: preferredEngine).engine
+
+        // Quota gate — `countsTowardScreenshotQuota` is the hook a future
+        // on-device-only tier flips; today both engines share the same limit.
+        if plannedEngine.countsTowardScreenshotQuota,
+           !usageManager.canAnalyzeScreenshots(count: count, isPro: subManager.isProActive) {
             showPaywall = true
             return
         }
@@ -111,13 +120,16 @@ struct ImportView: View {
 
         Task {
             await viewModel.analyzeImages(
+                preferredEngine: preferredEngine,
                 customCategories: customPayload,
                 allowNewCategory: subManager.isProActive
             )
             // Open ConfirmationView only after await — draftItems are populated at this point
             if !viewModel.draftItems.isEmpty {
                 // Consume quota for the screenshots that were submitted
-                usageManager.consumeScreenshots(count: count)
+                if viewModel.activeEngine.countsTowardScreenshotQuota {
+                    usageManager.consumeScreenshots(count: count)
+                }
 
                 // Show a brief "success" screen before handing off to ConfirmationView
                 completionCount = viewModel.draftItems.count
@@ -338,6 +350,12 @@ struct ImportView: View {
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+
+                    // Which engine is doing the work — reassures privacy-minded users.
+                    Label(viewModel.activeEngine.localizedName, systemImage: viewModel.activeEngine.iconName)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 2)
                 }
             }
 

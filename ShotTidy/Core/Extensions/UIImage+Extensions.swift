@@ -25,3 +25,21 @@ extension UIImage {
         }
     }
 }
+
+extension UIImage {
+    /// EXIF-style orientation matching `imageOrientation`, for APIs that take a
+    /// raw `CGImage` plus orientation (Vision, Foundation Models attachments).
+    var cgImagePropertyOrientation: CGImagePropertyOrientation {
+        switch imageOrientation {
+        case .up:            return .up
+        case .upMirrored:    return .upMirrored
+        case .down:          return .down
+        case .downMirrored:  return .downMirrored
+        case .left:          return .left
+        case .leftMirrored:  return .leftMirrored
+        case .right:         return .right
+        case .rightMirrored: return .rightMirrored
+        @unknown default:    return .up
+        }
+    }
+}

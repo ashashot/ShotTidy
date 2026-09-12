@@ -31,6 +31,9 @@ final class ImportViewModel {
     var progressTotal = 0
     /// Warnings (individual screenshot failures, non-fatal)
     var warnings: [String] = []
+    /// Engine that processed (or is processing) the current batch. Defaults to
+    /// the policy default until `analyzeImages` resolves the user's choice.
+    private(set) var activeEngine: AnalysisEngine = AnalysisEnginePolicy.defaultEngine
 
     // MARK: - Drafts (analysis result, pending confirmation)
     var draftItems: [DraftItem] = []
@@ -60,7 +63,11 @@ final class ImportViewModel {
 
     // MARK: - Analysis
 
+    /// Analyzes the selected images with `preferredEngine`. When the on-device
+    /// model was requested but cannot run, the cloud engine is used and a
+    /// warning explains why; the engine actually used is in `activeEngine`.
     func analyzeImages(
+        preferredEngine: AnalysisEngine = AnalysisEnginePolicy.defaultEngine,
         customCategories: [CategoryPromptInfo] = [],
         allowNewCategory: Bool = false
     ) async {
@@ -76,6 +83,16 @@ final class ImportViewModel {
         progressTotal = selectedImages.count
         sessionScreenshotIds = []
         didSaveThisSession = false
+
+        let resolution = ScreenshotAnalysisService.resolve(preferred: preferredEngine)
+        let engine = resolution.engine
+        activeEngine = engine
+        if let reason = resolution.fallbackReason {
+            warnings.append(String(
+                localized: "On-device analysis is unavailable, so the cloud engine was used. \(reason.localizedDescription)",
+                bundle: AppLocale.bundle
+            ))
+        }
 
         // Prepare all jobs up front. Each image is resized once to the API size;
         // the thumbnail is derived from that smaller image instead of the original.
@@ -105,7 +122,9 @@ final class ImportViewModel {
         var hardError: String? = nil
 
         await withTaskGroup(of: (Int, Result<[DraftItem], any Error>).self) { group in
-            let maxConcurrent = 3
+            // The on-device model serves one request at a time; parallel jobs
+            // would just queue up inside the engine actor.
+            let maxConcurrent = engine == .onDevice ? 1 : 3
             var nextJob = 0
 
             func submitNext() {
@@ -118,8 +137,9 @@ final class ImportViewModel {
                 let imageLabel = job.screenshot.originalFileName ?? "screenshot_\(index + 1)"
                 group.addTask {
                     do {
-                        let extracted = try await OpenAIAPIClient.shared.analyzeScreenshot(
+                        let extracted = try await ScreenshotAnalysisService.analyze(
                             image,
+                            engine: engine,
                             customCategories: customCategories,
                             allowNewCategory: allowNewCategory,
                             screenshotId: screenshotId,
@@ -148,22 +168,18 @@ final class ImportViewModel {
                     screenshot.analysisStatus = .failed
                     screenshot.errorMessage = error.localizedDescription
 
-                    if let err = error as? OpenAIError,
-                       case .quotaExceeded = err {
+                    switch error.analysisFailureKind {
+                    case .quotaExceeded:
                         // Server-side quota/rate limit — surfaced separately so the UI can
                         // route to the paywall instead of the "add manually" fallback.
-                        quotaExceededMessage = err.localizedDescription
-                    } else if let err = error as? OpenAIError,
-                       case .refused = err {
-                        // Refusal is non-fatal — just skip this screenshot
+                        quotaExceededMessage = error.localizedDescription
+                    case .skippable:
+                        // Refusal / empty response / on-device hiccup — skip this
+                        // screenshot with a warning and keep going.
                         let name = screenshot.originalFileName ?? String(localized: "screenshot \(index + 1)", bundle: AppLocale.bundle)
-                        warnings.append(String(localized: "\(name): \(err.localizedDescription)", bundle: AppLocale.bundle))
-                    } else if let err = error as? OpenAIError,
-                              case .emptyResponse = err {
-                        let name = screenshot.originalFileName ?? String(localized: "screenshot \(index + 1)", bundle: AppLocale.bundle)
-                        warnings.append(String(localized: "\(name): \(err.localizedDescription)", bundle: AppLocale.bundle))
-                    } else {
-                        // Network / HTTP errors — only shown if nothing was extracted
+                        warnings.append(String(localized: "\(name): \(error.localizedDescription)", bundle: AppLocale.bundle))
+                    case .hard:
+                        // Network / HTTP / engine-missing errors — only shown if nothing was extracted
                         hardError = error.localizedDescription
                     }
                 }

@@ -78,6 +78,11 @@ final class ShareAnalysisViewModel {
     var phase: Phase = .extracting
     var draftWrappers: [DraftWrapper] = []
 
+    /// Engine actually used for this share — follows the main app's Settings
+    /// choice (read from the App Group) with a cloud fallback when the
+    /// on-device model cannot run.
+    private(set) var activeEngine: AnalysisEngine = AnalysisEnginePolicy.defaultEngine
+
     /// The image extracted from the share payload — retained for saving a Screenshot record.
     private var capturedImage: UIImage?
 
@@ -119,10 +124,19 @@ final class ShareAnalysisViewModel {
         }
         capturedImage = image
 
-        // Step 2: analyze via Supabase Edge Function (no local API key needed)
+        // Step 2: analyze — on device (Apple Intelligence, iOS 27+) when the user
+        // chose it and it is available, otherwise via the Supabase Edge Function.
+        let preferred = AppGroupManager.loadAnalysisEngine()
+        activeEngine = (preferred == .onDevice && OnDeviceAnalysisEngine.availability.isAvailable)
+            ? .onDevice
+            : .cloud
         phase = .analyzing
         do {
-            let items = try await ShareAPIClient.shared.analyze(image: image)
+            let items: [PendingDraftItem]
+            switch activeEngine {
+            case .onDevice: items = try await analyzeOnDevice(image)
+            case .cloud:    items = try await ShareAPIClient.shared.analyze(image: image)
+            }
             if items.isEmpty {
                 // Consume the quota slot even for "no items" — the API call was made
                 usage.consumeScreenshots(count: 1)
@@ -141,6 +155,39 @@ final class ShareAnalysisViewModel {
         } catch {
             // Network / server error — do NOT consume quota (no successful API call)
             phase = .manualEntry
+        }
+    }
+
+    // MARK: - On-device analysis
+
+    /// Runs the Foundation Models engine and maps its raw items to drafts.
+    /// New-category suggestions stay disabled here, like the cloud path: the
+    /// extension has no UI to create a category.
+    private func analyzeOnDevice(_ image: UIImage) async throws -> [PendingDraftItem] {
+        guard let cgImage = image.cgImage else { throw OnDeviceAnalysisError.invalidImage }
+        let hints = AppGroupManager.loadCustomCategories().map {
+            AnalysisCategoryHint(key: $0.key, name: $0.name, hint: $0.hint)
+        }
+        let raw = try await OnDeviceAnalysisEngine.shared.analyze(
+            cgImage: cgImage,
+            orientation: image.cgImagePropertyOrientation,
+            customCategories: hints,
+            allowNewCategory: false
+        )
+        return raw.compactMap { dict in
+            guard let category = dict["category"], !category.isEmpty,
+                  let title = dict["title"],
+                  !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else { return nil }
+            return PendingDraftItem(
+                categoryKey: category,
+                title: title,
+                subtitle: dict["subtitle"] ?? "",
+                link: dict["link"] ?? "",
+                extra1: dict["extra1"] ?? "",
+                extra2: dict["extra2"] ?? "",
+                notes: dict["notes"] ?? ""
+            )
         }
     }
 

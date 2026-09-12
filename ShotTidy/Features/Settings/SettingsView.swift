@@ -13,6 +13,7 @@ struct SettingsView: View {
     @Environment(SubscriptionManager.self) private var subManager
     @Environment(UsageManager.self)        private var usageManager
     @Environment(LocalizationManager.self) private var localizationManager
+    @Environment(AnalysisEngineSettings.self) private var engineSettings
 
     @Query private var allItems: [CatalogItem]
     /// Only count screenshots that actually have saved catalog items (same filter as ScreenshotsView).
@@ -164,6 +165,18 @@ struct SettingsView: View {
                     Button("Delete All Data", role: .destructive) {
                         showDeleteAlert = true
                     }
+                }
+
+                // MARK: - Analysis engine
+
+                Section {
+                    ForEach(AnalysisEngine.allCases) { engine in
+                        engineRow(engine)
+                    }
+                } header: {
+                    Text("Analysis")
+                } footer: {
+                    Text(engineFooter)
                 }
 
                 // MARK: - Diagnostics (hidden — tap version 5x in About to reveal)
@@ -318,7 +331,10 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .onAppear { purgeOrphanedScreenshots() }
+            .onAppear {
+                purgeOrphanedScreenshots()
+                engineSettings.refreshAvailability()
+            }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
             }
@@ -356,6 +372,61 @@ struct SettingsView: View {
                 Text(diagnosticText)
             }
         }
+    }
+
+    // MARK: - Analysis engine
+
+    /// Selectable row for one engine. The on-device option is disabled (but
+    /// still visible, with the reason in the footer) when the model cannot run.
+    private func engineRow(_ engine: AnalysisEngine) -> some View {
+        let isSelected = engineSettings.selectedEngine == engine
+        let isAvailable = engine == .cloud || engineSettings.isOnDeviceAvailable
+        let isAllowed = engineSettings.isAllowed(engine, isPro: subManager.isProActive)
+        let enabled = isAvailable && isAllowed
+
+        return Button {
+            engineSettings.selectedEngine = engine
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: engine.iconName)
+                    .font(.system(size: 18))
+                    .foregroundStyle(enabled ? Color.blue : Color.secondary)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(engine.localizedName)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(enabled ? Color.primary : Color.secondary)
+                    Text(engine.localizedSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.blue)
+                }
+            }
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var engineFooter: String {
+        let availability = engineSettings.onDeviceAvailability
+        if availability.isAvailable {
+            if engineSettings.selectedEngine == .onDevice {
+                return String(localized: "Screenshots are analyzed by Apple Intelligence on this device and are never uploaded.", bundle: AppLocale.bundle)
+            }
+            return String(localized: "On-device analysis is ready.", bundle: AppLocale.bundle)
+        }
+        if engineSettings.selectedEngine == .onDevice {
+            return String(localized: "On-device analysis is unavailable, so the cloud engine is used. \(availability.localizedDescription)", bundle: AppLocale.bundle)
+        }
+        return availability.localizedDescription
     }
 
     // MARK: - App version

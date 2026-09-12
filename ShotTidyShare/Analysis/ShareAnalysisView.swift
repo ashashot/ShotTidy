@@ -219,9 +219,14 @@ struct ShareAnalysisView: View {
             }
             .frame(width: 88, height: 88)
 
-            Text("Analyzing screenshot…")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            VStack(spacing: 6) {
+                Text("Analyzing screenshot…")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Label(viewModel.activeEngine.localizedName, systemImage: viewModel.activeEngine.iconName)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

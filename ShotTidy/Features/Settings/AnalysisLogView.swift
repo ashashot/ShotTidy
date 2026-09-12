@@ -133,6 +133,11 @@ private struct AnalysisLogDetailView: View {
                         .foregroundStyle(entry.outcome.tintColor)
                 }
                 LabeledContent("Time", value: entry.timestamp.formatted(date: .abbreviated, time: .standard))
+                if let engine = entry.engine.flatMap(AnalysisEngine.init(rawValue:)) {
+                    LabeledContent("Engine") {
+                        Label(engine.localizedName, systemImage: engine.iconName)
+                    }
+                }
                 if entry.outcome == .success || entry.outcome == .emptyItems {
                     LabeledContent("Items Found", value: "\(entry.itemCount)")
                 }
@@ -190,6 +195,8 @@ extension AnalysisLogOutcome {
         case .quotaExceeded: return "gauge.with.needle.fill"
         case .networkError: return "wifi.slash"
         case .invalidImage: return "photo.badge.exclamationmark"
+        case .engineUnavailable: return "apple.intelligence"
+        case .engineError: return "cpu"
         }
     }
 
@@ -212,6 +219,8 @@ extension AnalysisLogOutcome {
         case .quotaExceeded: return String(localized: "Rate Limited", bundle: AppLocale.bundle)
         case .networkError: return String(localized: "Network Error", bundle: AppLocale.bundle)
         case .invalidImage: return String(localized: "Invalid Image", bundle: AppLocale.bundle)
+        case .engineUnavailable: return String(localized: "On-Device Model Unavailable", bundle: AppLocale.bundle)
+        case .engineError: return String(localized: "On-Device Model Error", bundle: AppLocale.bundle)
         }
     }
 }
