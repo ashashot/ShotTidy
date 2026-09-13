@@ -314,12 +314,16 @@ struct MacImportView: View {
     private func startAnalysis() {
         let count = viewModel.selectedImages.count
         engineSettings.refreshAvailability()
-        let preferredEngine = engineSettings.selectedEngine
-        let plannedEngine = AnalysisEngineResolver.resolve(preferred: preferredEngine).engine
+        // Mac is on-device only. Without Apple Intelligence the app is gated by
+        // `MacUnsupportedDeviceView`, so this only trips if the model went away.
+        guard let engine = engineSettings.engine else {
+            viewModel.analysisError = engineSettings.onDeviceAvailability.localizedDescription
+            return
+        }
 
         // Quota gate — `countsTowardScreenshotQuota` is the hook a future
         // on-device-only tier flips; today both engines share the same limit.
-        if plannedEngine.countsTowardScreenshotQuota,
+        if engine.countsTowardScreenshotQuota,
            !usageManager.canAnalyzeScreenshots(count: count, isPro: subManager.isProActive) {
             showLimitAlert = true
             return
@@ -331,7 +335,7 @@ struct MacImportView: View {
 
         Task {
             await viewModel.analyzeImages(
-                preferredEngine: preferredEngine,
+                engine: engine,
                 customCategories: customPayload,
                 allowNewCategory: subManager.isProActive
             )

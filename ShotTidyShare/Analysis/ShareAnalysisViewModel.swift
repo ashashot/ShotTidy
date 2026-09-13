@@ -3,7 +3,7 @@
 //  ShotTidyShare
 //
 //  @Observable ViewModel for the Share Extension analysis flow.
-//  Manages phases: extracting image → analyzing with GPT-4o → displaying results.
+//  Manages phases: extracting image → analyzing (on device or in the cloud) → displaying results.
 //  After analysis, checks for duplicates against the catalog index written by the main app.
 //
 
@@ -78,9 +78,8 @@ final class ShareAnalysisViewModel {
     var phase: Phase = .extracting
     var draftWrappers: [DraftWrapper] = []
 
-    /// Engine actually used for this share — follows the main app's Settings
-    /// choice (read from the App Group) with a cloud fallback when the
-    /// on-device model cannot run.
+    /// Engine actually used for this share — decided by the device exactly
+    /// like in the main app (Apple Intelligence → on-device, otherwise cloud).
     private(set) var activeEngine: AnalysisEngine = AnalysisEnginePolicy.defaultEngine
 
     /// The image extracted from the share payload — retained for saving a Screenshot record.
@@ -124,12 +123,14 @@ final class ShareAnalysisViewModel {
         }
         capturedImage = image
 
-        // Step 2: analyze — on device (Apple Intelligence, iOS 27+) when the user
-        // chose it and it is available, otherwise via the Supabase Edge Function.
-        let preferred = AppGroupManager.loadAnalysisEngine()
-        activeEngine = (preferred == .onDevice && OnDeviceAnalysisEngine.availability.isAvailable)
-            ? .onDevice
-            : .cloud
+        // Step 2: analyze — on device (Apple Intelligence) when this device can
+        // run it, otherwise via the Supabase Edge Function.
+        guard let engine = AnalysisEngineResolver.resolve().engine else {
+            // Unsupported device (Mac-only state) — let the user add the item by hand.
+            phase = .manualEntry
+            return
+        }
+        activeEngine = engine
         phase = .analyzing
         do {
             let items: [PendingDraftItem]

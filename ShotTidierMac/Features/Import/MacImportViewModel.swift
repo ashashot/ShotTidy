@@ -32,10 +32,10 @@ final class MacImportViewModel {
 
     // MARK: - Analysis
 
-    /// Analyzes the selected images with `preferredEngine`. When on-device was
-    /// requested but cannot run, the cloud engine is used and a warning says why.
+    /// Analyzes the selected images with `engine` — the one the device
+    /// resolved (`AnalysisEngineResolver`); there is no runtime fallback.
     func analyzeImages(
-        preferredEngine: AnalysisEngine = AnalysisEnginePolicy.defaultEngine,
+        engine: AnalysisEngine,
         customCategories: [CategoryPromptInfo] = [],
         allowNewCategory: Bool = false
     ) async {
@@ -51,12 +51,7 @@ final class MacImportViewModel {
         sessionScreenshotIds = []
         didSaveThisSession = false
 
-        let resolution = AnalysisEngineResolver.resolve(preferred: preferredEngine)
-        let engine = resolution.engine
         activeEngine = engine
-        if let reason = resolution.fallbackReason {
-            warnings.append("On-device analysis is unavailable, so the cloud engine was used. \(reason.localizedDescription)")
-        }
 
         for (index, image) in selectedImages.enumerated() {
             progressCurrent = index + 1

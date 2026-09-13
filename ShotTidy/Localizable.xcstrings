@@ -6845,82 +6845,6 @@
         }
       }
     },
-    "Best accuracy. Screenshots are uploaded for analysis." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Höchste Genauigkeit. Screenshots werden zur Analyse hochgeladen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Máxima precisión. Las capturas se suben para su análisis."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Précision maximale. Les captures d'écran sont envoyées pour analyse."
-          }
-        },
-        "hy" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Առավելագույն ճշգրտություն։ Սքրինշոթները վերբեռնվում են վերլուծության համար։"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Massima precisione. Gli screenshot vengono caricati per l'analisi."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最高の精度。スクリーンショットは解析のためにアップロードされます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "최고의 정확도. 스크린샷이 분석을 위해 업로드됩니다."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Melhor precisão. As capturas de tela são enviadas para análise."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Melhor precisão. As capturas de ecrã são enviadas para análise."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Максимальная точность. Скриншоты отправляются на сервер для анализа."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "En yüksek doğruluk. Ekran görüntüleri analiz için yüklenir."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "准确度最高。截图会上传以进行分析。"
-          }
-        }
-      }
-    },
     "Book / Article / URL" : {
       "localizations" : {
         "de" : {
@@ -8821,78 +8745,78 @@
         }
       }
     },
-    "Cloud (GPT-4o)" : {
+    "Cloud" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cloud (GPT-4o)"
+            "value" : "Cloud"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nube (GPT-4o)"
+            "value" : "Nube"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cloud (GPT-4o)"
+            "value" : "Cloud"
           }
         },
         "hy" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ամպ (GPT-4o)"
+            "value" : "Ամպ"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cloud (GPT-4o)"
+            "value" : "Cloud"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クラウド（GPT-4o）"
+            "value" : "クラウド"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "클라우드 (GPT-4o)"
+            "value" : "클라우드"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nuvem (GPT-4o)"
+            "value" : "Nuvem"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nuvem (GPT-4o)"
+            "value" : "Nuvem"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Облако (GPT-4o)"
+            "value" : "Облако"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bulut (GPT-4o)"
+            "value" : "Bulut"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "云端 (GPT-4o)"
+            "value" : "云端"
           }
         }
       }
@@ -19991,82 +19915,6 @@
         }
       }
     },
-    "On-device analysis is unavailable, so the cloud engine was used. %@" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Analyse auf dem Gerät war nicht verfügbar, daher wurde die Cloud-Engine verwendet. %@"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "El análisis en el dispositivo no está disponible, así que se usó el motor en la nube. %@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "L'analyse sur l'appareil est indisponible ; le moteur cloud a donc été utilisé. %@"
-          }
-        },
-        "hy" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Սարքի վրա վերլուծությունը հասանելի չէ, ուստի օգտագործվեց ամպային շարժիչը։ %@"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "L'analisi sul dispositivo non è disponibile, quindi è stato usato il motore cloud. %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "オンデバイス解析を利用できないため、クラウドエンジンを使用しました。%@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "온디바이스 분석을 사용할 수 없어 클라우드 엔진을 사용했습니다. %@"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A análise no dispositivo não está disponível, então o mecanismo na nuvem foi usado. %@"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A análise no dispositivo não está disponível, por isso foi usado o motor na nuvem. %@"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Локальный анализ недоступен, поэтому был использован облачный движок. %@"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cihaz üzerinde analiz kullanılamıyor, bu nedenle bulut motoru kullanıldı. %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "设备端分析不可用，因此已使用云端引擎。%@"
-          }
-        }
-      }
-    },
     "On-device analysis timed out." : {
       "localizations" : {
         "de" : {
@@ -25307,6 +25155,82 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "截图由本设备上的 Apple 智能分析，永不上传。"
+          }
+        }
+      }
+    },
+    "Screenshots are uploaded and analyzed in the cloud." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshots werden hochgeladen und in der Cloud analysiert."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las capturas se suben y se analizan en la nube."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les captures sont envoyées et analysées dans le cloud."
+          }
+        },
+        "hy" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Սքրինշոթները վերբեռնվում և վերլուծվում են ամպում։"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gli screenshot vengono caricati e analizzati nel cloud."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンショットはアップロードされ、クラウドで解析されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스크린샷을 업로드하여 클라우드에서 분석합니다."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As capturas de tela são enviadas e analisadas na nuvem."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As capturas de ecrã são enviadas e analisadas na nuvem."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скриншоты загружаются и анализируются в облаке."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekran görüntüleri yüklenir ve bulutta analiz edilir."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "截图会上传并在云端分析。"
           }
         }
       }

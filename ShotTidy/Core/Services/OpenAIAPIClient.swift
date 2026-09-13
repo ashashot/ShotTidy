@@ -3,7 +3,7 @@
 //  ShotTidy
 //
 //  Screenshot analysis via Supabase Edge Function (analyze-screenshot).
-//  The Edge Function proxies the request to GPT-4o; the OpenAI key never
+//  The Edge Function proxies the request to OpenAI; the API key never
 //  leaves the server.
 //
 

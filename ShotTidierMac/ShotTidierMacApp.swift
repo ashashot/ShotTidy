@@ -118,9 +118,22 @@ struct ShotTidierMacApp: App {
                 .overlay {
                     if updateService.state == .required {
                         MacForceUpdateView()
+                    } else if analysisEngineSettings.isUnsupported {
+                        // The Mac app is on-device only: without Apple
+                        // Intelligence nothing can be analyzed, so the app
+                        // refuses to run until the model is available.
+                        MacUnsupportedDeviceView(
+                            availability: analysisEngineSettings.onDeviceAvailability,
+                            onCheckAgain: { analysisEngineSettings.refreshAvailability() }
+                        )
                     }
                 }
                 .animation(.easeInOut(duration: 0.3), value: updateService.state == .required)
+                .animation(.easeInOut(duration: 0.3), value: analysisEngineSettings.isUnsupported)
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                    // The user may have just enabled Apple Intelligence in System Settings.
+                    analysisEngineSettings.refreshAvailability()
+                }
                 .alert(
                     "Restart Required",
                     isPresented: .init(

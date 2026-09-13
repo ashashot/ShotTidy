@@ -3,7 +3,7 @@
 //  ShotTidy
 //
 //  Calls the Supabase `enrich-item` Edge Function, which uses
-//  GPT-4o with web search to fill in empty fields for a catalog item.
+//  OpenAI with web search to fill in empty fields for a catalog item.
 //
 
 import Foundation

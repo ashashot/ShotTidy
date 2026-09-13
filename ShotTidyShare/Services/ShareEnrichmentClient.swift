@@ -4,7 +4,7 @@
 //
 //  Self-contained enrichment client for the Share Extension.
 //  Mirrors EnrichmentAPIClient from the main app without importing any main-app types.
-//  Calls the Supabase `enrich-item` Edge Function (GPT-4o web search).
+//  Calls the Supabase `enrich-item` Edge Function (OpenAI web search).
 //
 
 import Foundation

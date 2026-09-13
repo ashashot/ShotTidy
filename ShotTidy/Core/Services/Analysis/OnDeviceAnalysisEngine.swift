@@ -16,7 +16,7 @@
 //
 //  Output mirrors the cloud path (`SupabaseFunctionClient.openAIItems`): an
 //  array of string dictionaries with the same keys, so callers map them into
-//  `DraftItem` / `PendingDraftItem` exactly like the GPT-4o response.
+//  `DraftItem` / `PendingDraftItem` exactly like the cloud response.
 //
 //  Cross-compiled into the Share Extension and the macOS app.
 //  Foundation + FoundationModels + Vision only — no UIKit/AppKit.

@@ -102,12 +102,13 @@ struct ImportView: View {
     private func startAnalysis() {
         let count = viewModel.selectedImages.count
         engineSettings.refreshAvailability()
-        let preferredEngine = engineSettings.selectedEngine
-        let plannedEngine = AnalysisEngineResolver.resolve(preferred: preferredEngine).engine
+        // The device decides the engine (on-device when Apple Intelligence can
+        // run, otherwise cloud). iOS always has one; `nil` is a Mac-only state.
+        guard let engine = engineSettings.engine else { return }
 
         // Quota gate — `countsTowardScreenshotQuota` is the hook a future
         // on-device-only tier flips; today both engines share the same limit.
-        if plannedEngine.countsTowardScreenshotQuota,
+        if engine.countsTowardScreenshotQuota,
            !usageManager.canAnalyzeScreenshots(count: count, isPro: subManager.isProActive) {
             showPaywall = true
             return
@@ -120,7 +121,7 @@ struct ImportView: View {
 
         Task {
             await viewModel.analyzeImages(
-                preferredEngine: preferredEngine,
+                engine: engine,
                 customCategories: customPayload,
                 allowNewCategory: subManager.isProActive
             )

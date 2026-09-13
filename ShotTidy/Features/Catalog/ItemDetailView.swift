@@ -3,7 +3,7 @@
 //  ShotTidy
 //
 //  Detailed view for a catalog item.
-//  Includes an "Enrich" button that uses GPT-4o web search to fill empty fields.
+//  Includes an "Enrich" button that uses OpenAI web search to fill empty fields.
 //
 
 import SwiftUI

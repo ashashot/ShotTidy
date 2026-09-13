@@ -33,8 +33,11 @@ struct MacSettingsView: View {
             // MARK: - Analysis engine
 
             Section {
-                ForEach(AnalysisEngine.allCases) { engine in
+                if let engine = engineSettings.engine {
                     engineRow(engine)
+                } else {
+                    Label("Apple Intelligence is required", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
                 }
             } header: {
                 Text("Analysis")
@@ -79,58 +82,33 @@ struct MacSettingsView: View {
 
     // MARK: - Analysis engine
 
-    /// Selectable row for one engine. The on-device option is disabled (with
-    /// the reason in the footer) when the model cannot run on this Mac.
+    /// Read-only row for the engine this Mac uses. The Mac app is on-device
+    /// only, so this is always Apple Intelligence when the app is usable.
     private func engineRow(_ engine: AnalysisEngine) -> some View {
-        let isSelected = engineSettings.selectedEngine == engine
-        let isAvailable = engine == .cloud || engineSettings.isOnDeviceAvailable
-        let isAllowed = engineSettings.isAllowed(engine, isPro: subscriptionManager.isProActive)
-        let enabled = isAvailable && isAllowed
-
-        return Button {
-            engineSettings.selectedEngine = engine
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: engine.iconName)
-                    .font(.system(size: 18))
-                    .foregroundStyle(enabled ? Color.blue : Color.secondary)
-                    .frame(width: 24)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(engine.localizedName)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(enabled ? Color.primary : Color.secondary)
-                    Text(engine.localizedSummary)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.blue)
-                }
+        HStack(spacing: 12) {
+            Image(systemName: engine.iconName)
+                .font(.system(size: 18))
+                .foregroundStyle(Color.blue)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(engine.localizedName)
+                    .font(.subheadline.weight(.medium))
+                Text(engine.localizedSummary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .padding(.vertical, 2)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .padding(.vertical, 2)
     }
 
     private var engineFooter: String {
-        let availability = engineSettings.onDeviceAvailability
-        if availability.isAvailable {
-            guard engineSettings.selectedEngine == .onDevice else {
-                return availability.localizedDescription
-            }
+        switch engineSettings.resolution {
+        case .onDevice(let availability):
             let privacy = "Screenshots are analyzed by Apple Intelligence on this Mac and are never uploaded."
             return availability.isTextOnly ? privacy + " " + availability.localizedDescription : privacy
+        case .cloud(let availability), .unsupported(let availability):
+            return "ShotTidier for Mac analyzes screenshots only with Apple Intelligence. \(availability.localizedDescription)"
         }
-        if engineSettings.selectedEngine == .onDevice {
-            return "On-device analysis is unavailable, so the cloud engine is used. \(availability.localizedDescription)"
-        }
-        return availability.localizedDescription
     }
 
     // MARK: - Active Pro section

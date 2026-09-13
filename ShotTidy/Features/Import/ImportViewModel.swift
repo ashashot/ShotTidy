@@ -31,8 +31,7 @@ final class ImportViewModel {
     var progressTotal = 0
     /// Warnings (individual screenshot failures, non-fatal)
     var warnings: [String] = []
-    /// Engine that processed (or is processing) the current batch. Defaults to
-    /// the policy default until `analyzeImages` resolves the user's choice.
+    /// Engine that processed (or is processing) the current batch.
     private(set) var activeEngine: AnalysisEngine = AnalysisEnginePolicy.defaultEngine
 
     // MARK: - Drafts (analysis result, pending confirmation)
@@ -63,11 +62,10 @@ final class ImportViewModel {
 
     // MARK: - Analysis
 
-    /// Analyzes the selected images with `preferredEngine`. When the on-device
-    /// model was requested but cannot run, the cloud engine is used and a
-    /// warning explains why; the engine actually used is in `activeEngine`.
+    /// Analyzes the selected images with `engine` — the one the device
+    /// resolved (`AnalysisEngineResolver`); there is no runtime fallback.
     func analyzeImages(
-        preferredEngine: AnalysisEngine = AnalysisEnginePolicy.defaultEngine,
+        engine: AnalysisEngine,
         customCategories: [CategoryPromptInfo] = [],
         allowNewCategory: Bool = false
     ) async {
@@ -84,15 +82,7 @@ final class ImportViewModel {
         sessionScreenshotIds = []
         didSaveThisSession = false
 
-        let resolution = AnalysisEngineResolver.resolve(preferred: preferredEngine)
-        let engine = resolution.engine
         activeEngine = engine
-        if let reason = resolution.fallbackReason {
-            warnings.append(String(
-                localized: "On-device analysis is unavailable, so the cloud engine was used. \(reason.localizedDescription)",
-                bundle: AppLocale.bundle
-            ))
-        }
 
         // Prepare all jobs up front. Each image is resized once to the API size;
         // the thumbnail is derived from that smaller image instead of the original.

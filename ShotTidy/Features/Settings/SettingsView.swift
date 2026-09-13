@@ -170,7 +170,7 @@ struct SettingsView: View {
                 // MARK: - Analysis engine
 
                 Section {
-                    ForEach(AnalysisEngine.allCases) { engine in
+                    if let engine = engineSettings.engine {
                         engineRow(engine)
                     }
                 } header: {
@@ -376,59 +376,37 @@ struct SettingsView: View {
 
     // MARK: - Analysis engine
 
-    /// Selectable row for one engine. The on-device option is disabled (but
-    /// still visible, with the reason in the footer) when the model cannot run.
+    /// Read-only row describing the engine this device uses. The device
+    /// decides (Apple Intelligence → on-device, otherwise cloud); the footer
+    /// explains why.
     private func engineRow(_ engine: AnalysisEngine) -> some View {
-        let isSelected = engineSettings.selectedEngine == engine
-        let isAvailable = engine == .cloud || engineSettings.isOnDeviceAvailable
-        let isAllowed = engineSettings.isAllowed(engine, isPro: subManager.isProActive)
-        let enabled = isAvailable && isAllowed
-
-        return Button {
-            engineSettings.selectedEngine = engine
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: engine.iconName)
-                    .font(.system(size: 18))
-                    .foregroundStyle(enabled ? Color.blue : Color.secondary)
-                    .frame(width: 24)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(engine.localizedName)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(enabled ? Color.primary : Color.secondary)
-                    Text(engine.localizedSummary)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.blue)
-                }
+        HStack(spacing: 12) {
+            Image(systemName: engine.iconName)
+                .font(.system(size: 18))
+                .foregroundStyle(Color.blue)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(engine.localizedName)
+                    .font(.subheadline.weight(.medium))
+                Text(engine.localizedSummary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .padding(.vertical, 2)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .padding(.vertical, 2)
     }
 
     private var engineFooter: String {
-        let availability = engineSettings.onDeviceAvailability
-        if availability.isAvailable {
-            guard engineSettings.selectedEngine == .onDevice else {
-                return availability.localizedDescription
-            }
+        switch engineSettings.resolution {
+        case .onDevice(let availability):
             let privacy = String(localized: "Screenshots are analyzed by Apple Intelligence on this device and are never uploaded.", bundle: AppLocale.bundle)
             // Text mode deserves a heads-up: results are weaker than full image analysis.
             return availability.isTextOnly ? privacy + " " + availability.localizedDescription : privacy
-        }
-        if engineSettings.selectedEngine == .onDevice {
+        case .cloud(let availability):
             return String(localized: "On-device analysis is unavailable, so the cloud engine is used. \(availability.localizedDescription)", bundle: AppLocale.bundle)
+        case .unsupported(let availability):
+            return availability.localizedDescription
         }
-        return availability.localizedDescription
     }
 
     // MARK: - App version

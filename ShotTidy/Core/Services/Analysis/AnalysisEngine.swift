@@ -4,15 +4,19 @@
 //
 //  Which backend extracts catalog items from a screenshot.
 //
-//  Foundation-only and cross-compiled into the Share Extension so both
-//  processes honor the same user choice (persisted in the App Group defaults).
+//  The engine is decided by the device, not by the user:
 //
-//  Tiering hook: `AnalysisEnginePolicy` is the single place to gate engines by
-//  plan later (e.g. an "on-device only" tier vs. "on-device + cloud"). Today
-//  every engine is allowed on every plan and both count toward the same
-//  screenshot quota, so the business rules are unchanged.
+//  • iPhone / iPad that can run Apple Intelligence → on-device model.
+//  • iPhone / iPad that cannot → cloud (OpenAI via the Edge Function).
+//  • Mac → on-device only; a Mac that cannot run the model is unsupported and
+//    the app refuses to work there (see `MacUnsupportedDeviceView`).
 //
-//  Also compiled into the macOS app — Foundation only, no UIKit/AppKit.
+//  Plans are unaffected: both engines are allowed on every plan and both count
+//  toward the same screenshot quota. `AnalysisEnginePolicy` stays the single
+//  place to change that later.
+//
+//  Foundation-only and cross-compiled into the Share Extension, the Safari
+//  extension and the macOS app so every process reaches the same decision.
 //
 
 import Foundation
@@ -20,7 +24,7 @@ import Foundation
 // MARK: - AnalysisEngine
 
 enum AnalysisEngine: String, CaseIterable, Identifiable, Codable, Sendable {
-    /// GPT-4o via the Supabase Edge Function (the original implementation).
+    /// OpenAI via the Supabase Edge Function.
     case cloud
     /// Apple Intelligence on-device model via Foundation Models
     /// (image mode on iOS/macOS 27+, OCR text mode on iOS/macOS 26).
@@ -30,16 +34,16 @@ enum AnalysisEngine: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var localizedName: String {
         switch self {
-        case .cloud:    return String(localized: "Cloud (GPT-4o)", bundle: AppLocale.bundle)
+        case .cloud:    return String(localized: "Cloud", bundle: AppLocale.bundle)
         case .onDevice: return String(localized: "On-Device (Apple Intelligence)", bundle: AppLocale.bundle)
         }
     }
 
-    /// One-line explanation shown under the option in Settings.
+    /// One-line explanation shown under the engine in Settings.
     var localizedSummary: String {
         switch self {
         case .cloud:
-            return String(localized: "Best accuracy. Screenshots are uploaded for analysis.", bundle: AppLocale.bundle)
+            return String(localized: "Screenshots are uploaded and analyzed in the cloud.", bundle: AppLocale.bundle)
         case .onDevice:
             return String(localized: "Private and works offline. Screenshots never leave your device.", bundle: AppLocale.bundle)
         }
@@ -58,13 +62,22 @@ enum AnalysisEngine: String, CaseIterable, Identifiable, Codable, Sendable {
     var countsTowardScreenshotQuota: Bool { true }
 }
 
-// MARK: - Plan policy (future tiers)
+// MARK: - Plan / platform policy
 
 enum AnalysisEnginePolicy {
-    /// Engine preferred when the user has never made a choice. On-device is
-    /// the default; devices that cannot run it silently use the cloud (see
-    /// `AnalysisEngineResolver`) — no warning is shown for an implicit default.
+    /// Engine every device is expected to use when it can run it.
     static let defaultEngine: AnalysisEngine = .onDevice
+
+    /// Whether a device that cannot run the on-device model may analyze in the
+    /// cloud instead. iPhone/iPad: yes. Mac: no — the Mac app requires Apple
+    /// Intelligence and is unsupported without it.
+    static var allowsCloudFallback: Bool {
+        #if os(macOS)
+        return false
+        #else
+        return true
+        #endif
+    }
 
     /// Whether the plan allows this engine. Always true today; a future
     /// "on-device only" tier would return false for `.cloud` on that plan.
@@ -77,34 +90,49 @@ enum AnalysisEnginePolicy {
 
 enum AnalysisEngineResolver {
 
-    /// Outcome of picking an engine for a run.
-    struct Resolution: Equatable {
-        /// Engine that will actually process the screenshots.
-        let engine: AnalysisEngine
-        /// Non-nil when on-device was requested but is not usable right now,
-        /// so the cloud engine is used instead.
-        let fallbackReason: OnDeviceAnalysisAvailability?
-    }
+    /// What this device does with a screenshot. Carries the on-device
+    /// availability so the UI can explain the outcome.
+    enum Resolution: Equatable, Sendable {
+        /// The on-device model runs (image or OCR text mode).
+        case onDevice(OnDeviceAnalysisAvailability)
+        /// The device cannot run the on-device model; the cloud does the work.
+        case cloud(OnDeviceAnalysisAvailability)
+        /// The device cannot run the on-device model and the platform has no
+        /// cloud fallback (Mac) — analysis is impossible here.
+        case unsupported(OnDeviceAnalysisAvailability)
 
-    /// Honors the preferred engine when it can run; otherwise falls back to the
-    /// cloud and reports why, so the UI can tell the user.
-    static func resolve(preferred: AnalysisEngine) -> Resolution {
-        switch preferred {
-        case .cloud:
-            return Resolution(engine: .cloud, fallbackReason: nil)
-        case .onDevice:
-            let availability = OnDeviceAnalysisEngine.availability
-            if availability.isAvailable {
-                return Resolution(engine: .onDevice, fallbackReason: nil)
+        /// Engine to run, or `nil` when the device is unsupported.
+        var engine: AnalysisEngine? {
+            switch self {
+            case .onDevice:    return .onDevice
+            case .cloud:       return .cloud
+            case .unsupported: return nil
             }
-            return Resolution(engine: .cloud, fallbackReason: availability)
+        }
+
+        var availability: OnDeviceAnalysisAvailability {
+            switch self {
+            case .onDevice(let a), .cloud(let a), .unsupported(let a): return a
+            }
+        }
+
+        var isUnsupported: Bool {
+            if case .unsupported = self { return true }
+            return false
         }
     }
 
-    /// Engine to use when the user never chose one: the policy default if it
-    /// can run here, otherwise the cloud — quietly, without a fallback notice.
-    static func implicitEngine() -> AnalysisEngine {
-        resolve(preferred: AnalysisEnginePolicy.defaultEngine).engine
+    /// Decides the engine from the current state of the system model. Cheap;
+    /// re-check before every run because Apple Intelligence can be toggled or
+    /// finish downloading while the app is open.
+    static func resolve() -> Resolution {
+        let availability = OnDeviceAnalysisEngine.availability
+        if availability.isAvailable {
+            return .onDevice(availability)
+        }
+        return AnalysisEnginePolicy.allowsCloudFallback
+            ? .cloud(availability)
+            : .unsupported(availability)
     }
 }
 
@@ -117,30 +145,4 @@ struct AnalysisCategoryHint: Sendable, Equatable {
     let key: String
     let name: String
     let hint: String
-}
-
-// MARK: - Persistence (App Group)
-
-extension AppGroupManager {
-    private nonisolated static let analysisEngineKey = "settings.analysisEngine"
-
-    /// Persists the engine chosen in Settings so the Share Extension uses it too.
-    nonisolated static func saveAnalysisEngine(_ engine: AnalysisEngine) {
-        sharedDefaults.set(engine.rawValue, forKey: analysisEngineKey)
-    }
-
-    /// Engine explicitly chosen in Settings, or `nil` when the user never chose.
-    nonisolated static func loadStoredAnalysisEngine() -> AnalysisEngine? {
-        guard
-            let raw = sharedDefaults.string(forKey: analysisEngineKey),
-            let engine = AnalysisEngine(rawValue: raw)
-        else { return nil }
-        return engine
-    }
-
-    /// Engine to run with: the stored choice, or the implicit default resolved
-    /// for this device (on-device when it can run, else cloud).
-    nonisolated static func loadAnalysisEngine() -> AnalysisEngine {
-        loadStoredAnalysisEngine() ?? AnalysisEngineResolver.implicitEngine()
-    }
 }

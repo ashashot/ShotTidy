@@ -5,11 +5,10 @@
 //  Native side of the Safari Web Extension. Receives messages sent from
 //  background.js via browser.runtime.sendNativeMessage and routes them:
 //
-//    getStatus   → Pro flag + custom categories + analysis engine from the App Group
-//    analyzeText → on-device Foundation Models when the user's engine choice
-//                  (App Group) is on-device and the Mac can run it, otherwise
-//                  the analyze-text Edge Function (per-user JWT via
-//                  SupabaseAuthManager); returns extracted items
+//    getStatus   → Pro flag + custom categories + analysis engine
+//    analyzeText → on-device Foundation Models (the Mac app is on-device
+//                  only; a Mac without Apple Intelligence gets an error);
+//                  returns extracted items
 //    saveItems   → appends PendingDraftItems to the App Group inbox and
 //                  notifies the running Mac app via DistributedNotificationCenter
 //
@@ -75,16 +74,17 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             "isPro": AppGroupManager.loadIsProStatus(),
             "builtinCategories": builtinCategories,
             "customCategories": customCategories,
-            "analysisEngine": resolvedEngine().rawValue,
+            "analysisEngine": AnalysisEngineResolver.resolve().engine?.rawValue ?? "unsupported",
         ]
     }
 
-    // MARK: - Engine choice
-
-    /// The user's Settings choice (shared through the App Group) when the
-    /// on-device model can run on this Mac, otherwise the cloud.
-    private static func resolvedEngine() -> AnalysisEngine {
-        AnalysisEngineResolver.resolve(preferred: AppGroupManager.loadAnalysisEngine()).engine
+    /// Error payload for a Mac that cannot run the on-device model.
+    private static func unsupportedPayload(_ availability: OnDeviceAnalysisAvailability) -> [String: Any] {
+        [
+            "ok": false,
+            "code": "unsupported_device",
+            "error": "ShotTidier requires Apple Intelligence on this Mac. \(availability.localizedDescription)",
+        ]
     }
 
     // MARK: - analyzeText
@@ -106,14 +106,14 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             return ["ok": false, "error": "No text selected."]
         }
 
-        switch resolvedEngine() {
-        case .onDevice: return await analyzeTextOnDevice(text, message: message)
-        case .cloud:    return await analyzeTextInCloud(text, message: message)
+        // The Mac app is on-device only — no cloud path on this platform.
+        guard case .onDevice = AnalysisEngineResolver.resolve() else {
+            return unsupportedPayload(OnDeviceAnalysisEngine.availability)
         }
+        return await analyzeTextOnDevice(text, message: message)
     }
 
-    /// Apple's on-device model — nothing leaves the Mac. Same output shape as
-    /// the cloud path so the page script does not care which one ran.
+    /// Apple's on-device model — nothing leaves the Mac.
     private static func analyzeTextOnDevice(_ text: String, message: [String: Any]) async -> [String: Any] {
         let hints = AppGroupManager.loadCustomCategories().map {
             AnalysisCategoryHint(key: $0.key, name: $0.name, hint: $0.hint)
@@ -128,48 +128,11 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             )
             return ["ok": true, "items": items, "engine": AnalysisEngine.onDevice.rawValue]
         } catch let error as OnDeviceAnalysisError {
-            if case .unavailable = error {
-                // Model went away between the check and the call — use the cloud.
-                return await analyzeTextInCloud(text, message: message)
+            if case .unavailable(let availability) = error {
+                // Model went away between the check and the call.
+                return unsupportedPayload(availability)
             }
             return ["ok": false, "error": error.localizedDescription]
-        } catch {
-            return ["ok": false, "error": error.localizedDescription]
-        }
-    }
-
-    private static func analyzeTextInCloud(_ text: String, message: [String: Any]) async -> [String: Any] {
-        guard let url = URL(string: "\(Config.supabaseURL)/functions/v1/analyze-text") else {
-            return ["ok": false, "error": "Invalid endpoint URL."]
-        }
-
-        var body: [String: Any] = [
-            "text": String(text.prefix(20_000)),
-            "sourceURL": message["url"] as? String ?? "",
-            "pageTitle": message["title"] as? String ?? "",
-        ]
-        let custom = AppGroupManager.loadCustomCategories()
-        if !custom.isEmpty {
-            body["customCategories"] = custom.map {
-                ["key": $0.key, "name": $0.name, "hint": $0.hint]
-            }
-        }
-
-        do {
-            let data = try await SupabaseFunctionClient.postJSON(body, to: url)
-            let items = try SupabaseFunctionClient.openAIItems(from: data)
-            return ["ok": true, "items": items, "engine": AnalysisEngine.cloud.rawValue]
-        } catch let transportError as SupabaseFunctionClient.TransportError {
-            switch transportError {
-            case .quotaExceeded(let message):
-                return ["ok": false, "code": "quota_exceeded", "error": message]
-            case .network(let err):
-                return ["ok": false, "error": "Network error: \(err.localizedDescription)"]
-            case .http(let code, let message):
-                return ["ok": false, "error": message ?? "Server error (\(code))."]
-            case .refused, .emptyResponse, .decodingFailed:
-                return ["ok": false, "error": "Could not parse the AI response. Please try again."]
-            }
         } catch {
             return ["ok": false, "error": error.localizedDescription]
         }
