@@ -152,12 +152,6 @@ struct MacSettingsView: View {
                 }
             }
             .disabled(syncMonitor.isSyncing)
-
-            if subscriptionManager.needsRestartForSyncChange {
-                Label("Restart the app to apply sync changes.", systemImage: "exclamationmark.triangle")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-            }
         }
     }
 

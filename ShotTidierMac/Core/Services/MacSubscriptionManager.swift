@@ -28,11 +28,6 @@ final class MacSubscriptionManager {
     // MARK: - State
 
     private(set) var isProActive: Bool = false
-    /// True until the app is relaunched after a sync-config change —
-    /// drives the persistent hint in Settings. Not cleared by the alert.
-    private(set) var needsRestartForSyncChange = false
-    /// Drives the one-time alert; cleared when the user acknowledges it.
-    private(set) var showRestartAlert = false
     private(set) var products: [Product] = []
     private(set) var isPurchasing = false
     private(set) var isRestoring = false
@@ -70,10 +65,6 @@ final class MacSubscriptionManager {
         // reads proProduct, which is only available after products load.
         await loadProducts()
         await refreshSubscriptionStatus()
-    }
-
-    func acknowledgeRestartPrompt() {
-        showRestartAlert = false
     }
 
     // MARK: - Product loading
@@ -228,17 +219,26 @@ final class MacSubscriptionManager {
             linkSubscriptionOnServer(jws: jws)
         }
 
-        let containerWasConfiguredAsPro = Self.loadIsProStatus()
+        // No signal from StoreKit at all: entitlements came back empty and the
+        // product-status fallback could not run because the product list never
+        // loaded (offline, App Store unreachable). Keep the last known status
+        // rather than downgrading Pro to Free — a false flip here would tear
+        // down iCloud sync (and flip it back on the next launch) for no reason.
+        if !active, totalEntitlements == 0, products.isEmpty {
+            #if DEBUG
+            diagnostic += "\nno StoreKit data — keeping previous status"
+            #endif
+            return
+        }
+
+        // Persist for the next launch (ModelContainer reads this before StoreKit
+        // answers). ShotTidierMacApp observes isProActive and rebuilds the
+        // container in place when the value changes.
         isProActive = active
         UserDefaults.standard.set(active, forKey: Self.proStatusKey)
         // Mirror into the App Group so the Safari extension can read the Pro
         // flag (its process cannot see this app's standard defaults).
         AppGroupManager.saveIsProStatus(active)
-
-        if containerWasConfiguredAsPro != active {
-            needsRestartForSyncChange = true
-            showRestartAlert = true
-        }
     }
 
     // MARK: - Persisted status (read before ModelContainer is created)

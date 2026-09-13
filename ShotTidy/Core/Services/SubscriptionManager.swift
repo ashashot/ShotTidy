@@ -60,6 +60,9 @@ final class SubscriptionManager {
     // MARK: - Init
 
     init() {
+        // Start from the persisted status so Pro UI (and the container that was
+        // built from the same flag) do not flash Free until StoreKit answers.
+        isProActive = AppGroupManager.loadIsProStatus()
         startTransactionListener()
     }
     // Note: SubscriptionManager lives for the entire app lifetime (held by @State in ShotTidyApp),
@@ -167,24 +170,21 @@ final class SubscriptionManager {
             linkSubscriptionOnServer(jws: jws)
         }
 
-        // Read the persisted Pro status BEFORE updating it — this is the value
-        // ModelContainer was configured with at launch, so it reflects whether
-        // CloudKit sync is currently active in the running container.
-        let containerWasConfiguredAsPro = AppGroupManager.loadIsProStatus()
+        // No signal from StoreKit at all: entitlements came back empty and the
+        // product-status fallback could not run because the product list never
+        // loaded (offline, App Store unreachable). Keep the last known status
+        // rather than downgrading Pro to Free — a false flip here would tear
+        // down iCloud sync (and flip it back on the next launch) for no reason.
+        if !active, totalEntitlements == 0, products.isEmpty {
+            lastDiagnostic += " — no StoreKit data, keeping previous status"
+            return
+        }
+
+        // Persist for the next launch (ModelContainer reads this before StoreKit
+        // answers) and for the Share Extension. ShotTidyApp observes isProActive
+        // and rebuilds the container in place when the value changes.
         isProActive = active
         AppGroupManager.saveIsProStatus(active)
-
-        if containerWasConfiguredAsPro != active {
-            needsRestartForSyncChange = true
-        }
-    }
-
-    /// Set to true when Pro status changes mid-session.
-    /// The UI should prompt the user to restart to apply the iCloud sync change.
-    private(set) var needsRestartForSyncChange = false
-
-    func acknowledgeRestartPrompt() {
-        needsRestartForSyncChange = false
     }
 
     // MARK: - Private helpers

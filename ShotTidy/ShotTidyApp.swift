@@ -18,6 +18,17 @@ struct ShotTidyApp: App {
     @State private var localizationManager = LocalizationManager()
     @State private var analysisEngineSettings = AnalysisEngineSettings()
 
+    // MARK: - SwiftData container
+
+    /// The live container. Rebuilt in place when the Pro status changes so
+    /// iCloud sync switches on/off without restarting the app.
+    @State private var modelContainer: ModelContainer
+    /// The Pro state the current container was built for (CloudKit on/off).
+    @State private var containerIsPro: Bool
+    /// Bumped on every container swap so the whole view tree (and its
+    /// `@Query` / `modelContext` bindings) is recreated against the new container.
+    @State private var containerGeneration = 0
+
     // MARK: - Init
 
     init() {
@@ -26,11 +37,15 @@ struct ShotTidyApp: App {
 
         // Remove the legacy PendingImages directory left over from v1 of the Share Extension flow.
         AppGroupManager.purgeLegacyPendingImages()
+
+        let isPro = AppGroupManager.loadIsProStatus()
+        _modelContainer = State(initialValue: Self.makeModelContainer(isPro: isPro))
+        _containerIsPro = State(initialValue: isPro)
     }
 
-    // MARK: - SwiftData container
-
-    var sharedModelContainer: ModelContainer = {
+    /// Builds the container for the shared App Group store. Pro tier gets a
+    /// CloudKit-backed configuration; everything else stays local-only.
+    private static func makeModelContainer(isPro: Bool) -> ModelContainer {
         let schema = Schema([
             Screenshot.self,
             CatalogItem.self,
@@ -52,8 +67,6 @@ struct ShotTidyApp: App {
                 try? FileManager.default.copyItem(at: src, to: dst)
             }
         }
-
-        let isPro = AppGroupManager.loadIsProStatus()
 
         if isPro {
             // Pro tier: CloudKit sync enabled.
@@ -84,13 +97,30 @@ struct ShotTidyApp: App {
         }
 
         fatalError("Failed to create ModelContainer")
-    }()
+    }
+
+    /// Swaps the container when the Pro status no longer matches the one the
+    /// container was built for. The store file stays the same — only the
+    /// CloudKit configuration changes — so this is what a restart used to do,
+    /// minus the restart.
+    private func applySyncConfigurationIfNeeded() {
+        Task { @MainActor in
+            // Let the paywall's dismiss animation finish before the view tree is rebuilt.
+            try? await Task.sleep(for: .milliseconds(600))
+            let isPro = subscriptionManager.isProActive
+            guard isPro != containerIsPro else { return }
+            modelContainer = Self.makeModelContainer(isPro: isPro)
+            containerIsPro = isPro
+            containerGeneration += 1
+        }
+    }
 
     // MARK: - Scene
 
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .id(containerGeneration)
                 .environment(subscriptionManager)
                 .environment(usageManager)
                 .environment(categoryStore)
@@ -105,26 +135,8 @@ struct ShotTidyApp: App {
                     // Check remote config for a required update (runs in background).
                     await updateService.check()
                 }
-                .alert(
-                    "Restart Required",
-                    isPresented: .init(
-                        get: { subscriptionManager.needsRestartForSyncChange },
-                        set: { _ in subscriptionManager.acknowledgeRestartPrompt() }
-                    )
-                ) {
-                    Button("Restart Now") {
-                        subscriptionManager.acknowledgeRestartPrompt()
-                        exit(0)
-                    }
-                    Button("Later", role: .cancel) {
-                        subscriptionManager.acknowledgeRestartPrompt()
-                    }
-                } message: {
-                    if subscriptionManager.isProActive {
-                        Text("iCloud sync has been enabled. Tap \"Restart Now\" to apply the change — the app will close and reopen automatically.")
-                    } else {
-                        Text("iCloud sync has been disabled. Tap \"Restart Now\" to apply the change.")
-                    }
+                .onChange(of: subscriptionManager.isProActive) { _, _ in
+                    applySyncConfigurationIfNeeded()
                 }
                 // Force update overlay — covers the entire UI, cannot be dismissed.
                 .overlay {
@@ -136,6 +148,6 @@ struct ShotTidyApp: App {
                 }
                 .animation(.easeInOut(duration: 0.3), value: updateService.state == .required)
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(modelContainer)
     }
 }

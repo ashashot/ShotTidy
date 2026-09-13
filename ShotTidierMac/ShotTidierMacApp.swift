@@ -22,7 +22,25 @@ struct ShotTidierMacApp: App {
     @State private var showImportBanner = false
     @State private var bannerDismissTask: Task<Void, Never>?
 
-    var sharedModelContainer: ModelContainer = {
+    // MARK: - SwiftData container
+
+    /// The live container. Rebuilt in place when the Pro status changes so
+    /// iCloud sync switches on/off without restarting the app.
+    @State private var modelContainer: ModelContainer
+    /// The Pro state the current container was built for (CloudKit on/off).
+    @State private var containerIsPro: Bool
+    /// Bumped on every container swap so the window's view tree (and its
+    /// `@Query` / `modelContext` bindings) is recreated against the new container.
+    @State private var containerGeneration = 0
+
+    init() {
+        let isPro = MacSubscriptionManager.loadIsProStatus()
+        _modelContainer = State(initialValue: Self.makeModelContainer(isPro: isPro))
+        _containerIsPro = State(initialValue: isPro)
+    }
+
+    /// Pro tier gets a CloudKit-backed configuration; everything else stays local-only.
+    private static func makeModelContainer(isPro: Bool) -> ModelContainer {
         let schema = Schema([
             Screenshot.self,
             CatalogItem.self,
@@ -31,8 +49,6 @@ struct ShotTidierMacApp: App {
         let storeURL = URL.applicationSupportDirectory
             .appending(path: "ShotTidierMac", directoryHint: .isDirectory)
             .appending(path: "ShotTidy.sqlite")
-
-        let isPro = MacSubscriptionManager.loadIsProStatus()
 
         if isPro {
             // Pro tier: CloudKit sync enabled — same container as iOS.
@@ -62,7 +78,24 @@ struct ShotTidierMacApp: App {
             fatalError("Failed to create ModelContainer")
         }
         return container
-    }()
+    }
+
+    /// Swaps the container when the Pro status no longer matches the one the
+    /// container was built for. The store file stays the same — only the
+    /// CloudKit configuration changes — so this is what a restart used to do,
+    /// minus the restart.
+    private func applySyncConfigurationIfNeeded() {
+        Task { @MainActor in
+            let isPro = subscriptionManager.isProActive
+            guard isPro != containerIsPro else { return }
+            let container = Self.makeModelContainer(isPro: isPro)
+            modelContainer = container
+            containerIsPro = isPro
+            containerGeneration += 1
+            // The inbox writes through a stored context — point it at the new store.
+            extensionInbox.start(context: container.mainContext)
+        }
+    }
 
     /// Transient confirmation shown when the Safari extension delivers items.
     private var importBanner: some View {
@@ -84,6 +117,7 @@ struct ShotTidierMacApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .id(containerGeneration)
                 .environment(categoryStore)
                 .environment(subscriptionManager)
                 .environment(syncMonitor)
@@ -92,7 +126,7 @@ struct ShotTidierMacApp: App {
                 .task {
                     // Import items saved by the Safari extension (also subscribes
                     // to live updates while the app is running).
-                    extensionInbox.start(context: sharedModelContainer.mainContext)
+                    extensionInbox.start(context: modelContainer.mainContext)
                     // The update check is independent — run it concurrently with
                     // the StoreKit launch sequence.
                     async let updateCheck: Void = updateService.check()
@@ -134,29 +168,16 @@ struct ShotTidierMacApp: App {
                     // The user may have just enabled Apple Intelligence in System Settings.
                     analysisEngineSettings.refreshAvailability()
                 }
-                .alert(
-                    "Restart Required",
-                    isPresented: .init(
-                        get: { subscriptionManager.showRestartAlert },
-                        set: { _ in subscriptionManager.acknowledgeRestartPrompt() }
-                    )
-                ) {
-                    Button("OK") {
-                        subscriptionManager.acknowledgeRestartPrompt()
-                    }
-                } message: {
-                    if subscriptionManager.isProActive {
-                        Text("iCloud sync has been enabled. Please restart the app to start syncing your catalog across devices.")
-                    } else {
-                        Text("iCloud sync has been disabled. Please restart the app to apply changes.")
-                    }
+                .onChange(of: subscriptionManager.isProActive) { _, _ in
+                    applySyncConfigurationIfNeeded()
                 }
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(modelContainer)
 
         Settings {
             MacSettingsView()
-                .modelContainer(sharedModelContainer)
+                .id(containerGeneration)
+                .modelContainer(modelContainer)
                 .environment(subscriptionManager)
                 .environment(syncMonitor)
                 .environment(usageManager)
