@@ -579,7 +579,7 @@
 				ARCHS = arm64;
 				CODE_SIGN_ENTITLEMENTS = ShotTidySafariExtension/ShotTidySafariExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				ENABLE_HARDWARE_CHECKED_POINTER_ARITHMETIC_SLICE = YES;
@@ -613,7 +613,7 @@
 				ARCHS = arm64;
 				CODE_SIGN_ENTITLEMENTS = ShotTidySafariExtension/ShotTidySafariExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				ENABLE_HARDWARE_CHECKED_POINTER_ARITHMETIC_SLICE = YES;
@@ -648,7 +648,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = ShotTidyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				ENABLE_HARDWARE_CHECKED_POINTER_ARITHMETIC_SLICE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -681,7 +681,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = ShotTidyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				ENABLE_HARDWARE_CHECKED_POINTER_ARITHMETIC_SLICE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -714,7 +714,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ShotTidy/ShotTidy.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				ENABLE_HARDWARE_CHECKED_POINTER_ARITHMETIC_SLICE = YES;
 				ENABLE_PREVIEWS = YES;
@@ -727,6 +727,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = arm64;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 26;
@@ -754,7 +755,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ShotTidy/ShotTidy.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				ENABLE_HARDWARE_CHECKED_POINTER_ARITHMETIC_SLICE = YES;
 				ENABLE_PREVIEWS = YES;
@@ -767,6 +768,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = arm64;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 26;
@@ -919,7 +921,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = ShotTidyShare/ShotTidyShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				ENABLE_HARDWARE_CHECKED_POINTER_ARITHMETIC_SLICE = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -950,7 +952,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = ShotTidyShare/ShotTidyShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				ENABLE_HARDWARE_CHECKED_POINTER_ARITHMETIC_SLICE = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -983,7 +985,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ShotTidierMac/ShotTidierMac.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				ENABLE_HARDWARE_CHECKED_POINTER_ARITHMETIC_SLICE = YES;
@@ -1015,7 +1017,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ShotTidierMac/ShotTidierMac.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = FK4KSS322U;
 				ENABLE_HARDWARE_CHECKED_POINTER_ARITHMETIC_SLICE = YES;
