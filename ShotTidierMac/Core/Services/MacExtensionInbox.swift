@@ -30,7 +30,9 @@ final class MacExtensionInbox {
 
     private var modelContext: ModelContext?
     // nonisolated(unsafe): only mutated on the main actor (start), read in deinit.
-    nonisolated(unsafe) private var observer: NSObjectProtocol?
+    // @ObservationIgnored keeps it a real stored property — under @Observable the
+    // macro-generated accessor would otherwise make nonisolated(unsafe) a no-op.
+    @ObservationIgnored nonisolated(unsafe) private var observer: NSObjectProtocol?
 
     deinit {
         if let observer {

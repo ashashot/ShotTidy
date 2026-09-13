@@ -23027,83 +23027,6 @@
         }
       }
     },
-    "Pro Plan" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pro-Plan"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plan Pro"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Formule Pro"
-          }
-        },
-        "hy" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pro պլան"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Piano Pro"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Proプラン"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pro 플랜"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plano Pro"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plano Pro"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Тариф Pro"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pro Plan"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pro 版"
-          }
-        }
-      },
-      "extractionState" : "stale"
-    },
     "Product is not available yet. Please try again in a moment." : {
       "localizations" : {
         "de" : {
@@ -28271,83 +28194,6 @@
           }
         }
       }
-    },
-    "Subscription renews automatically each month. Manage or cancel anytime in your App Store account settings." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das Abo verlängert sich automatisch jeden Monat. Verwalte oder kündige es jederzeit in deinen App Store-Kontoeinstellungen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La suscripción se renueva automáticamente cada mes. Gestiónala o cancélala cuando quieras en los ajustes de tu cuenta de App Store."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "L'abonnement se renouvelle automatiquement chaque mois. Gérez-le ou annulez-le à tout moment dans les réglages de votre compte App Store."
-          }
-        },
-        "hy" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Բաժանորդագրությունն ինքնաշխատ երկարաձգվում է ամեն ամիս։ Կառավարեք կամ չեղարկեք ցանկացած պահի App Store հաշվի կարգավորումներում։"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "L'abbonamento si rinnova automaticamente ogni mese. Gestiscilo o annullalo in qualsiasi momento nelle impostazioni del tuo account App Store."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サブスクリプションは毎月自動更新されます。App Storeのアカウント設定からいつでも管理・キャンセルできます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "구독은 매월 자동으로 갱신됩니다. App Store 계정 설정에서 언제든지 관리하거나 취소할 수 있습니다."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A assinatura é renovada automaticamente todo mês. Gerencie ou cancele quando quiser nas configurações da sua conta da App Store."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A subscrição é renovada automaticamente todos os meses. Faça a gestão ou cancele quando quiser nas definições da sua conta da App Store."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Подписка автоматически продлевается каждый месяц. Управляйте ею или отмените в любое время в настройках учётной записи App Store."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abonelik her ay otomatik olarak yenilenir. App Store hesap ayarlarınızdan istediğiniz zaman yönetebilir veya iptal edebilirsiniz."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "订阅将每月自动续订。您可以随时在 App Store 账户设置中管理或取消。"
-          }
-        }
-      },
-      "extractionState" : "stale"
     },
     "Subtitle" : {
       "localizations" : {
@@ -34585,78 +34431,78 @@
         }
       }
     },
-    "Save %lld%%" : {
+    "Save %@" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld %% sparen"
+            "value" : "%@ sparen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ahorra un %lld%%"
+            "value" : "Ahorra un %@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Économisez %lld %%"
+            "value" : "Économisez %@"
           }
         },
         "hy" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Խնայեք %lld%%"
+            "value" : "Խնայեք %@"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Risparmi il %lld%%"
+            "value" : "Risparmi il %@"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld%%お得"
+            "value" : "%@お得"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld%% 할인"
+            "value" : "%@ 할인"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Economize %lld%%"
+            "value" : "Economize %@"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Poupe %lld%%"
+            "value" : "Poupe %@"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Выгода %lld%%"
+            "value" : "Выгода %@"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%%%lld tasarruf"
+            "value" : "%@ tasarruf"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "节省 %lld%%"
+            "value" : "节省 %@"
           }
         }
       }

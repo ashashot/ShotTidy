@@ -14,7 +14,9 @@
 
 import Foundation
 
-enum AppLocale {
+// Only reads UserDefaults and Bundle (both thread-safe), so it is usable from
+// any isolation — e.g. the on-device engine builds error messages off the main actor.
+nonisolated enum AppLocale {
     private static let groupID = "group.com.mbx.ShotTidier"
     private static let overrideKey = "settings.languageOverride"
 

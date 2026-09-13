@@ -15,6 +15,7 @@ struct PaywallView: View {
     @Environment(SubscriptionManager.self) private var subManager
     @Environment(UsageManager.self) private var usageManager
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
 
     @State private var selectedPlan: ProPlan = .yearly
     @State private var isPurchasing = false
@@ -287,21 +288,24 @@ struct PaywallView: View {
     }
 
     private func badgeText(for plan: ProPlan) -> Text? {
-        guard plan == .yearly, let percent = yearlySavingsPercent else { return nil }
-        return Text("Save \(percent)%")
+        guard plan == .yearly, let saving = yearlySavings else { return nil }
+        // Percent placement differs by language (e.g. "%50" in Turkish) — let the locale format it.
+        let percent = saving.formatted(.percent.precision(.fractionLength(0)).locale(locale))
+        return Text("Save \(percent)")
     }
 
-    /// Yearly discount against twelve monthly payments, from live App Store prices.
-    private var yearlySavingsPercent: Int? {
+    /// Yearly discount against twelve monthly payments as a fraction
+    /// (0.5 = 50%, rounded to whole percent), from live App Store prices.
+    private var yearlySavings: Double? {
         guard
             let monthly = subManager.product(for: .monthly)?.price,
             let yearly = subManager.product(for: .yearly)?.price,
             monthly > 0
         else { return nil }
         let fullYear = monthly * 12
-        let saving = NSDecimalNumber(decimal: (fullYear - yearly) / fullYear * 100).doubleValue
-        let percent = Int(saving.rounded())
-        return percent > 0 ? percent : nil
+        let saving = NSDecimalNumber(decimal: (fullYear - yearly) / fullYear).doubleValue
+        let rounded = (saving * 100).rounded() / 100
+        return rounded > 0 ? rounded : nil
     }
 
     // MARK: - CTA

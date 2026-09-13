@@ -15,7 +15,8 @@
 
 import Foundation
 
-enum SubscriptionProducts {
+// Plain constants and pure functions — usable from any isolation.
+nonisolated enum SubscriptionProducts {
 
     static let proMonthly     = "com.mbx.shottidier.pro_monthly"
     static let proYearly      = "com.mbx.shottidier.pro_yearly"
@@ -61,7 +62,7 @@ enum SubscriptionProducts {
 
 /// The purchase that currently unlocks Pro. Every plan unlocks the same
 /// features; plans differ only in billing and in how enrichment credits arrive.
-enum ProPlan: String, CaseIterable, Identifiable, Sendable {
+nonisolated enum ProPlan: String, CaseIterable, Identifiable, Sendable {
     case monthly
     case yearly
     case lifetime

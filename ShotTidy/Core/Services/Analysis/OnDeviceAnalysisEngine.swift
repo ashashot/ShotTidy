@@ -249,7 +249,7 @@ enum OnDeviceAnalysisPrompt {
 
     /// Upper bound on extracted items per screenshot — keeps the response
     /// inside the on-device context window.
-    static let maxItems = 15
+    nonisolated static let maxItems = 15
 
     /// Text mode gets a tighter cap: the text-only model tends to pad the
     /// list with duplicates when it is allowed to go long.
@@ -541,7 +541,7 @@ enum OnDeviceResultGrounding {
 @available(iOS 26.0, macOS 26.0, *)
 private enum FoundationModelsSupport {
 
-    static var modelAvailability: OnDeviceAnalysisAvailability {
+    nonisolated static var modelAvailability: OnDeviceAnalysisAvailability {
         switch SystemLanguageModel.default.availability {
         case .available:
             return .available
@@ -729,7 +729,7 @@ private enum FoundationModelsSupport {
 @available(iOS 26.0, macOS 26.0, *)
 private enum TextModeBridge {
 
-    static var modelAvailability: OnDeviceAnalysisAvailability {
+    nonisolated static var modelAvailability: OnDeviceAnalysisAvailability {
         FoundationModelsSupport.modelAvailability
     }
 
@@ -830,7 +830,7 @@ private enum TextModeBridge {
 @available(iOS 27.0, macOS 27.0, *)
 private enum ImageModeBridge {
 
-    static var availability: OnDeviceAnalysisAvailability {
+    nonisolated static var availability: OnDeviceAnalysisAvailability {
         let base = FoundationModelsSupport.modelAvailability
         guard base == .available else { return base }
         return SystemLanguageModel.default.capabilities.contains(.vision)
