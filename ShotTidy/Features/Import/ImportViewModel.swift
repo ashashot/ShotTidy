@@ -84,7 +84,7 @@ final class ImportViewModel {
         sessionScreenshotIds = []
         didSaveThisSession = false
 
-        let resolution = ScreenshotAnalysisService.resolve(preferred: preferredEngine)
+        let resolution = AnalysisEngineResolver.resolve(preferred: preferredEngine)
         let engine = resolution.engine
         activeEngine = engine
         if let reason = resolution.fallbackReason {

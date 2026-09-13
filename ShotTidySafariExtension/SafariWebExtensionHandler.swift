@@ -5,9 +5,11 @@
 //  Native side of the Safari Web Extension. Receives messages sent from
 //  background.js via browser.runtime.sendNativeMessage and routes them:
 //
-//    getStatus   → Pro flag + custom categories from the App Group
-//    analyzeText → analyze-text Edge Function (per-user JWT via
-//                  SupabaseAuthManager), returns extracted items
+//    getStatus   → Pro flag + custom categories + analysis engine from the App Group
+//    analyzeText → on-device Foundation Models when the user's engine choice
+//                  (App Group) is on-device and the Mac can run it, otherwise
+//                  the analyze-text Edge Function (per-user JWT via
+//                  SupabaseAuthManager); returns extracted items
 //    saveItems   → appends PendingDraftItems to the App Group inbox and
 //                  notifies the running Mac app via DistributedNotificationCenter
 //
@@ -73,7 +75,16 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             "isPro": AppGroupManager.loadIsProStatus(),
             "builtinCategories": builtinCategories,
             "customCategories": customCategories,
+            "analysisEngine": resolvedEngine().rawValue,
         ]
+    }
+
+    // MARK: - Engine choice
+
+    /// The user's Settings choice (shared through the App Group) when the
+    /// on-device model can run on this Mac, otherwise the cloud.
+    private static func resolvedEngine() -> AnalysisEngine {
+        AnalysisEngineResolver.resolve(preferred: AppGroupManager.loadAnalysisEngine()).engine
     }
 
     // MARK: - analyzeText
@@ -95,6 +106,39 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             return ["ok": false, "error": "No text selected."]
         }
 
+        switch resolvedEngine() {
+        case .onDevice: return await analyzeTextOnDevice(text, message: message)
+        case .cloud:    return await analyzeTextInCloud(text, message: message)
+        }
+    }
+
+    /// Apple's on-device model — nothing leaves the Mac. Same output shape as
+    /// the cloud path so the page script does not care which one ran.
+    private static func analyzeTextOnDevice(_ text: String, message: [String: Any]) async -> [String: Any] {
+        let hints = AppGroupManager.loadCustomCategories().map {
+            AnalysisCategoryHint(key: $0.key, name: $0.name, hint: $0.hint)
+        }
+        do {
+            let items = try await OnDeviceAnalysisEngine.shared.analyze(
+                text: text,
+                sourceURL: message["url"] as? String ?? "",
+                pageTitle: message["title"] as? String ?? "",
+                customCategories: hints,
+                allowNewCategory: false   // the panel has no UI to create a category
+            )
+            return ["ok": true, "items": items, "engine": AnalysisEngine.onDevice.rawValue]
+        } catch let error as OnDeviceAnalysisError {
+            if case .unavailable = error {
+                // Model went away between the check and the call — use the cloud.
+                return await analyzeTextInCloud(text, message: message)
+            }
+            return ["ok": false, "error": error.localizedDescription]
+        } catch {
+            return ["ok": false, "error": error.localizedDescription]
+        }
+    }
+
+    private static func analyzeTextInCloud(_ text: String, message: [String: Any]) async -> [String: Any] {
         guard let url = URL(string: "\(Config.supabaseURL)/functions/v1/analyze-text") else {
             return ["ok": false, "error": "Invalid endpoint URL."]
         }
@@ -114,7 +158,7 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         do {
             let data = try await SupabaseFunctionClient.postJSON(body, to: url)
             let items = try SupabaseFunctionClient.openAIItems(from: data)
-            return ["ok": true, "items": items]
+            return ["ok": true, "items": items, "engine": AnalysisEngine.cloud.rawValue]
         } catch let transportError as SupabaseFunctionClient.TransportError {
             switch transportError {
             case .quotaExceeded(let message):

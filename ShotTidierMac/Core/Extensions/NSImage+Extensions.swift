@@ -34,4 +34,10 @@ extension NSImage {
     func thumbnailData() -> Data? {
         resized(toMaxDimension: 800).jpegData(compressionQuality: 0.85)
     }
+
+    /// Bitmap for on-device analysis (Vision / Foundation Models). NSImage has
+    /// no orientation metadata — the bitmap is always upright.
+    var analysisCGImage: CGImage? {
+        cgImage(forProposedRect: nil, context: nil, hints: nil)
+    }
 }

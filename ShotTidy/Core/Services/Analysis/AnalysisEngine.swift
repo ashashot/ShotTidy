@@ -12,6 +12,8 @@
 //  every engine is allowed on every plan and both count toward the same
 //  screenshot quota, so the business rules are unchanged.
 //
+//  Also compiled into the macOS app — Foundation only, no UIKit/AppKit.
+//
 
 import Foundation
 
@@ -20,7 +22,8 @@ import Foundation
 enum AnalysisEngine: String, CaseIterable, Identifiable, Codable, Sendable {
     /// GPT-4o via the Supabase Edge Function (the original implementation).
     case cloud
-    /// Apple Intelligence on-device model via Foundation Models (iOS 27+).
+    /// Apple Intelligence on-device model via Foundation Models
+    /// (image mode on iOS/macOS 27+, OCR text mode on iOS/macOS 26).
     case onDevice
 
     var id: String { rawValue }
@@ -58,13 +61,50 @@ enum AnalysisEngine: String, CaseIterable, Identifiable, Codable, Sendable {
 // MARK: - Plan policy (future tiers)
 
 enum AnalysisEnginePolicy {
-    /// Engine used when the user has never made a choice.
-    static let defaultEngine: AnalysisEngine = .cloud
+    /// Engine preferred when the user has never made a choice. On-device is
+    /// the default; devices that cannot run it silently use the cloud (see
+    /// `AnalysisEngineResolver`) — no warning is shown for an implicit default.
+    static let defaultEngine: AnalysisEngine = .onDevice
 
     /// Whether the plan allows this engine. Always true today; a future
     /// "on-device only" tier would return false for `.cloud` on that plan.
     static func isAllowed(_ engine: AnalysisEngine, isPro: Bool) -> Bool {
         true
+    }
+}
+
+// MARK: - Resolution (which engine actually runs)
+
+enum AnalysisEngineResolver {
+
+    /// Outcome of picking an engine for a run.
+    struct Resolution: Equatable {
+        /// Engine that will actually process the screenshots.
+        let engine: AnalysisEngine
+        /// Non-nil when on-device was requested but is not usable right now,
+        /// so the cloud engine is used instead.
+        let fallbackReason: OnDeviceAnalysisAvailability?
+    }
+
+    /// Honors the preferred engine when it can run; otherwise falls back to the
+    /// cloud and reports why, so the UI can tell the user.
+    static func resolve(preferred: AnalysisEngine) -> Resolution {
+        switch preferred {
+        case .cloud:
+            return Resolution(engine: .cloud, fallbackReason: nil)
+        case .onDevice:
+            let availability = OnDeviceAnalysisEngine.availability
+            if availability.isAvailable {
+                return Resolution(engine: .onDevice, fallbackReason: nil)
+            }
+            return Resolution(engine: .cloud, fallbackReason: availability)
+        }
+    }
+
+    /// Engine to use when the user never chose one: the policy default if it
+    /// can run here, otherwise the cloud — quietly, without a fallback notice.
+    static func implicitEngine() -> AnalysisEngine {
+        resolve(preferred: AnalysisEnginePolicy.defaultEngine).engine
     }
 }
 
@@ -89,12 +129,18 @@ extension AppGroupManager {
         sharedDefaults.set(engine.rawValue, forKey: analysisEngineKey)
     }
 
-    /// Engine chosen in Settings, or the policy default when never set.
-    nonisolated static func loadAnalysisEngine() -> AnalysisEngine {
+    /// Engine explicitly chosen in Settings, or `nil` when the user never chose.
+    nonisolated static func loadStoredAnalysisEngine() -> AnalysisEngine? {
         guard
             let raw = sharedDefaults.string(forKey: analysisEngineKey),
             let engine = AnalysisEngine(rawValue: raw)
-        else { return AnalysisEnginePolicy.defaultEngine }
+        else { return nil }
         return engine
+    }
+
+    /// Engine to run with: the stored choice, or the implicit default resolved
+    /// for this device (on-device when it can run, else cloud).
+    nonisolated static func loadAnalysisEngine() -> AnalysisEngine {
+        loadStoredAnalysisEngine() ?? AnalysisEngineResolver.implicitEngine()
     }
 }

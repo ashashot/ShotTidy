@@ -16,6 +16,7 @@ struct ShotTidierMacApp: App {
     @State private var subscriptionManager = MacSubscriptionManager()
     @State private var syncMonitor = MacCloudSyncMonitor()
     @State private var usageManager = UsageManager()
+    @State private var analysisEngineSettings = AnalysisEngineSettings()
     @State private var updateService = AppUpdateService()
     @State private var extensionInbox = MacExtensionInbox()
     @State private var showImportBanner = false
@@ -87,6 +88,7 @@ struct ShotTidierMacApp: App {
                 .environment(subscriptionManager)
                 .environment(syncMonitor)
                 .environment(usageManager)
+                .environment(analysisEngineSettings)
                 .task {
                     // Import items saved by the Safari extension (also subscribes
                     // to live updates while the app is running).
@@ -145,6 +147,7 @@ struct ShotTidierMacApp: App {
                 .environment(subscriptionManager)
                 .environment(syncMonitor)
                 .environment(usageManager)
+                .environment(analysisEngineSettings)
         }
     }
 }

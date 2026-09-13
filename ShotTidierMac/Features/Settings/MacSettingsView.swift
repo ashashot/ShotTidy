@@ -17,6 +17,7 @@ struct MacSettingsView: View {
     @Environment(MacSubscriptionManager.self) private var subscriptionManager
     @Environment(MacCloudSyncMonitor.self) private var syncMonitor
     @Environment(UsageManager.self) private var usageManager
+    @Environment(AnalysisEngineSettings.self) private var engineSettings
     @State private var showDeleteAlert = false
 
     var body: some View {
@@ -27,6 +28,20 @@ struct MacSettingsView: View {
                 activeProSection
             } else {
                 upgradeSection
+            }
+
+            // MARK: - Analysis engine
+
+            Section {
+                ForEach(AnalysisEngine.allCases) { engine in
+                    engineRow(engine)
+                }
+            } header: {
+                Text("Analysis")
+            } footer: {
+                Text(engineFooter)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             // MARK: - Data
@@ -59,6 +74,63 @@ struct MacSettingsView: View {
         }
         .frame(width: 420)
         .navigationTitle("Settings")
+        .onAppear { engineSettings.refreshAvailability() }
+    }
+
+    // MARK: - Analysis engine
+
+    /// Selectable row for one engine. The on-device option is disabled (with
+    /// the reason in the footer) when the model cannot run on this Mac.
+    private func engineRow(_ engine: AnalysisEngine) -> some View {
+        let isSelected = engineSettings.selectedEngine == engine
+        let isAvailable = engine == .cloud || engineSettings.isOnDeviceAvailable
+        let isAllowed = engineSettings.isAllowed(engine, isPro: subscriptionManager.isProActive)
+        let enabled = isAvailable && isAllowed
+
+        return Button {
+            engineSettings.selectedEngine = engine
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: engine.iconName)
+                    .font(.system(size: 18))
+                    .foregroundStyle(enabled ? Color.blue : Color.secondary)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(engine.localizedName)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(enabled ? Color.primary : Color.secondary)
+                    Text(engine.localizedSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.blue)
+                }
+            }
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var engineFooter: String {
+        let availability = engineSettings.onDeviceAvailability
+        if availability.isAvailable {
+            guard engineSettings.selectedEngine == .onDevice else {
+                return availability.localizedDescription
+            }
+            let privacy = "Screenshots are analyzed by Apple Intelligence on this Mac and are never uploaded."
+            return availability.isTextOnly ? privacy + " " + availability.localizedDescription : privacy
+        }
+        if engineSettings.selectedEngine == .onDevice {
+            return "On-device analysis is unavailable, so the cloud engine is used. \(availability.localizedDescription)"
+        }
+        return availability.localizedDescription
     }
 
     // MARK: - Active Pro section

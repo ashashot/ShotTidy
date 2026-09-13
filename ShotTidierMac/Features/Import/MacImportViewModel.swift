@@ -20,6 +20,8 @@ final class MacImportViewModel {
     var progressCurrent = 0
     var progressTotal = 0
     var warnings: [String] = []
+    /// Engine that processed (or is processing) the current batch.
+    private(set) var activeEngine: AnalysisEngine = AnalysisEnginePolicy.defaultEngine
 
     var draftItems: [DraftItem] = []
 
@@ -30,7 +32,10 @@ final class MacImportViewModel {
 
     // MARK: - Analysis
 
+    /// Analyzes the selected images with `preferredEngine`. When on-device was
+    /// requested but cannot run, the cloud engine is used and a warning says why.
     func analyzeImages(
+        preferredEngine: AnalysisEngine = AnalysisEnginePolicy.defaultEngine,
         customCategories: [CategoryPromptInfo] = [],
         allowNewCategory: Bool = false
     ) async {
@@ -45,6 +50,13 @@ final class MacImportViewModel {
         progressTotal = selectedImages.count
         sessionScreenshotIds = []
         didSaveThisSession = false
+
+        let resolution = AnalysisEngineResolver.resolve(preferred: preferredEngine)
+        let engine = resolution.engine
+        activeEngine = engine
+        if let reason = resolution.fallbackReason {
+            warnings.append("On-device analysis is unavailable, so the cloud engine was used. \(reason.localizedDescription)")
+        }
 
         for (index, image) in selectedImages.enumerated() {
             progressCurrent = index + 1
@@ -62,8 +74,9 @@ final class MacImportViewModel {
             sessionScreenshotIds.insert(screenshot.id)
 
             do {
-                let extracted = try await MacOpenAIAPIClient.shared.analyzeScreenshot(
+                let extracted = try await MacScreenshotAnalysisService.analyze(
                     image,
+                    engine: engine,
                     customCategories: customCategories,
                     allowNewCategory: allowNewCategory,
                     screenshotId: screenshot.id
@@ -83,6 +96,19 @@ final class MacImportViewModel {
                     if draftItems.isEmpty && index == selectedImages.count - 1 {
                         analysisError = err.localizedDescription
                     }
+                }
+            } catch let err as OnDeviceAnalysisError {
+                screenshot.analysisStatus = .failed
+                screenshot.errorMessage = err.localizedDescription
+                switch err {
+                case .unavailable, .underlying:
+                    if draftItems.isEmpty && index == selectedImages.count - 1 {
+                        analysisError = err.localizedDescription
+                    }
+                default:
+                    // Per-screenshot hiccup on the local model — skip it, keep going.
+                    let name = screenshot.originalFileName ?? "image \(index + 1)"
+                    warnings.append("\(name): \(err.localizedDescription)")
                 }
             } catch {
                 screenshot.analysisStatus = .failed

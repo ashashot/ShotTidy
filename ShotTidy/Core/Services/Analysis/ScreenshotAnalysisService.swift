@@ -2,11 +2,10 @@
 //  ScreenshotAnalysisService.swift
 //  ShotTidy
 //
-//  Single entry point for screenshot analysis in the main app. Resolves which
-//  engine actually runs (the user's choice, or the cloud when the on-device
-//  model is unavailable), dispatches to it, normalizes results into
+//  Single entry point for screenshot analysis in the iOS app. Dispatches to
+//  the engine picked by `AnalysisEngineResolver`, normalizes results into
 //  `DraftItem`s, and classifies failures so the import flow treats cloud and
-//  on-device errors the same way.
+//  on-device errors the same way. (macOS has `MacScreenshotAnalysisService`.)
 //
 
 import Foundation
@@ -64,30 +63,6 @@ extension Error {
 // MARK: - Service
 
 enum ScreenshotAnalysisService {
-
-    /// Outcome of picking an engine for a run.
-    struct Resolution: Equatable {
-        /// Engine that will actually process the screenshots.
-        let engine: AnalysisEngine
-        /// Non-nil when the user asked for on-device analysis but it is not
-        /// usable right now, so the cloud engine is used instead.
-        let fallbackReason: OnDeviceAnalysisAvailability?
-    }
-
-    /// Honors the preferred engine when it can run; otherwise falls back to the
-    /// cloud and reports why, so the UI can tell the user.
-    static func resolve(preferred: AnalysisEngine) -> Resolution {
-        switch preferred {
-        case .cloud:
-            return Resolution(engine: .cloud, fallbackReason: nil)
-        case .onDevice:
-            let availability = OnDeviceAnalysisEngine.availability
-            if availability.isAvailable {
-                return Resolution(engine: .onDevice, fallbackReason: nil)
-            }
-            return Resolution(engine: .cloud, fallbackReason: availability)
-        }
-    }
 
     /// Analyzes one screenshot with the given engine. Errors are
     /// `OpenAIError` (cloud) or `OnDeviceAnalysisError` (on-device) — both

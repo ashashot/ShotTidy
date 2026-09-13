@@ -103,7 +103,7 @@ struct ImportView: View {
         let count = viewModel.selectedImages.count
         engineSettings.refreshAvailability()
         let preferredEngine = engineSettings.selectedEngine
-        let plannedEngine = ScreenshotAnalysisService.resolve(preferred: preferredEngine).engine
+        let plannedEngine = AnalysisEngineResolver.resolve(preferred: preferredEngine).engine
 
         // Quota gate — `countsTowardScreenshotQuota` is the hook a future
         // on-device-only tier flips; today both engines share the same limit.

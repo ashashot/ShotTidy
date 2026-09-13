@@ -5781,6 +5781,234 @@
         }
       }
     },
+    "Analyzes text recognized in the screenshot. Full image analysis requires iOS 27." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analysiert den im Screenshot erkannten Text. Die vollständige Bildanalyse erfordert iOS 27."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analiza el texto reconocido en la captura. El análisis completo de la imagen requiere iOS 27."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analyse le texte reconnu dans la capture d'écran. L'analyse complète de l'image nécessite iOS 27."
+          }
+        },
+        "hy" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Վերլուծվում է սքրինշոթում ճանաչված տեքստը։ Պատկերի ամբողջական վերլուծության համար պահանջվում է iOS 27։"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analizza il testo riconosciuto nello screenshot. L'analisi completa dell'immagine richiede iOS 27."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンショットから認識したテキストを解析します。画像全体の解析にはiOS 27が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스크린샷에서 인식된 텍스트를 분석합니다. 전체 이미지 분석에는 iOS 27이 필요합니다."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analisa o texto reconhecido na captura de tela. A análise completa da imagem requer o iOS 27."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analisa o texto reconhecido na captura de ecrã. A análise completa da imagem requer iOS 27."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Анализируется распознанный на скриншоте текст. Полный анализ изображения требует iOS 27."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekran görüntüsünde tanınan metni analiz eder. Tam görsel analizi için iOS 27 gerekir."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分析截图中识别出的文字。完整的图像分析需要 iOS 27。"
+          }
+        }
+      }
+    },
+    "Analyzes text recognized in the screenshot. The model on this device cannot read images." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analysiert den im Screenshot erkannten Text. Das Modell auf diesem Gerät kann keine Bilder lesen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analiza el texto reconocido en la captura. El modelo de este dispositivo no puede leer imágenes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analyse le texte reconnu dans la capture d'écran. Le modèle de cet appareil ne peut pas lire les images."
+          }
+        },
+        "hy" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Վերլուծվում է սքրինշոթում ճանաչված տեքստը։ Այս սարքի մոդելը չի կարող կարդալ պատկերներ։"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analizza il testo riconosciuto nello screenshot. Il modello di questo dispositivo non può leggere le immagini."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンショットから認識したテキストを解析します。このデバイスのモデルは画像を読み取れません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스크린샷에서 인식된 텍스트를 분석합니다. 이 기기의 모델은 이미지를 읽을 수 없습니다."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analisa o texto reconhecido na captura de tela. O modelo deste dispositivo não consegue ler imagens."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analisa o texto reconhecido na captura de ecrã. O modelo deste dispositivo não consegue ler imagens."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Анализируется распознанный на скриншоте текст. Модель на этом устройстве не умеет читать изображения."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekran görüntüsünde tanınan metni analiz eder. Bu cihazdaki model görselleri okuyamıyor."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分析截图中识别出的文字。此设备上的模型无法读取图像。"
+          }
+        }
+      }
+    },
+    "Analyzes text recognized in the screenshot. This build was made without full image analysis; rebuild with Xcode 27." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analysiert den im Screenshot erkannten Text. Dieser Build wurde ohne vollständige Bildanalyse erstellt; bitte mit Xcode 27 neu bauen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analiza el texto reconocido en la captura. Esta compilación se hizo sin análisis completo de la imagen; vuelve a compilar con Xcode 27."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analyse le texte reconnu dans la capture d'écran. Cette version a été compilée sans analyse complète de l'image ; recompilez avec Xcode 27."
+          }
+        },
+        "hy" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Վերլուծվում է սքրինշոթում ճանաչված տեքստը։ Այս տարբերակը կառուցվել է առանց պատկերի ամբողջական վերլուծության․ վերակառուցեք Xcode 27-ով։"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analizza il testo riconosciuto nello screenshot. Questa build è stata creata senza analisi completa dell'immagine; ricompila con Xcode 27."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンショットから認識したテキストを解析します。このビルドは画像全体の解析なしで作成されています。Xcode 27で再ビルドしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스크린샷에서 인식된 텍스트를 분석합니다. 이 빌드는 전체 이미지 분석 없이 만들어졌습니다. Xcode 27로 다시 빌드하세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analisa o texto reconhecido na captura de tela. Esta versão foi compilada sem análise completa da imagem; recompile com o Xcode 27."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analisa o texto reconhecido na captura de ecrã. Esta versão foi compilada sem análise completa da imagem; recompile com o Xcode 27."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Анализируется распознанный на скриншоте текст. Эта сборка сделана без полного анализа изображения; пересоберите в Xcode 27."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekran görüntüsünde tanınan metni analiz eder. Bu derleme tam görsel analizi olmadan yapıldı; Xcode 27 ile yeniden derleyin."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分析截图中识别出的文字。此版本在构建时未包含完整的图像分析，请使用 Xcode 27 重新构建。"
+          }
+        }
+      }
+    },
     "Analyzing screenshots..." : {
       "localizations" : {
         "de" : {
@@ -23333,78 +23561,78 @@
         }
       }
     },
-    "Requires iOS 27 or later." : {
+    "Requires iOS 26 or later." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erfordert iOS 27 oder neuer."
+            "value" : "Erfordert iOS 26 oder neuer."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Requiere iOS 27 o posterior."
+            "value" : "Requiere iOS 26 o posterior."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nécessite iOS 27 ou version ultérieure."
+            "value" : "Nécessite iOS 26 ou version ultérieure."
           }
         },
         "hy" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Պահանջվում է iOS 27 կամ ավելի նոր։"
+            "value" : "Պահանջվում է iOS 26 կամ ավելի նոր։"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Richiede iOS 27 o versioni successive."
+            "value" : "Richiede iOS 26 o versioni successive."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iOS 27以降が必要です。"
+            "value" : "iOS 26以降が必要です。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iOS 27 이상이 필요합니다."
+            "value" : "iOS 26 이상이 필요합니다."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Requer o iOS 27 ou posterior."
+            "value" : "Requer o iOS 26 ou posterior."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Requer iOS 27 ou posterior."
+            "value" : "Requer iOS 26 ou posterior."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Требуется iOS 27 или новее."
+            "value" : "Требуется iOS 26 или новее."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iOS 27 veya üzeri gerekir."
+            "value" : "iOS 26 veya üzeri gerekir."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "需要 iOS 27 或更高版本。"
+            "value" : "需要 iOS 26 或更高版本。"
           }
         }
       }
@@ -29107,82 +29335,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设备端模型仍在下载中。请稍后重试。"
-          }
-        }
-      }
-    },
-    "The on-device model on this device cannot analyze images." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das Geräte-Modell auf diesem Gerät kann keine Bilder analysieren."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "El modelo local de este dispositivo no puede analizar imágenes."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le modèle local de cet appareil ne peut pas analyser les images."
-          }
-        },
-        "hy" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Այս սարքի մոդելը չի կարող վերլուծել պատկերներ։"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Il modello locale di questo dispositivo non può analizzare immagini."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このデバイスのオンデバイスモデルは画像を解析できません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 기기의 온디바이스 모델은 이미지를 분석할 수 없습니다."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O modelo local deste dispositivo não consegue analisar imagens."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O modelo local deste dispositivo não consegue analisar imagens."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Локальная модель на этом устройстве не умеет анализировать изображения."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu cihazdaki model görselleri analiz edemiyor."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此设备上的设备端模型无法分析图片。"
           }
         }
       }

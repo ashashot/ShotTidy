@@ -418,10 +418,12 @@ struct SettingsView: View {
     private var engineFooter: String {
         let availability = engineSettings.onDeviceAvailability
         if availability.isAvailable {
-            if engineSettings.selectedEngine == .onDevice {
-                return String(localized: "Screenshots are analyzed by Apple Intelligence on this device and are never uploaded.", bundle: AppLocale.bundle)
+            guard engineSettings.selectedEngine == .onDevice else {
+                return availability.localizedDescription
             }
-            return String(localized: "On-device analysis is ready.", bundle: AppLocale.bundle)
+            let privacy = String(localized: "Screenshots are analyzed by Apple Intelligence on this device and are never uploaded.", bundle: AppLocale.bundle)
+            // Text mode deserves a heads-up: results are weaker than full image analysis.
+            return availability.isTextOnly ? privacy + " " + availability.localizedDescription : privacy
         }
         if engineSettings.selectedEngine == .onDevice {
             return String(localized: "On-device analysis is unavailable, so the cloud engine is used. \(availability.localizedDescription)", bundle: AppLocale.bundle)

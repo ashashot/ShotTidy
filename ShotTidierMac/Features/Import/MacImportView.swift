@@ -24,6 +24,7 @@ struct MacImportView: View {
     @Environment(CategoryStore.self) private var categoryStore
     @Environment(MacSubscriptionManager.self) private var subManager
     @Environment(UsageManager.self) private var usageManager
+    @Environment(AnalysisEngineSettings.self) private var engineSettings
 
     var body: some View {
         VStack(spacing: 0) {
@@ -239,6 +240,9 @@ struct MacImportView: View {
                     .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
                     .animation(.snappy, value: viewModel.progressCurrent)
+                Label(viewModel.activeEngine.localizedName, systemImage: viewModel.activeEngine.iconName)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
         }
     }
@@ -309,7 +313,14 @@ struct MacImportView: View {
 
     private func startAnalysis() {
         let count = viewModel.selectedImages.count
-        guard usageManager.canAnalyzeScreenshots(count: count, isPro: subManager.isProActive) else {
+        engineSettings.refreshAvailability()
+        let preferredEngine = engineSettings.selectedEngine
+        let plannedEngine = AnalysisEngineResolver.resolve(preferred: preferredEngine).engine
+
+        // Quota gate — `countsTowardScreenshotQuota` is the hook a future
+        // on-device-only tier flips; today both engines share the same limit.
+        if plannedEngine.countsTowardScreenshotQuota,
+           !usageManager.canAnalyzeScreenshots(count: count, isPro: subManager.isProActive) {
             showLimitAlert = true
             return
         }
@@ -320,12 +331,15 @@ struct MacImportView: View {
 
         Task {
             await viewModel.analyzeImages(
+                preferredEngine: preferredEngine,
                 customCategories: customPayload,
                 allowNewCategory: subManager.isProActive
             )
             if !viewModel.draftItems.isEmpty {
                 // Consume quota for the screenshots that were submitted
-                usageManager.consumeScreenshots(count: count)
+                if viewModel.activeEngine.countsTowardScreenshotQuota {
+                    usageManager.consumeScreenshots(count: count)
+                }
 
                 completionCount = viewModel.draftItems.count
                 showCompletion = true
