@@ -5,6 +5,7 @@
 
 import SwiftUI
 import SwiftData
+import StoreKit
 import UIKit
 
 struct SettingsView: View {
@@ -26,6 +27,7 @@ struct SettingsView: View {
     @State private var showDeleteAlert = false
     @State private var showPaywall = false
     @State private var showEnrichmentStore = false
+    @State private var showManageSubscriptions = false
     @State private var isRestoring = false
     @State private var restoreError: String?
     @State private var syncMonitor = CloudSyncMonitor()
@@ -48,18 +50,31 @@ struct SettingsView: View {
                 Section {
                     // Plan status
                     HStack(spacing: 10) {
-                        if subManager.isProActive {
+                        if let plan = subManager.activePlan {
                             Image(systemName: "checkmark.seal.fill")
                                 .foregroundStyle(.blue)
                                 .font(.system(size: 18))
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Pro Plan")
+                                Text("Pro · \(plan.localizedName)")
                                     .font(.subheadline.weight(.semibold))
-                                Text("Unlimited screenshots · \(UsageManager.proEnrichmentsPerPeriod) enrichments/month")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                Group {
+                                    if plan.isSubscription {
+                                        Text("Unlimited screenshots · \(UsageManager.proEnrichmentsPerPeriod) enrichments/month")
+                                    } else {
+                                        Text("Unlimited screenshots · lifetime access")
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                             }
                             Spacer()
+                            if plan.isSubscription {
+                                Button("Change Plan") {
+                                    showPaywall = true
+                                }
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.blue)
+                            }
                         } else {
                             Image(systemName: "person.fill")
                                 .foregroundStyle(.secondary)
@@ -80,6 +95,24 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.vertical, 2)
+
+                    // Lifetime bought while a subscription still renews — the
+                    // App Store does not cancel it, so ask the user to.
+                    if subManager.subscriptionRenewsAlongsideLifetime {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label("Your subscription is still active", systemImage: "exclamationmark.triangle.fill")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.orange)
+                            Text("Lifetime is unlocked. Cancel the subscription so you are not charged again.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Button("Manage Subscription") {
+                                showManageSubscriptions = true
+                            }
+                            .font(.subheadline.weight(.semibold))
+                        }
+                        .padding(.vertical, 2)
+                    }
 
                     // Rolling 30-day screenshots
                     HStack {
@@ -341,6 +374,13 @@ struct SettingsView: View {
             .sheet(isPresented: $showEnrichmentStore) {
                 EnrichmentStoreView()
             }
+            .manageSubscriptionsSheet(isPresented: $showManageSubscriptions)
+            .onChange(of: showManageSubscriptions) { _, isShown in
+                // Pick up a cancellation made in the sheet.
+                if !isShown {
+                    Task { await subManager.refreshSubscriptionStatus() }
+                }
+            }
             .alert("Mail Not Available", isPresented: $showMailUnavailableAlert) {
                 Button("Copy Email Address") {
                     UIPasteboard.general.string = Config.feedbackEmail
@@ -460,10 +500,9 @@ struct SettingsView: View {
         isRestoring = true
         defer { isRestoring = false }
         do {
+            // Plan credits are granted by ShotTidyApp when `activePlan` changes.
             try await subManager.restorePurchases()
-            if subManager.isProActive {
-                usageManager.onSubscriptionActivated()
-            } else {
+            if !subManager.isProActive {
                 restoreError = String(localized: "No active subscription found.", bundle: AppLocale.bundle)
             }
         } catch {

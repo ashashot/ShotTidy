@@ -57,6 +57,24 @@
       "referenceName" : "Enrichments Pack 75",
       "subscriptionGroupID" : null,
       "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "groupLevel" : 1,
+      "internalID" : "8A3F1B2C-1001-0000-0000-000000000004",
+      "introductoryOffer" : null,
+      "localizations" : [
+        {
+          "description" : "Pro forever + 100 enrichment credits",
+          "displayName" : "ShotTidy Pro Lifetime",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.mbx.shottidier.pro_lifetime",
+      "referenceName" : "Pro Lifetime",
+      "subscriptionGroupID" : null,
+      "type" : "NonConsumable"
     }
   ],
   "settings" : {
@@ -86,7 +104,7 @@
           ],
           "displayPrice" : "4.99",
           "familyShareable" : false,
-          "groupLevel" : 1,
+          "groupLevel" : 2,
           "internalID" : "8A3F1B2C-3001-0000-0000-000000000001",
           "introductoryOffer" : null,
           "localizations" : [
@@ -99,6 +117,30 @@
           "productID" : "com.mbx.shottidier.pro_monthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "Pro Monthly",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "29.99",
+          "familyShareable" : false,
+          "groupLevel" : 1,
+          "internalID" : "8A3F1B2C-3001-0000-0000-000000000002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited screenshot analysis + 10 enrichment credits every 30 days",
+              "displayName" : "ShotTidy Pro Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.mbx.shottidier.pro_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Pro Yearly",
           "type" : "RecurringSubscription"
         }
       ]

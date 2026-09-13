@@ -139,6 +139,7 @@
 				Core/Services/AppGroupManager.swift,
 				Core/Services/AppLocale.swift,
 				Core/Services/SupabaseAuthManager.swift,
+				Core/SubscriptionProducts.swift,
 				Models/CatalogItem.swift,
 				Models/CategoryDescriptor.swift,
 				Models/ItemCategory.swift,

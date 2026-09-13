@@ -4,6 +4,7 @@
 //
 //  Mirrors the iOS SubscriptionManager but without App Group dependency —
 //  macOS stores Pro status in UserDefaults.standard (no Share Extension on Mac).
+//  Plans and product IDs live in SubscriptionProducts.swift.
 //
 
 import StoreKit
@@ -15,7 +16,6 @@ final class MacSubscriptionManager {
 
     // MARK: - Constants
 
-    nonisolated static let proProductID = SubscriptionProducts.proMonthly
     nonisolated static var packProductIDs: Set<String> { SubscriptionProducts.packs }
     nonisolated private static let proStatusKey = "subscription.isPro"
 
@@ -27,15 +27,27 @@ final class MacSubscriptionManager {
 
     // MARK: - State
 
-    private(set) var isProActive: Bool = false
+    /// The purchase that unlocks Pro right now, `nil` on the Free plan.
+    private(set) var activePlan: ProPlan?
+    var isProActive: Bool { activePlan != nil }
+
+    /// Lifetime is active but a subscription is still set to renew. The App
+    /// Store never cancels it on its own, so the UI asks the user to.
+    private(set) var subscriptionRenewsAlongsideLifetime = false
+
     private(set) var products: [Product] = []
     private(set) var isPurchasing = false
     private(set) var isRestoring = false
     var purchaseError: String?
     private(set) var diagnostic = ""
 
+    /// Monthly plan product — used for "per month" teasers.
     var proProduct: Product? {
-        products.first { $0.id == Self.proProductID }
+        product(for: .monthly)
+    }
+
+    func product(for plan: ProPlan) -> Product? {
+        products.first { $0.id == plan.productID }
     }
 
     var packProducts: [Product] {
@@ -48,10 +60,14 @@ final class MacSubscriptionManager {
 
     private var transactionListenerTask: Task<Void, Never>?
 
+    /// Signed Lifetime transaction, kept to claim its one-time credit pool.
+    private var lifetimeJWS: String?
+
     // MARK: - Init
 
     init() {
-        isProActive = Self.loadIsProStatus()
+        // Last known plan until StoreKit answers (ModelContainer reads the Pro flag early).
+        activePlan = Self.loadIsProStatus() ? (AppGroupManager.loadProPlan() ?? .monthly) : nil
         startTransactionListener()
     }
 
@@ -62,7 +78,7 @@ final class MacSubscriptionManager {
         // API calls and purchase appAccountToken linking.
         Task { _ = await SupabaseAuthManager.shared.bearerToken() }
         // Sequential on purpose (matches iOS): the status-refresh fallback
-        // reads proProduct, which is only available after products load.
+        // reads the subscription products, which are only available after products load.
         await loadProducts()
         await refreshSubscriptionStatus()
     }
@@ -71,9 +87,7 @@ final class MacSubscriptionManager {
 
     func loadProducts() async {
         do {
-            let loaded = try await Product.products(
-                for: Self.packProductIDs.union([Self.proProductID])
-            )
+            let loaded = try await Product.products(for: SubscriptionProducts.all)
             products = loaded.sorted { $0.price < $1.price }
         } catch {
             // non-critical — paywall will show spinner or no price
@@ -82,8 +96,8 @@ final class MacSubscriptionManager {
 
     // MARK: - Purchase
 
-    func purchasePro() async {
-        guard let product = proProduct else { return }
+    func purchase(_ plan: ProPlan) async {
+        guard let product = product(for: plan) else { return }
         isPurchasing = true
         purchaseError = nil
         defer { isPurchasing = false }
@@ -156,7 +170,7 @@ final class MacSubscriptionManager {
             if let syncErr = syncError {
                 purchaseError = "Sync error: \(syncErr). Checked local transactions — no active Pro found."
             } else {
-                purchaseError = "No active Pro subscription found for this Apple ID."
+                purchaseError = "No active Pro purchase found for this Apple ID."
             }
         }
     }
@@ -164,20 +178,24 @@ final class MacSubscriptionManager {
     // MARK: - Status check
 
     func refreshSubscriptionStatus() async {
-        var active = false
-        var proJWS: String? = nil
+        var best: (plan: ProPlan, jws: String)?
         var totalEntitlements = 0
         var unverifiedCount = 0
         var foundIDs: [String] = []
+
+        // Several Pro purchases can be active at once — keep the highest plan.
+        func consider(_ plan: ProPlan, jws: String) {
+            if let current = best, current.plan.rank >= plan.rank { return }
+            best = (plan, jws)
+        }
 
         for await result in Transaction.currentEntitlements {
             totalEntitlements += 1
             switch result {
             case .verified(let tx):
                 foundIDs.append(tx.productID)
-                if tx.productID == Self.proProductID && tx.revocationDate == nil {
-                    active = true
-                    proJWS = result.jwsRepresentation
+                if tx.revocationDate == nil, let plan = ProPlan(productID: tx.productID) {
+                    consider(plan, jws: result.jwsRepresentation)
                 }
             case .unverified(_, let error):
                 unverifiedCount += 1
@@ -186,37 +204,28 @@ final class MacSubscriptionManager {
         }
 
         // Fallback: subscription status API (helps in Sandbox).
-        if !active, let product = proProduct {
-            if let statuses = try? await product.subscription?.status {
-                for status in statuses where status.state == .subscribed || status.state == .inGracePeriod {
-                    // Status covers the whole subscription GROUP — make sure
-                    // the underlying transaction is for this product.
-                    guard case .verified(let tx) = status.transaction,
-                          tx.productID == Self.proProductID,
-                          tx.revocationDate == nil else { continue }
-                    active = true
-                    foundIDs.append("via subscription.status")
-                }
-            }
-            // Recover a JWS for server linking — the fallback path has no
-            // entitlement transaction, but latest(for:) usually still has one.
-            if active, proJWS == nil,
-               let latest = await Transaction.latest(for: Self.proProductID) {
-                proJWS = latest.jwsRepresentation
+        if best == nil {
+            for status in await subscriptionGroupStatuses()
+            where status.state == .subscribed || status.state == .inGracePeriod {
+                // Status covers the whole subscription GROUP — take the plan
+                // from the underlying transaction.
+                guard case .verified(let tx) = status.transaction,
+                      tx.revocationDate == nil,
+                      let plan = ProPlan(productID: tx.productID) else { continue }
+                consider(plan, jws: status.transaction.jwsRepresentation)
+                foundIDs.append("via subscription.status")
             }
         }
 
         #if DEBUG
         let storefront = await Storefront.current
-        #endif
-        #if DEBUG
-        diagnostic = "entitlements:\(totalEntitlements) unverified:\(unverifiedCount) active:\(active)\nIDs: \(foundIDs.isEmpty ? "none" : foundIDs.joined(separator: ", "))\nexpected: \(Self.proProductID)\nstorefront: \(storefront?.countryCode ?? "unknown")"
+        diagnostic = "entitlements:\(totalEntitlements) unverified:\(unverifiedCount) plan:\(best?.plan.rawValue ?? "none")\nIDs: \(foundIDs.isEmpty ? "none" : foundIDs.joined(separator: ", "))\nexpected: \(SubscriptionProducts.proProducts.sorted().joined(separator: ", "))\nstorefront: \(storefront?.countryCode ?? "unknown")"
         #endif
 
         // Keep the server-side subscription record in sync (once per launch).
-        if active, let jws = proJWS, !didLinkSubscriptionThisSession {
+        if let best, !didLinkSubscriptionThisSession {
             didLinkSubscriptionThisSession = true
-            linkSubscriptionOnServer(jws: jws)
+            linkSubscriptionOnServer(jws: best.jws)
         }
 
         // No signal from StoreKit at all: entitlements came back empty and the
@@ -224,21 +233,30 @@ final class MacSubscriptionManager {
         // loaded (offline, App Store unreachable). Keep the last known status
         // rather than downgrading Pro to Free — a false flip here would tear
         // down iCloud sync (and flip it back on the next launch) for no reason.
-        if !active, totalEntitlements == 0, products.isEmpty {
+        if best == nil, totalEntitlements == 0, products.isEmpty {
             #if DEBUG
             diagnostic += "\nno StoreKit data — keeping previous status"
             #endif
             return
         }
 
+        if let best, best.plan == .lifetime {
+            lifetimeJWS = best.jws
+            subscriptionRenewsAlongsideLifetime = await subscriptionWillRenew()
+        } else {
+            lifetimeJWS = nil
+            subscriptionRenewsAlongsideLifetime = false
+        }
+
         // Persist for the next launch (ModelContainer reads this before StoreKit
         // answers). ShotTidierMacApp observes isProActive and rebuilds the
         // container in place when the value changes.
-        isProActive = active
-        UserDefaults.standard.set(active, forKey: Self.proStatusKey)
+        activePlan = best?.plan
+        UserDefaults.standard.set(isProActive, forKey: Self.proStatusKey)
         // Mirror into the App Group so the Safari extension can read the Pro
         // flag (its process cannot see this app's standard defaults).
-        AppGroupManager.saveIsProStatus(active)
+        AppGroupManager.saveIsProStatus(isProActive)
+        AppGroupManager.saveProPlan(activePlan)
     }
 
     // MARK: - Persisted status (read before ModelContainer is created)
@@ -247,14 +265,52 @@ final class MacSubscriptionManager {
         UserDefaults.standard.bool(forKey: proStatusKey)
     }
 
+    // MARK: - Lifetime credit pool
+
+    /// Asks the server for the one-time Lifetime credit pool. Returns the
+    /// credits granted to this user (0 when the purchase was already claimed
+    /// by another install), or `nil` when the request failed — retry later.
+    func claimLifetimeCredits() async -> Int? {
+        guard
+            let jws = lifetimeJWS,
+            let url = URL(string: "\(Config.supabaseURL)/functions/v1/link-subscription"),
+            let data = try? await SupabaseFunctionClient.postJSON(
+                ["signedTransaction": jws, "claimLifetimeCredits": true],
+                to: url,
+                timeout: 30
+            ),
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let credits = json["lifetime_credits"] as? Int
+        else { return nil }
+        return credits
+    }
+
     // MARK: - Private
+
+    /// Statuses of the Pro subscription group (empty until products load).
+    private func subscriptionGroupStatuses() async -> [Product.SubscriptionInfo.Status] {
+        guard
+            let product = products.first(where: { SubscriptionProducts.subscriptions.contains($0.id) }),
+            let statuses = try? await product.subscription?.status
+        else { return [] }
+        return statuses
+    }
+
+    /// Whether a subscription in the Pro group is still set to renew.
+    private func subscriptionWillRenew() async -> Bool {
+        await subscriptionGroupStatuses().contains { status in
+            guard status.state != .expired, status.state != .revoked,
+                  case .verified(let renewal) = status.renewalInfo else { return false }
+            return renewal.willAutoRenew
+        }
+    }
 
     private func startTransactionListener() {
         transactionListenerTask = Task { [weak self] in
             for await result in Transaction.updates {
                 guard let self else { return }
                 guard let tx = try? self.checkVerified(result) else { continue }
-                if tx.productID == Self.proProductID {
+                if SubscriptionProducts.proProducts.contains(tx.productID) {
                     await self.refreshSubscriptionStatus()
                 }
                 await tx.finish()
@@ -276,7 +332,7 @@ final class MacSubscriptionManager {
 
     /// Sends the signed transaction to the link-subscription Edge Function so
     /// the server can associate this device's anonymous user with the Pro
-    /// subscription. Fire-and-forget: the server upsert is idempotent, and
+    /// purchase. Fire-and-forget: the server upsert is idempotent, and
     /// failures are non-critical (the next launch or ASSN will sync it).
     private func linkSubscriptionOnServer(jws: String) {
         guard let url = URL(string: "\(Config.supabaseURL)/functions/v1/link-subscription") else { return }

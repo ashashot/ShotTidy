@@ -19,6 +19,12 @@ struct MacSettingsView: View {
     @Environment(UsageManager.self) private var usageManager
     @Environment(AnalysisEngineSettings.self) private var engineSettings
     @State private var showDeleteAlert = false
+    @State private var selectedPlan: ProPlan = .yearly
+
+    /// Display order — the yearly plan first as the recommended one.
+    private let planOrder: [ProPlan] = [.yearly, .monthly, .lifetime]
+
+    private static let manageSubscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")!
 
     var body: some View {
         Form {
@@ -115,6 +121,25 @@ struct MacSettingsView: View {
 
     private var activeProSection: some View {
         Section("iCloud Sync") {
+            if let plan = subscriptionManager.activePlan {
+                LabeledContent("Plan", value: "Pro · \(plan.localizedName)")
+            }
+
+            // Lifetime bought while a subscription still renews — the App
+            // Store does not cancel it, so ask the user to.
+            if subscriptionManager.subscriptionRenewsAlongsideLifetime {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Your subscription is still active", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text("Lifetime is unlocked. Cancel the subscription so you are not charged again.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("Manage Subscription") {
+                        NSWorkspace.shared.open(Self.manageSubscriptionsURL)
+                    }
+                }
+            }
+
             LabeledContent("Status") {
                 switch syncMonitor.state {
                 case .idle:
@@ -191,39 +216,38 @@ struct MacSettingsView: View {
                 }
                 #endif
 
+                Picker("Plan", selection: $selectedPlan) {
+                    ForEach(planOrder) { plan in
+                        Text(planOptionLabel(plan)).tag(plan)
+                    }
+                }
+                .pickerStyle(.radioGroup)
+                .labelsHidden()
+
+                // Plan credits are granted by ShotTidierMacApp when `activePlan` changes.
                 HStack(spacing: 8) {
-                    // Subscribe button
+                    // Purchase button
                     Button {
-                        Task {
-                            await subscriptionManager.purchasePro()
-                            if subscriptionManager.isProActive {
-                                usageManager.onSubscriptionActivated()
-                            }
-                        }
+                        Task { await subscriptionManager.purchase(selectedPlan) }
                     } label: {
                         HStack(spacing: 6) {
                             if subscriptionManager.isPurchasing {
                                 ProgressView().controlSize(.small)
                             }
-                            if let product = subscriptionManager.proProduct {
-                                Text("Subscribe — \(product.displayPrice)/mo")
-                            } else {
-                                Text("Subscribe to Pro")
-                            }
+                            Text(selectedPlan.isSubscription ? "Subscribe" : "Buy Lifetime")
                         }
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(subscriptionManager.isPurchasing || subscriptionManager.isRestoring)
+                    .disabled(
+                        subscriptionManager.isPurchasing
+                            || subscriptionManager.isRestoring
+                            || subscriptionManager.product(for: selectedPlan) == nil
+                    )
 
                     // Restore button
                     Button {
-                        Task {
-                            await subscriptionManager.restorePurchases()
-                            if subscriptionManager.isProActive {
-                                usageManager.onSubscriptionActivated()
-                            }
-                        }
+                        Task { await subscriptionManager.restorePurchases() }
                     } label: {
                         HStack(spacing: 6) {
                             if subscriptionManager.isRestoring {
@@ -246,6 +270,20 @@ struct MacSettingsView: View {
     }
 
     // MARK: - Helpers
+
+    private func planOptionLabel(_ plan: ProPlan) -> String {
+        guard let price = subscriptionManager.product(for: plan)?.displayPrice else {
+            return plan.localizedName
+        }
+        switch plan {
+        case .monthly:
+            return "\(plan.localizedName) — \(price)/mo"
+        case .yearly:
+            return "\(plan.localizedName) — \(price)/yr"
+        case .lifetime:
+            return "\(plan.localizedName) — \(price) once, \(SubscriptionProducts.lifetimeEnrichmentCredits) enrichment credits"
+        }
+    }
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"

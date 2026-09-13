@@ -7,8 +7,8 @@
 //  always operate on the same counters and balance.
 //
 //  Credit model (must match UsageManager):
-//    • purchasedCredits — one-time pack purchases; never expire; spent first.
-//    • proCredits       — included in Pro subscription; reset each 30-day cycle.
+//    • purchasedCredits — one-time packs and the Lifetime pool; never expire; spent first.
+//    • proCredits       — included in Monthly / Yearly plans; reset each 30-day cycle.
 //
 
 import Foundation
@@ -26,7 +26,6 @@ final class ShareUsageManager {
 
     static let freeScreenshotsPerPeriod = 5
     static let freeInitialEnrichments   = 1
-    static let proEnrichmentsPerPeriod  = 10
     static let periodDays: Double       = 30
 
     // MARK: - UserDefaults keys (identical to UsageManager.Key)
@@ -93,8 +92,8 @@ final class ShareUsageManager {
 
     // MARK: - Rolling 30-day reset
 
-    /// Call at the start of each extension session.
-    func performRollingReset(isPro: Bool) {
+    /// Call at the start of each extension session (same rules as `UsageManager.applyPlan`).
+    func performRollingReset(plan: ProPlan?) {
         let now = Date()
 
         if now >= periodEndDate {
@@ -104,13 +103,12 @@ final class ShareUsageManager {
             defaults.set(now.timeIntervalSince1970, forKey: Key.periodStartDate)
         }
 
-        if isPro {
-            grantProCreditsIfDue(now: now)
-        } else {
-            if proCredits > 0 {
-                proCredits = 0
-                defaults.set(0, forKey: Key.proCredits)
-            }
+        let allowance = plan?.monthlyEnrichments ?? 0
+        if allowance > 0 {
+            grantProCreditsIfDue(allowance, now: now)
+        } else if proCredits > 0 {
+            proCredits = 0
+            defaults.set(0, forKey: Key.proCredits)
         }
     }
 
@@ -146,19 +144,15 @@ final class ShareUsageManager {
         defaults.set(true, forKey: Key.hasClaimedFreeEnrichment)
     }
 
-    private func grantProCreditsIfDue(now: Date) {
+    private func grantProCreditsIfDue(_ allowance: Int, now: Date) {
         let proKey = Key.proEnrichmentStartDate
-        let windowStart: Date
-        if let ts = defaults.object(forKey: proKey) as? Double {
-            windowStart = Date(timeIntervalSince1970: ts)
-        } else {
-            windowStart = now
+        if let ts = defaults.object(forKey: proKey) as? Double,
+           now < Date(timeIntervalSince1970: ts).addingTimeInterval(Self.periodDays * 86400) {
+            return  // The current 30-day credit window is still running.
         }
-        let nextGrant = windowStart.addingTimeInterval(Self.periodDays * 86400)
-        guard now >= nextGrant else { return }
 
         // Reset Pro credits for the new cycle (no carryover).
-        proCredits = Self.proEnrichmentsPerPeriod
+        proCredits = allowance
         defaults.set(proCredits, forKey: Key.proCredits)
         defaults.set(now.timeIntervalSince1970, forKey: proKey)
     }

@@ -97,6 +97,17 @@ struct ShotTidierMacApp: App {
         }
     }
 
+    /// Grants or clears plan credits and claims the Lifetime credit pool when due.
+    private func syncUsageWithPlan() async {
+        let plan = subscriptionManager.activePlan
+        usageManager.applyPlan(plan)
+        if plan == .lifetime {
+            await usageManager.claimLifetimeCreditsIfNeeded {
+                await subscriptionManager.claimLifetimeCredits()
+            }
+        }
+    }
+
     /// Transient confirmation shown when the Safari extension delivers items.
     private var importBanner: some View {
         Label(
@@ -131,8 +142,8 @@ struct ShotTidierMacApp: App {
                     // the StoreKit launch sequence.
                     async let updateCheck: Void = updateService.check()
                     await subscriptionManager.onLaunch()
-                    // Check rolling 30-day reset now that we know the subscription state.
-                    usageManager.performRollingReset(isPro: subscriptionManager.isProActive)
+                    // Align usage counters and credits with the plan StoreKit reported.
+                    await syncUsageWithPlan()
                     await updateCheck
                 }
                 .overlay(alignment: .top) {
@@ -170,6 +181,9 @@ struct ShotTidierMacApp: App {
                 }
                 .onChange(of: subscriptionManager.isProActive) { _, _ in
                     applySyncConfigurationIfNeeded()
+                }
+                .onChange(of: subscriptionManager.activePlan) { _, _ in
+                    Task { await syncUsageWithPlan() }
                 }
         }
         .modelContainer(modelContainer)

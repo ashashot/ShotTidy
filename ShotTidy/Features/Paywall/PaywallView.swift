@@ -2,8 +2,9 @@
 //  PaywallView.swift
 //  ShotTidy
 //
-//  Full-screen subscription paywall shown when the free screenshot limit is reached.
-//  Shows a Free vs Pro feature comparison and a subscribe CTA.
+//  Full-screen Pro paywall: Free vs Pro feature comparison and a plan picker —
+//  Yearly, Monthly or a one-time Lifetime purchase. Subscribers open it to
+//  change plans; their current plan is marked and cannot be bought again.
 //
 
 import SwiftUI
@@ -15,9 +16,15 @@ struct PaywallView: View {
     @Environment(UsageManager.self) private var usageManager
     @Environment(\.dismiss) private var dismiss
 
+    @State private var selectedPlan: ProPlan = .yearly
     @State private var isPurchasing = false
     @State private var isRestoring  = false
     @State private var errorMessage: String?
+    @State private var showCancelSubscriptionAlert = false
+    @State private var showManageSubscriptions = false
+
+    /// Display order — the yearly plan first as the recommended one.
+    private let plans: [ProPlan] = [.yearly, .monthly, .lifetime]
 
     var body: some View {
         NavigationStack {
@@ -26,14 +33,19 @@ struct PaywallView: View {
                     heroSection
                         .padding(.top, 8)
 
-                    usageBannerSection
-                        .padding(.top, 20)
+                    if !subManager.isProActive {
+                        usageBannerSection
+                            .padding(.top, 20)
+                    }
 
                     featuresSection
                         .padding(.top, 20)
 
+                    plansSection
+                        .padding(.top, 20)
+
                     ctaSection
-                        .padding(.top, 24)
+                        .padding(.top, 16)
 
                     footerSection
                         .padding(.top, 14)
@@ -57,6 +69,20 @@ struct PaywallView: View {
             } message: {
                 Text(errorMessage ?? "")
             }
+            .alert("Lifetime Unlocked", isPresented: $showCancelSubscriptionAlert) {
+                Button("Manage Subscription") { showManageSubscriptions = true }
+                Button("Later", role: .cancel) { dismiss() }
+            } message: {
+                Text("Your subscription is still active. Cancel it in your App Store account so you are not charged again.")
+            }
+            .manageSubscriptionsSheet(isPresented: $showManageSubscriptions)
+            .onChange(of: showManageSubscriptions) { _, isShown in
+                if !isShown { dismiss() }
+            }
+        }
+        .onAppear { normalizeSelectedPlan() }
+        .onChange(of: subManager.products.map(\.id)) { _, _ in
+            normalizeSelectedPlan()
         }
         .task {
             if subManager.products.isEmpty {
@@ -207,22 +233,93 @@ struct PaywallView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
+    // MARK: - Plans
+
+    /// Keeps the selection on a plan that can be bought: not the current plan,
+    /// and one whose App Store product actually loaded — a product that is not
+    /// available yet would otherwise leave the CTA stuck on "Loading…".
+    private func normalizeSelectedPlan() {
+        let purchasable = plans.filter {
+            $0 != subManager.activePlan && subManager.product(for: $0) != nil
+        }
+        if !purchasable.contains(selectedPlan), let first = purchasable.first {
+            selectedPlan = first
+        }
+    }
+
+    private var plansSection: some View {
+        VStack(spacing: 10) {
+            ForEach(plans) { plan in
+                if let product = subManager.product(for: plan) {
+                    PlanOptionRow(
+                        title: plan.localizedName,
+                        price: priceText(for: plan, product: product),
+                        detail: detailText(for: plan, product: product),
+                        badge: badgeText(for: plan),
+                        isSelected: selectedPlan == plan,
+                        isCurrent: subManager.activePlan == plan
+                    ) {
+                        selectedPlan = plan
+                    }
+                }
+            }
+        }
+    }
+
+    private func priceText(for plan: ProPlan, product: Product) -> Text {
+        switch plan {
+        case .monthly:  return Text("\(product.displayPrice) / month")
+        case .yearly:   return Text("\(product.displayPrice) / year")
+        case .lifetime: return Text(verbatim: product.displayPrice)
+        }
+    }
+
+    private func detailText(for plan: ProPlan, product: Product) -> Text {
+        switch plan {
+        case .monthly:
+            return Text("Billed monthly")
+        case .yearly:
+            let perMonth = (product.price / 12).formatted(product.priceFormatStyle)
+            return Text("\(perMonth) per month, billed yearly")
+        case .lifetime:
+            return Text("Pay once · \(SubscriptionProducts.lifetimeEnrichmentCredits) enrichment credits included")
+        }
+    }
+
+    private func badgeText(for plan: ProPlan) -> Text? {
+        guard plan == .yearly, let percent = yearlySavingsPercent else { return nil }
+        return Text("Save \(percent)%")
+    }
+
+    /// Yearly discount against twelve monthly payments, from live App Store prices.
+    private var yearlySavingsPercent: Int? {
+        guard
+            let monthly = subManager.product(for: .monthly)?.price,
+            let yearly = subManager.product(for: .yearly)?.price,
+            monthly > 0
+        else { return nil }
+        let fullYear = monthly * 12
+        let saving = NSDecimalNumber(decimal: (fullYear - yearly) / fullYear * 100).doubleValue
+        let percent = Int(saving.rounded())
+        return percent > 0 ? percent : nil
+    }
+
     // MARK: - CTA
 
     private var ctaSection: some View {
         VStack(spacing: 12) {
-            if let product = subManager.proProduct {
+            if let product = subManager.product(for: selectedPlan) {
                 Button {
-                    Task { await buyPro(product: product) }
+                    Task { await buy(selectedPlan) }
                 } label: {
                     Group {
                         if isPurchasing {
                             ProgressView().tint(.white)
                         } else {
                             VStack(spacing: 3) {
-                                Text("Subscribe for \(product.displayPrice) / month")
+                                ctaTitle(for: selectedPlan, price: product.displayPrice)
                                     .font(.headline)
-                                Text("Cancel anytime in App Store Settings")
+                                ctaCaption(for: selectedPlan)
                                     .font(.caption)
                                     .opacity(0.82)
                             }
@@ -234,7 +331,7 @@ struct PaywallView: View {
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.roundedRectangle(radius: 14))
                 .controlSize(.large)
-                .disabled(isPurchasing || isRestoring)
+                .disabled(isPurchasing || isRestoring || subManager.activePlan == selectedPlan)
             } else {
                 // Products still loading
                 HStack(spacing: 10) {
@@ -264,11 +361,25 @@ struct PaywallView: View {
         }
     }
 
+    private func ctaTitle(for plan: ProPlan, price: String) -> Text {
+        switch plan {
+        case .monthly:  return Text("Subscribe for \(price) / month")
+        case .yearly:   return Text("Subscribe for \(price) / year")
+        case .lifetime: return Text("Buy Lifetime for \(price)")
+        }
+    }
+
+    private func ctaCaption(for plan: ProPlan) -> Text {
+        plan.isSubscription
+            ? Text("Cancel anytime in App Store Settings")
+            : Text("One-time payment, no subscription")
+    }
+
     // MARK: - Footer
 
     private var footerSection: some View {
         VStack(spacing: 10) {
-            Text("Subscription renews automatically each month. Manage or cancel anytime in your App Store account settings.")
+            Text("Subscriptions renew automatically at the end of each billing period unless cancelled at least 24 hours before. Manage or cancel anytime in your App Store account settings. Lifetime is a one-time purchase.")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -286,13 +397,15 @@ struct PaywallView: View {
 
     // MARK: - Actions
 
-    private func buyPro(product: Product) async {
+    /// Credits for the new plan are granted by ShotTidyApp when `activePlan` changes.
+    private func buy(_ plan: ProPlan) async {
         isPurchasing = true
         defer { isPurchasing = false }
         do {
-            let success = try await subManager.purchasePro()
-            if success {
-                usageManager.onSubscriptionActivated()
+            guard try await subManager.purchase(plan) else { return }
+            if plan == .lifetime && subManager.subscriptionRenewsAlongsideLifetime {
+                showCancelSubscriptionAlert = true
+            } else {
                 dismiss()
             }
         } catch {
@@ -313,6 +426,77 @@ struct PaywallView: View {
         } catch {
             errorMessage = "Restore failed: \(error.localizedDescription). Make sure you're signed in with the same Apple ID used to purchase."
         }
+    }
+}
+
+// MARK: - PlanOptionRow
+
+private struct PlanOptionRow: View {
+    let title: String
+    let price: Text
+    let detail: Text
+    let badge: Text?
+    let isSelected: Bool
+    let isCurrent: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 12) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22))
+                    .foregroundStyle(isSelected ? Color.blue : Color.secondary)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+
+                        if isCurrent {
+                            tag(Text("Current"), color: .gray)
+                        } else if let badge {
+                            tag(badge, color: .orange)
+                        }
+                    }
+
+                    detail
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                price
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.trailing)
+            }
+            .padding(14)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(isSelected ? Color.blue : Color.clear, lineWidth: 2)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .disabled(isCurrent)
+        .opacity(isCurrent ? 0.6 : 1)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func tag(_ text: Text, color: Color) -> some View {
+        text
+            .font(.system(size: 9, weight: .bold))
+            .textCase(.uppercase)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(color)
+            .clipShape(Capsule())
     }
 }
 

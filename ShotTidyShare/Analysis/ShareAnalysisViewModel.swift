@@ -108,7 +108,7 @@ final class ShareAnalysisViewModel {
         // Step 0: check 30-day screenshot quota before making any API call
         let isPro = AppGroupManager.loadIsProStatus()
         let usage = ShareUsageManager.shared
-        usage.performRollingReset(isPro: isPro)
+        usage.performRollingReset(plan: isPro ? AppGroupManager.loadProPlan() : nil)
 
         guard usage.canAnalyzeScreenshots(count: 1, isPro: isPro) else {
             phase = .limitReached

@@ -115,6 +115,17 @@ struct ShotTidyApp: App {
         }
     }
 
+    /// Grants or clears plan credits and claims the Lifetime credit pool when due.
+    private func syncUsageWithPlan() async {
+        let plan = subscriptionManager.activePlan
+        usageManager.applyPlan(plan)
+        if plan == .lifetime {
+            await usageManager.claimLifetimeCreditsIfNeeded {
+                await subscriptionManager.claimLifetimeCredits()
+            }
+        }
+    }
+
     // MARK: - Scene
 
     var body: some Scene {
@@ -130,13 +141,16 @@ struct ShotTidyApp: App {
                 .task {
                     // Load StoreKit products and verify subscription status on launch.
                     await subscriptionManager.onLaunch()
-                    // Check rolling 30-day reset now that we know the subscription state.
-                    usageManager.performRollingReset(isPro: subscriptionManager.isProActive)
+                    // Align usage counters and credits with the plan StoreKit reported.
+                    await syncUsageWithPlan()
                     // Check remote config for a required update (runs in background).
                     await updateService.check()
                 }
                 .onChange(of: subscriptionManager.isProActive) { _, _ in
                     applySyncConfigurationIfNeeded()
+                }
+                .onChange(of: subscriptionManager.activePlan) { _, _ in
+                    Task { await syncUsageWithPlan() }
                 }
                 // Force update overlay — covers the entire UI, cannot be dismissed.
                 .overlay {

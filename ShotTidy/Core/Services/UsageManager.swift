@@ -3,15 +3,18 @@
 //  ShotTidy
 //
 //  Tracks rolling-30-day screenshot usage and enrichment credit balance.
-//  All state is persisted in UserDefaults (local only — by design).
+//  All state is persisted locally in the Keychain-backed UsageStore (by design).
 //
 //  Free plan limits:
 //    • 5 screenshot analyses per rolling 30-day period
 //    • 1 enrichment credit on first install (never refills automatically)
 //
-//  Pro plan ($4.99/month):
+//  Pro plans (see ProPlan in SubscriptionProducts.swift):
 //    • Unlimited screenshot analyses
-//    • 10 enrichment credits per 30-day period (reset each cycle — do NOT accumulate)
+//    • Monthly ($4.99) / Yearly ($29.99): 10 enrichment credits per 30-day period
+//      (reset each cycle — do NOT accumulate)
+//    • Lifetime ($49.99 once): 100 enrichment credits once, added to purchasedCredits
+//      (granted by the server once per App Store purchase)
 //
 //  Enrichment packs (one-time purchases — credits added to purchasedCredits immediately):
 //    • 10 credits for $1.99
@@ -32,7 +35,7 @@ final class UsageManager {
 
     static let freeScreenshotsPerPeriod  = 5
     static let freeInitialEnrichments    = 1
-    static let proEnrichmentsPerPeriod   = 10
+    static let proEnrichmentsPerPeriod   = ProPlan.monthly.monthlyEnrichments
     /// Number of AI category-field suggestions Pro users get per 30-day period.
     static let proCategorySuggestionsPerPeriod = 5
     static let periodDays: Double        = 30
@@ -50,17 +53,19 @@ final class UsageManager {
         // New split-credit keys (v2):
         static let purchasedCredits              = "usage.purchasedCredits"
         static let proCredits                    = "usage.proCredits"
+        static let lifetimeCreditsClaimed        = "usage.lifetimeCreditsClaimed"
     }
 
     // MARK: - Observable state
 
     private(set) var screenshotsThisPeriod: Int = 0
 
-    /// Credits from one-time pack purchases — never expire, accumulate across packs.
+    /// Credits from one-time pack purchases and the Lifetime pool — never
+    /// expire, accumulate across purchases.
     private(set) var purchasedCredits: Int = 0
 
-    /// Credits included in the active Pro subscription — reset to proEnrichmentsPerPeriod
-    /// each 30-day cycle; unused credits do NOT carry over to the next cycle.
+    /// Credits included in an active Monthly / Yearly plan — reset to the plan
+    /// allowance each 30-day cycle; unused credits do NOT carry over.
     private(set) var proCredits: Int = 0
 
     /// Combined visible balance (purchased + pro). Kept as a computed property so UI
@@ -75,6 +80,9 @@ final class UsageManager {
 
     /// The date when the current 30-day Pro enrichment window started.
     private(set) var proEnrichmentStartDate: Date?
+
+    /// Prevents overlapping Lifetime claims (launch and plan change can race).
+    @ObservationIgnored private var isClaimingLifetimeCredits = false
 
     private let defaults: UsageStore
 
@@ -154,16 +162,18 @@ final class UsageManager {
         defaults.set(categorySuggestionsThisPeriod, forKey: Key.categorySuggestionsThisPeriod)
     }
 
-    // MARK: - Rolling reset
+    // MARK: - Plan sync
 
-    /// Call on app launch and whenever subscription status changes.
+    /// Brings counters and credits in line with the active plan. Call on launch
+    /// and whenever the plan changes; safe to call repeatedly.
     ///
     /// - If 30 days have passed since `periodStartDate`, the screenshot counter is reset
     ///   and a new 30-day window begins from **now**.
-    /// - If `isPro` and 30 days have passed since `proEnrichmentStartDate`, resets
-    ///   Pro credits to `proEnrichmentsPerPeriod` (unused credits do NOT carry over).
-    /// - If not Pro, any remaining Pro credits are cleared immediately.
-    func performRollingReset(isPro: Bool) {
+    /// - Monthly / Yearly: grants the plan's monthly credits when no 30-day credit
+    ///   window is running — first activation, or the previous window elapsed.
+    ///   Unused credits do NOT carry over; a restore or relaunch grants nothing extra.
+    /// - Lifetime / Free: no monthly credits — any left from a subscription are cleared.
+    func applyPlan(_ plan: ProPlan?) {
         let now = Date()
 
         // Screenshot counter reset (also resets the category-suggestion counter,
@@ -177,26 +187,29 @@ final class UsageManager {
             defaults.set(now.timeIntervalSince1970, forKey: Key.periodStartDate)
         }
 
-        if isPro {
-            // Grant Pro credits if a new 30-day cycle has started.
-            grantProCreditsIfDue(now: now)
-        } else {
-            // Subscription cancelled or inactive — clear Pro credits.
-            if proCredits > 0 {
-                proCredits = 0
-                defaults.set(0, forKey: Key.proCredits)
-            }
+        let allowance = plan?.monthlyEnrichments ?? 0
+        if allowance > 0 {
+            grantProCreditsIfDue(allowance, now: now)
+        } else if proCredits > 0 {
+            proCredits = 0
+            defaults.set(0, forKey: Key.proCredits)
         }
     }
 
-    /// Called immediately after a successful Pro subscription purchase.
-    /// Sets Pro credits to the monthly allowance and starts the Pro window from **now**.
-    func onSubscriptionActivated() {
-        let now = Date()
-        proEnrichmentStartDate = now
-        defaults.set(now.timeIntervalSince1970, forKey: Key.proEnrichmentStartDate)
-        proCredits = Self.proEnrichmentsPerPeriod
-        defaults.set(proCredits, forKey: Key.proCredits)
+    /// Adds the one-time Lifetime credit pool to the purchased balance. The server
+    /// grants it once per App Store purchase, so restoring on another device or
+    /// reinstalling does not add it twice; the local flag stops asking once the
+    /// server has answered. A failed request (`nil`) is retried on the next call.
+    func claimLifetimeCreditsIfNeeded(_ claim: () async -> Int?) async {
+        guard !defaults.bool(forKey: Key.lifetimeCreditsClaimed), !isClaimingLifetimeCredits else { return }
+        isClaimingLifetimeCredits = true
+        defer { isClaimingLifetimeCredits = false }
+
+        guard let granted = await claim() else { return }
+        if granted > 0 {
+            addEnrichments(granted)
+        }
+        defaults.set(true, forKey: Key.lifetimeCreditsClaimed)
     }
 
     // MARK: - Private
@@ -242,16 +255,16 @@ final class UsageManager {
         defaults.set(true, forKey: Key.hasClaimedFreeEnrichment)
     }
 
-    private func grantProCreditsIfDue(now: Date) {
-        let windowStart = proEnrichmentStartDate ?? now
-        let nextGrant   = windowStart.addingTimeInterval(Self.periodDays * 86400)
+    private func grantProCreditsIfDue(_ allowance: Int, now: Date) {
+        if let windowStart = proEnrichmentStartDate,
+           now < windowStart.addingTimeInterval(Self.periodDays * 86400) {
+            return  // The current 30-day credit window is still running.
+        }
 
-        guard now >= nextGrant else { return }
-
-        // 30-day cycle elapsed — RESET Pro credits (unused credits are lost, not carried over).
+        // New cycle — RESET Pro credits (unused credits are lost, not carried over).
         proEnrichmentStartDate = now
         defaults.set(now.timeIntervalSince1970, forKey: Key.proEnrichmentStartDate)
-        proCredits = Self.proEnrichmentsPerPeriod
+        proCredits = allowance
         defaults.set(proCredits, forKey: Key.proCredits)
     }
 }

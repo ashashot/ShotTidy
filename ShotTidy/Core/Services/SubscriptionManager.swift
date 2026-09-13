@@ -2,10 +2,13 @@
 //  SubscriptionManager.swift
 //  ShotTidy
 //
-//  StoreKit 2 manager — subscriptions and one-time enrichment packs.
+//  StoreKit 2 manager — Pro plans and one-time enrichment packs.
 //
-//  Product IDs (configure in App Store Connect):
-//    com.mbx.shottidier.pro_monthly    — $4.99/month Auto-Renewable Subscription
+//  Product IDs and plan rules (configure in App Store Connect) live in
+//  SubscriptionProducts.swift:
+//    com.mbx.shottidier.pro_monthly    — $4.99/month  Auto-Renewable Subscription
+//    com.mbx.shottidier.pro_yearly     — $29.99/year  Auto-Renewable Subscription (same group)
+//    com.mbx.shottidier.pro_lifetime   — $49.99       Non-Consumable
 //    com.mbx.shottidier.enrichments_10 — $1.99  Consumable pack (10 credits)
 //    com.mbx.shottidier.enrichments_30 — $4.99  Consumable pack (30 credits)
 //    com.mbx.shottidier.enrichments_75 — $9.99  Consumable pack (75 credits)
@@ -22,6 +25,8 @@ final class SubscriptionManager {
 
     enum ProductID {
         static let proMonthly     = SubscriptionProducts.proMonthly
+        static let proYearly      = SubscriptionProducts.proYearly
+        static let proLifetime    = SubscriptionProducts.proLifetime
         static let enrichments10  = SubscriptionProducts.enrichments10
         static let enrichments30  = SubscriptionProducts.enrichments30
         static let enrichments75  = SubscriptionProducts.enrichments75
@@ -38,13 +43,25 @@ final class SubscriptionManager {
 
     // MARK: - Observable state
 
-    private(set) var isProActive = false
+    /// The purchase that unlocks Pro right now, `nil` on the Free plan.
+    private(set) var activePlan: ProPlan?
+    var isProActive: Bool { activePlan != nil }
+
+    /// Lifetime is active but a subscription is still set to renew. The App
+    /// Store never cancels it on its own, so the UI asks the user to.
+    private(set) var subscriptionRenewsAlongsideLifetime = false
+
     private(set) var products: [Product] = []
     private(set) var isPurchasing = false
     var purchaseError: String?
 
+    /// Monthly plan product — used for "per month" teasers.
     var proProduct: Product? {
-        products.first { $0.id == ProductID.proMonthly }
+        product(for: .monthly)
+    }
+
+    func product(for plan: ProPlan) -> Product? {
+        products.first { $0.id == plan.productID }
     }
 
     var packProducts: [Product] {
@@ -57,12 +74,15 @@ final class SubscriptionManager {
 
     private var transactionListenerTask: Task<Void, Never>?
 
+    /// Signed Lifetime transaction, kept to claim its one-time credit pool.
+    private var lifetimeJWS: String?
+
     // MARK: - Init
 
     init() {
-        // Start from the persisted status so Pro UI (and the container that was
+        // Start from the persisted plan so Pro UI (and the container that was
         // built from the same flag) do not flash Free until StoreKit answers.
-        isProActive = AppGroupManager.loadIsProStatus()
+        activePlan = AppGroupManager.loadIsProStatus() ? AppGroupManager.loadProPlan() : nil
         startTransactionListener()
     }
     // Note: SubscriptionManager lives for the entire app lifetime (held by @State in ShotTidyApp),
@@ -90,11 +110,11 @@ final class SubscriptionManager {
         }
     }
 
-    // MARK: - Purchase subscription
+    // MARK: - Purchase a plan
 
-    /// Returns `true` when Pro was activated.
-    func purchasePro() async throws -> Bool {
-        guard let product = proProduct else {
+    /// Returns `true` when the purchase went through.
+    func purchase(_ plan: ProPlan) async throws -> Bool {
+        guard let product = product(for: plan) else {
             throw PurchaseError.productNotLoaded
         }
         return try await performPurchase(product)
@@ -119,20 +139,24 @@ final class SubscriptionManager {
     private(set) var lastDiagnostic = ""
 
     func refreshSubscriptionStatus() async {
-        var active = false
-        var proJWS: String? = nil
+        var best: (plan: ProPlan, jws: String)?
         var totalEntitlements = 0
         var unverifiedCount = 0
         var foundProductIDs: [String] = []
+
+        // Several Pro purchases can be active at once — keep the highest plan.
+        func consider(_ plan: ProPlan, jws: String) {
+            if let current = best, current.plan.rank >= plan.rank { return }
+            best = (plan, jws)
+        }
 
         for await result in Transaction.currentEntitlements {
             totalEntitlements += 1
             switch result {
             case .verified(let tx):
                 foundProductIDs.append(tx.productID)
-                if tx.productID == ProductID.proMonthly && tx.revocationDate == nil {
-                    active = true
-                    proJWS = result.jwsRepresentation
+                if tx.revocationDate == nil, let plan = ProPlan(productID: tx.productID) {
+                    consider(plan, jws: result.jwsRepresentation)
                 }
             case .unverified(_, let error):
                 unverifiedCount += 1
@@ -141,33 +165,27 @@ final class SubscriptionManager {
         }
 
         // Fallback: check subscription status via Product API (helps in Sandbox).
-        if !active {
-            for product in products where product.id == ProductID.proMonthly {
-                if let statuses = try? await product.subscription?.status {
-                    for status in statuses where status.state == .subscribed || status.state == .inGracePeriod {
-                        // Status covers the whole subscription GROUP — make sure
-                        // the underlying transaction is for this product.
-                        guard case .verified(let tx) = status.transaction,
-                              tx.productID == ProductID.proMonthly,
-                              tx.revocationDate == nil else { continue }
-                        active = true
-                    }
-                }
-            }
-            // Recover a JWS for server linking — the fallback path has no
-            // entitlement transaction, but latest(for:) usually still has one.
-            if active, proJWS == nil,
-               let latest = await Transaction.latest(for: ProductID.proMonthly) {
-                proJWS = latest.jwsRepresentation
+        if best == nil {
+            for status in await subscriptionGroupStatuses()
+            where status.state == .subscribed || status.state == .inGracePeriod {
+                // Status covers the whole subscription GROUP — take the plan
+                // from the underlying transaction.
+                guard case .verified(let tx) = status.transaction,
+                      tx.revocationDate == nil,
+                      let plan = ProPlan(productID: tx.productID) else { continue }
+                consider(plan, jws: status.transaction.jwsRepresentation)
             }
         }
 
-        lastDiagnostic = "Entitlements: \(totalEntitlements), unverified: \(unverifiedCount), IDs: \(foundProductIDs.joined(separator: "|")), active: \(active)"
+        // Products the App Store did not return (not created, not "Ready to Submit",
+        // or not propagated to Sandbox yet) are silently missing from the paywall.
+        let missingProducts = ProductID.all.subtracting(products.map(\.id)).sorted()
+        lastDiagnostic = "Entitlements: \(totalEntitlements), unverified: \(unverifiedCount), IDs: \(foundProductIDs.joined(separator: "|")), plan: \(best?.plan.rawValue ?? "none"), missing products: \(missingProducts.isEmpty ? "none" : missingProducts.joined(separator: "|"))"
 
         // Keep the server-side subscription record in sync (once per launch).
-        if active, let jws = proJWS, !didLinkSubscriptionThisSession {
+        if let best, !didLinkSubscriptionThisSession {
             didLinkSubscriptionThisSession = true
-            linkSubscriptionOnServer(jws: jws)
+            linkSubscriptionOnServer(jws: best.jws)
         }
 
         // No signal from StoreKit at all: entitlements came back empty and the
@@ -175,19 +193,66 @@ final class SubscriptionManager {
         // loaded (offline, App Store unreachable). Keep the last known status
         // rather than downgrading Pro to Free — a false flip here would tear
         // down iCloud sync (and flip it back on the next launch) for no reason.
-        if !active, totalEntitlements == 0, products.isEmpty {
+        if best == nil, totalEntitlements == 0, products.isEmpty {
             lastDiagnostic += " — no StoreKit data, keeping previous status"
             return
+        }
+
+        if let best, best.plan == .lifetime {
+            lifetimeJWS = best.jws
+            subscriptionRenewsAlongsideLifetime = await subscriptionWillRenew()
+        } else {
+            lifetimeJWS = nil
+            subscriptionRenewsAlongsideLifetime = false
         }
 
         // Persist for the next launch (ModelContainer reads this before StoreKit
         // answers) and for the Share Extension. ShotTidyApp observes isProActive
         // and rebuilds the container in place when the value changes.
-        isProActive = active
-        AppGroupManager.saveIsProStatus(active)
+        activePlan = best?.plan
+        AppGroupManager.saveIsProStatus(isProActive)
+        AppGroupManager.saveProPlan(activePlan)
+    }
+
+    // MARK: - Lifetime credit pool
+
+    /// Asks the server for the one-time Lifetime credit pool. Returns the
+    /// credits granted to this user (0 when the purchase was already claimed
+    /// by another install), or `nil` when the request failed — retry later.
+    func claimLifetimeCredits() async -> Int? {
+        guard
+            let jws = lifetimeJWS,
+            let url = URL(string: "\(Config.supabaseURL)/functions/v1/link-subscription"),
+            let data = try? await SupabaseFunctionClient.postJSON(
+                ["signedTransaction": jws, "claimLifetimeCredits": true],
+                to: url,
+                timeout: 30
+            ),
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let credits = json["lifetime_credits"] as? Int
+        else { return nil }
+        return credits
     }
 
     // MARK: - Private helpers
+
+    /// Statuses of the Pro subscription group (empty until products load).
+    private func subscriptionGroupStatuses() async -> [Product.SubscriptionInfo.Status] {
+        guard
+            let product = products.first(where: { SubscriptionProducts.subscriptions.contains($0.id) }),
+            let statuses = try? await product.subscription?.status
+        else { return [] }
+        return statuses
+    }
+
+    /// Whether a subscription in the Pro group is still set to renew.
+    private func subscriptionWillRenew() async -> Bool {
+        await subscriptionGroupStatuses().contains { status in
+            guard status.state != .expired, status.state != .revoked,
+                  case .verified(let renewal) = status.renewalInfo else { return false }
+            return renewal.willAutoRenew
+        }
+    }
 
     private func performPurchase(_ product: Product) async throws -> Bool {
         isPurchasing = true
@@ -206,7 +271,7 @@ final class SubscriptionManager {
         switch result {
         case .success(let verification):
             let tx = try checkVerified(verification)
-            if tx.productID == ProductID.proMonthly {
+            if SubscriptionProducts.proProducts.contains(tx.productID) {
                 linkSubscriptionOnServer(jws: verification.jwsRepresentation)
                 await refreshSubscriptionStatus()
             }
@@ -226,7 +291,7 @@ final class SubscriptionManager {
             for await result in Transaction.updates {
                 guard let self else { return }
                 guard let tx = try? self.checkVerified(result) else { continue }
-                if tx.productID == ProductID.proMonthly {
+                if SubscriptionProducts.proProducts.contains(tx.productID) {
                     await self.refreshSubscriptionStatus()
                 }
                 await tx.finish()
@@ -248,7 +313,7 @@ final class SubscriptionManager {
 
     /// Sends the signed transaction to the link-subscription Edge Function so
     /// the server can associate this device's anonymous user with the Pro
-    /// subscription. Fire-and-forget: the server upsert is idempotent, and
+    /// purchase. Fire-and-forget: the server upsert is idempotent, and
     /// failures are non-critical (the next launch or ASSN will sync it).
     private func linkSubscriptionOnServer(jws: String) {
         guard let url = URL(string: "\(Config.supabaseURL)/functions/v1/link-subscription") else { return }
