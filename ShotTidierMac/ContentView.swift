@@ -35,7 +35,7 @@ struct ContentView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .automatic) {
+            ToolbarItem(placement: .primaryAction) {
                 CloudSyncStatusButton()
             }
         }
@@ -95,20 +95,21 @@ private struct CloudSyncStatusButton: View {
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
-        if syncMonitor.isSyncing {
-            ProgressView()
-                .controlSize(.small)
-                .help("Syncing with iCloud…")
-        } else {
-            Button {
-                syncMonitor.triggerSync(context: modelContext)
-            } label: {
+        // Keep the standard toolbar button style so the item shares the same
+        // size, padding and glass background as the neighbouring toolbar buttons.
+        Button {
+            syncMonitor.triggerSync(context: modelContext)
+        } label: {
+            if syncMonitor.isSyncing {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
                 Image(systemName: iconName)
                     .foregroundStyle(iconColor)
             }
-            .buttonStyle(.plain)
-            .help(helpText)
         }
+        .disabled(syncMonitor.isSyncing)
+        .help(helpText)
     }
 
     private var iconName: String {
