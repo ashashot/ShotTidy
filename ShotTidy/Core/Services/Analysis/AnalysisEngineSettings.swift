@@ -22,7 +22,7 @@ final class AnalysisEngineSettings {
     private(set) var resolution: AnalysisEngineResolver.Resolution
 
     init() {
-        resolution = AnalysisEngineResolver.resolve()
+        resolution = Self.currentResolution()
     }
 
     /// Engine that will run, or `nil` on an unsupported device (Mac without
@@ -38,7 +38,15 @@ final class AnalysisEngineSettings {
     /// Re-reads the system model state (Apple Intelligence can be toggled or
     /// finish downloading while the app is running).
     func refreshAvailability() {
-        resolution = AnalysisEngineResolver.resolve()
+        resolution = Self.currentResolution()
+    }
+
+    private static func currentResolution() -> AnalysisEngineResolver.Resolution {
+        #if DEBUG && os(iOS)
+        // App Store screenshot scenes show the on-device engine regardless of the simulator's model state.
+        if DemoMode.isActive { return .onDevice(.available) }
+        #endif
+        return AnalysisEngineResolver.resolve()
     }
 
     /// Whether the plan allows this engine — delegates to the tiering hook.

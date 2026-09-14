@@ -11,11 +11,11 @@ struct ShotTidyApp: App {
 
     // MARK: - Managers (injected into the environment)
 
-    @State private var subscriptionManager = SubscriptionManager()
+    @State private var subscriptionManager: SubscriptionManager
     @State private var usageManager        = UsageManager()
     @State private var categoryStore       = CategoryStore()
     @State private var updateService       = AppUpdateService()
-    @State private var localizationManager = LocalizationManager()
+    @State private var localizationManager: LocalizationManager
     @State private var analysisEngineSettings = AnalysisEngineSettings()
 
     // MARK: - SwiftData container
@@ -32,6 +32,13 @@ struct ShotTidyApp: App {
     // MARK: - Init
 
     init() {
+        #if DEBUG
+        // App Store screenshot scenes: seed Pro status and language before the managers read them.
+        DemoMode.prepareSharedState()
+        #endif
+        _subscriptionManager = State(initialValue: SubscriptionManager())
+        _localizationManager = State(initialValue: LocalizationManager())
+
         // OpenAI key now lives in Supabase Secrets (server-side).
         // No local key to sync — AppGroupManager.apiKey is no longer used.
 
@@ -39,8 +46,15 @@ struct ShotTidyApp: App {
         AppGroupManager.purgeLegacyPendingImages()
 
         let isPro = AppGroupManager.loadIsProStatus()
-        _modelContainer = State(initialValue: Self.makeModelContainer(isPro: isPro))
+        _modelContainer = State(initialValue: Self.initialModelContainer(isPro: isPro))
         _containerIsPro = State(initialValue: isPro)
+    }
+
+    private static func initialModelContainer(isPro: Bool) -> ModelContainer {
+        #if DEBUG
+        if DemoMode.isActive { return DemoMode.makeModelContainer() }
+        #endif
+        return makeModelContainer(isPro: isPro)
     }
 
     /// Builds the container for the shared App Group store. Pro tier gets a
@@ -139,6 +153,10 @@ struct ShotTidyApp: App {
                 .environment(analysisEngineSettings)
                 .environment(\.locale, localizationManager.resolvedLocale)
                 .task {
+                    #if DEBUG
+                    // Demo scenes run against seeded data — no StoreKit, quota or update checks.
+                    guard !DemoMode.isActive else { return }
+                    #endif
                     // Load StoreKit products and verify subscription status on launch.
                     await subscriptionManager.onLaunch()
                     // Align usage counters and credits with the plan StoreKit reported.

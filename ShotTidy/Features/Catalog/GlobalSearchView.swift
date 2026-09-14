@@ -30,6 +30,11 @@ struct GlobalSearchView: View {
             }
             .navigationTitle("Search")
             .searchable(text: $searchText, prompt: "Search all items")
+            #if DEBUG
+            .onAppear {
+                if DemoMode.scene == .search { searchText = DemoMode.content.searchQuery }
+            }
+            #endif
         }
     }
 }

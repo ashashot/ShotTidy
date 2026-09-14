@@ -150,6 +150,14 @@ struct ItemDetailView: View {
             .padding()
         }
         .background(Color(.systemGroupedBackground))
+        #if DEBUG
+        .onAppear {
+            // Enrichment demo scene: show the state right after three fields were filled.
+            guard DemoMode.scene == .enrichment, item.title == DemoMode.content.enrichmentTitle else { return }
+            enrichmentState = .success(DemoMode.enrichmentFilledKeys.count)
+            recentlyFilledKeys = DemoMode.enrichmentFilledKeys
+        }
+        #endif
         .navigationTitle(item.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

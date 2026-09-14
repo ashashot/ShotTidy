@@ -75,6 +75,12 @@ struct CategoriesView: View {
                 .navigationDestination(for: CategoryDescriptor.self) { category in
                     CategoryListView(descriptor: category)
                 }
+                #if DEBUG
+                // Demo scenes push an item detail directly (see DemoMode).
+                .navigationDestination(for: CatalogItem.self) { item in
+                    ItemDetailView(item: item)
+                }
+                #endif
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button {

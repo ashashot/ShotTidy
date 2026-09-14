@@ -94,6 +94,13 @@ struct ImportView: View {
         .onAppear {
             viewModel.modelContext = modelContext
             engineSettings.refreshAvailability()
+            #if DEBUG
+            if DemoMode.scene == .analyzing {
+                viewModel.progressTotal = 3
+                viewModel.progressCurrent = 2
+                viewModel.isAnalyzing = true
+            }
+            #endif
         }
     }
 

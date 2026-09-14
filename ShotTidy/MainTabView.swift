@@ -75,6 +75,12 @@ struct MainTabView: View {
     /// whenever the user creates, edits, or deletes a category.
     @Query private var userCategories: [UserCategory]
 
+    #if DEBUG
+    // App Store screenshot scenes (see DemoMode).
+    @State private var demoImportModel = ImportViewModel()
+    @State private var showDemoConfirmation = false
+    #endif
+
     var body: some View {
         Group {
             if #available(iOS 26.0, *) {
@@ -86,6 +92,13 @@ struct MainTabView: View {
         .sheet(isPresented: $showImport) {
             ImportView()
         }
+        #if DEBUG
+        .sheet(isPresented: $showDemoConfirmation) {
+            ConfirmationView(viewModel: demoImportModel) {
+                showDemoConfirmation = false
+            }
+        }
+        #endif
         // Success banner (appears above the tab bar)
         .overlay(alignment: .top) {
             if let text = importBanner {
@@ -103,6 +116,9 @@ struct MainTabView: View {
             syncCustomCategories()
             importPendingDraftsIfNeeded()
             syncWidgetSnapshot()
+            #if DEBUG
+            applyDemoScene()
+            #endif
         }
         // Keep the shared CategoryStore + App Group snapshot in sync with SwiftData
         .onChange(of: userCategories.count) { _, _ in
@@ -211,6 +227,38 @@ struct MainTabView: View {
             }
         }
     }
+
+    #if DEBUG
+    // MARK: - Demo scenes
+
+    /// Opens the screen requested by `-demoScene` once the tab view is on screen.
+    private func applyDemoScene() {
+        guard let scene = DemoMode.scene else { return }
+        Task { @MainActor in
+            // Let the tab view settle so sheets and pushes are not dropped.
+            try? await Task.sleep(for: .milliseconds(600))
+            switch scene {
+            case .confirmation, .newCategory:
+                demoImportModel.modelContext = modelContext
+                demoImportModel.draftItems = DemoMode.drafts(for: scene)
+                showDemoConfirmation = true
+            case .analyzing:
+                showImport = true
+            case .enrichment, .place:
+                guard let item = DemoMode.catalogItem(for: scene, in: modelContext) else { return }
+                catalogNavigationPath = NavigationPath()
+                catalogNavigationPath.append(categoryStore.descriptor(for: item))
+                catalogNavigationPath.append(item)
+            case .search:
+                selectedTab = .search
+            case .settings:
+                selectedTab = .settings
+            case .catalog, .share, .widgets:
+                break
+            }
+        }
+    }
+    #endif
 
     // MARK: - Widget snapshot sync
 

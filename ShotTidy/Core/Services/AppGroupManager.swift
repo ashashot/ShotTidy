@@ -298,6 +298,31 @@ enum AppGroupManager {
         containerURL?.appendingPathComponent("pending_drafts.json")
     }
 
+    #if DEBUG
+    // MARK: - App Store screenshot demo (Debug only)
+
+    private nonisolated static let demoShareDraftsKey = "demo.shareDrafts"
+
+    /// Canned drafts the Share Extension shows instead of analyzing (see DemoMode).
+    /// Pass `nil` to clear them.
+    static func saveDemoShareDrafts(_ items: [PendingDraftItem]?) {
+        if let items, let data = try? JSONEncoder().encode(items) {
+            sharedDefaults.set(data, forKey: demoShareDraftsKey)
+        } else {
+            sharedDefaults.removeObject(forKey: demoShareDraftsKey)
+        }
+    }
+
+    static func loadDemoShareDrafts() -> [PendingDraftItem]? {
+        guard
+            let data = sharedDefaults.data(forKey: demoShareDraftsKey),
+            let items = try? JSONDecoder().decode([PendingDraftItem].self, from: data),
+            !items.isEmpty
+        else { return nil }
+        return items
+    }
+    #endif
+
     // MARK: - Pending Draft Items (new flow)
 
     /// Append items confirmed by the user in the Share Extension to any existing pending drafts.

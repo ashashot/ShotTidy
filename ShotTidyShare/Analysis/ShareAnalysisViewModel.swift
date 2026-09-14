@@ -105,6 +105,19 @@ final class ShareAnalysisViewModel {
     // MARK: - Start analysis
 
     func start() async {
+        #if DEBUG
+        // App Store screenshot scene: the main app launched with `-demoScene share`
+        // leaves canned drafts in the App Group — show them instead of analyzing.
+        if let demoItems = AppGroupManager.loadDemoShareDrafts() {
+            activeEngine = .onDevice
+            phase = .analyzing
+            try? await Task.sleep(for: .seconds(1))
+            draftWrappers = demoItems.map { DraftWrapper(item: $0) }
+            phase = .results
+            return
+        }
+        #endif
+
         // Step 0: check 30-day screenshot quota before making any API call
         let isPro = AppGroupManager.loadIsProStatus()
         let usage = ShareUsageManager.shared
