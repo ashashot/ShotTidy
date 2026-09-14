@@ -3,7 +3,8 @@
 //  ShotTidyWidget
 //
 //  Displays items from a user-selected category.
-//  Small: up to 3 items. Medium: up to 5. Large: up to 8 + plan footer.
+//  Small: up to 3 items. Medium: up to 4. Large: up to 8 + plan footer.
+//  The row count adapts down (ViewThatFits) so nothing is clipped.
 //
 
 import WidgetKit
@@ -101,79 +102,39 @@ struct CategoryListWidgetView: View {
         WidgetCategoryInfo.forKey(entry.configuration.category.id)
     }
 
-    private var maxVisible: Int {
+    /// Row budgets tried in order; the first one that fits the height wins.
+    private var rowBudgets: [Int] {
         switch family {
-        case .systemSmall:  return 3
-        case .systemMedium: return 4
-        default:            return 8
+        case .systemSmall:  return [3, 2]
+        case .systemMedium: return [4, 3, 2]
+        default:            return [8, 7, 6, 5]
         }
-    }
-
-    private var outerPadding: CGFloat {
-        switch family {
-        case .systemSmall:  return 11
-        case .systemMedium: return 13
-        default:            return 16
-        }
-    }
-
-    private var headerBottomPadding: CGFloat {
-        family == .systemSmall ? 6 : 8
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            headerView.padding(.bottom, headerBottomPadding)
+        VStack(alignment: .leading, spacing: WidgetMetrics.headerSpacing(for: family)) {
+            WidgetHeader(info: info, badge: Text("\(entry.items.count)"))
 
             if entry.items.isEmpty {
-                emptyState
+                WidgetEmptyState(systemImage: info.iconName, text: "No items yet", color: info.color)
             } else {
-                itemList
+                ViewThatFits(in: .vertical) {
+                    ForEach(rowBudgets, id: \.self) { budget in
+                        itemList(maxVisible: budget)
+                    }
+                }
             }
 
             if family == .systemLarge {
-                planFooter.padding(.top, 8)
+                planFooter
             }
         }
-        .padding(outerPadding)
         .widgetURL(URL(string: "shottidy://category/\(entry.configuration.category.id)"))
     }
 
     // MARK: Subviews
 
-    private var headerView: some View {
-        HStack(spacing: 6) {
-            Image(systemName: info.iconName)
-                .font(.system(size: 12, weight: .semibold))
-            Text(info.displayName)
-                .font(.system(size: 13, weight: .semibold))
-            Spacer()
-            Text("\(entry.items.count)")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(info.color)
-                .clipShape(Capsule())
-        }
-        .foregroundStyle(info.color)
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 6) {
-            Spacer()
-            Image(systemName: info.iconName)
-                .font(.system(size: 28))
-                .foregroundStyle(info.color.opacity(0.25))
-            Text("No items yet")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private var itemList: some View {
+    private func itemList(maxVisible: Int) -> some View {
         VStack(alignment: .leading, spacing: family == .systemSmall ? 4 : 5) {
             ForEach(entry.items.prefix(maxVisible)) { item in
                 HStack(spacing: 6) {
@@ -182,8 +143,7 @@ struct CategoryListWidgetView: View {
                         .frame(width: 5, height: 5)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(item.title)
-                            .font(.system(size: family == .systemSmall ? 12 : 13))
-                            .fontWeight(.medium)
+                            .font(.system(size: WidgetMetrics.rowTextSize(for: family), weight: .medium))
                             .foregroundStyle(item.isCompleted ? Color.secondary : Color.primary)
                             .strikethrough(item.isCompleted, color: .secondary)
                             .lineLimit(1)
@@ -198,10 +158,7 @@ struct CategoryListWidgetView: View {
                 }
             }
             if entry.items.count > maxVisible {
-                Text("+\(entry.items.count - maxVisible) more")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .padding(.top, 2)
+                WidgetOverflowLabel(count: entry.items.count - maxVisible)
             }
             Spacer(minLength: 0)
         }
