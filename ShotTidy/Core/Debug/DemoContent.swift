@@ -56,9 +56,29 @@ enum DemoContent {
     static let winesKey = "custom_demo_wines"
     static let giftsKey = "custom_demo_gifts"
 
+    /// Item count shown on each category card — identical in every language.
+    static let defaultCategoryTotals: [String: Int] = [
+        "shopping": 24, "places": 17, "appsServices": 9, "languageLearning": 32,
+        "prompts": 14, "health": 8, "recipes": 21, "books": 12, "movies": 15,
+        "quotes": 26, "articles": 11, "contacts": 6, "tasks": 10,
+        winesKey: 7, giftsKey: 5,
+    ]
+
     static func set(for languageCode: String) -> DemoContentSet {
         switch languageCode {
-        default: return english
+        case "zh-Hans": return chineseSimplified
+        case "es":      return spanish
+        case "pt-BR":   return portugueseBrazil
+        case "pt-PT":   return portuguesePortugal
+        case "tr":      return turkish
+        case "ru":      return russian
+        case "it":      return italian
+        case "de":      return german
+        case "fr":      return french
+        case "ja":      return japanese
+        case "ko":      return korean
+        case "hy":      return armenian
+        default:        return english
         }
     }
 }

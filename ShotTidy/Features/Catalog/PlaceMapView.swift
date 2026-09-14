@@ -24,11 +24,26 @@ struct PlaceMapView: View {
     @State private var coordinate: CLLocationCoordinate2D? = nil
     @State private var geocodeState: GeocodeState = .loading
 
-    private var queryString: String {
-        [placeName, address, city, country]
-            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-            .joined(separator: ", ")
+    /// Queries tried in order until one resolves. The full string works best, but
+    /// a place name the geocoder does not know can sink an otherwise valid address,
+    /// so the address alone and the name with its city are tried next.
+    private var queryStrings: [String] {
+        func joined(_ parts: [String?]) -> String {
+            parts
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .joined(separator: ", ")
+        }
+        var queries: [String] = []
+        let hasAddress = !(address?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        for query in [
+            joined([placeName, address, city, country]),
+            hasAddress ? joined([address, city, country]) : "",
+            joined([placeName, city, country]),
+        ] where !query.isEmpty && !queries.contains(query) {
+            queries.append(query)
+        }
+        return queries
     }
 
     var body: some View {
@@ -102,39 +117,30 @@ struct PlaceMapView: View {
     // MARK: - Geocoding
 
     private func geocode() async {
-        let query = queryString
-        guard !query.isEmpty else { geocodeState = .failed; return }
-
-        do {
-            let coord: CLLocationCoordinate2D
-            if #available(iOS 26, *) {
-                guard let request = MKGeocodingRequest(addressString: query) else {
-                    geocodeState = .failed
-                    return
-                }
-                let items = try await request.mapItems
-                guard let location = items.first?.location else {
-                    geocodeState = .failed
-                    return
-                }
-                coord = location.coordinate
-            } else {
-                let geocoder = CLGeocoder()
-                let placemarks = try await geocoder.geocodeAddressString(query)
-                guard let location = placemarks.first?.location else {
-                    geocodeState = .failed
-                    return
-                }
-                coord = location.coordinate
-            }
+        for query in queryStrings {
+            guard let coord = await coordinate(for: query) else { continue }
             coordinate = coord
             cameraPosition = .region(MKCoordinateRegion(
                 center: coord,
                 span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
             ))
             geocodeState = .ready
+            return
+        }
+        geocodeState = .failed
+    }
+
+    /// First coordinate the geocoder returns for `query`, or nil when nothing matches.
+    private func coordinate(for query: String) async -> CLLocationCoordinate2D? {
+        do {
+            if #available(iOS 26, *) {
+                guard let request = MKGeocodingRequest(addressString: query) else { return nil }
+                return try await request.mapItems.first?.location.coordinate
+            } else {
+                return try await CLGeocoder().geocodeAddressString(query).first?.location?.coordinate
+            }
         } catch {
-            geocodeState = .failed
+            return nil
         }
     }
 

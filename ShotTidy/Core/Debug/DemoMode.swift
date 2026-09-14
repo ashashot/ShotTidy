@@ -138,11 +138,18 @@ enum DemoMode {
 
         // Older copies bring each category up to its displayed total. They never
         // match the search query, so the search scene only shows the real entries.
+        // Categories whose only entries match the query get neutral placeholders —
+        // no scene ever lists them, they only feed the counters.
         for (key, total) in content.categoryTotals {
-            let pool = (entriesByCategory[key] ?? []).filter {
-                !$0.title.localizedCaseInsensitiveContains(content.searchQuery)
+            let matchesQuery = { (entry: DemoCatalogEntry) in
+                [entry.title, entry.subtitle, entry.extra1, entry.extra2, entry.notes]
+                    .compactMap { $0 }
+                    .contains { $0.localizedCaseInsensitiveContains(content.searchQuery) }
             }
-            guard !pool.isEmpty else { continue }
+            var pool = (entriesByCategory[key] ?? []).filter { !matchesQuery($0) }
+            if pool.isEmpty {
+                pool = [DemoCatalogEntry(categoryKey: key, title: "#\(key)")]
+            }
             let existing = entriesByCategory[key]?.count ?? 0
             for offset in 0..<max(0, total - existing) {
                 var copy = pool[offset % pool.count]
