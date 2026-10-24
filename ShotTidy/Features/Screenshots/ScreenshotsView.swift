@@ -31,9 +31,18 @@ struct ScreenshotsView: View {
     @State private var selectedIDs: Set<UUID> = []
     @State private var showBatchDeleteAlert = false
 
-    private static let columnCount: Int = 3
+    private static let minColumnCount: Int = 3
+    private static let minCellWidth: CGFloat = 110
     private static let cellSpacing: CGFloat = 10
     private static let gridPadding: CGFloat = 16
+
+    /// Column count derived from the available width, not the device: 3 on
+    /// regular iPhones, more on wide spaces (unfolded iPhone Duo, iPad, landscape).
+    private static func columnCount(forWidth width: CGFloat) -> Int {
+        let available = width - gridPadding * 2 + cellSpacing
+        let fitting = Int(available / (minCellWidth + cellSpacing))
+        return max(minColumnCount, fitting)
+    }
 
     var body: some View {
         NavigationStack {
@@ -149,13 +158,14 @@ struct ScreenshotsView: View {
             // an explicit, fixed frame — the only reliable way to prevent
             // LazyVGrid from recalculating cell heights during scroll.
             GeometryReader { proxy in
-                let n = CGFloat(Self.columnCount)
+                let columnCount = Self.columnCount(forWidth: proxy.size.width)
+                let n = CGFloat(columnCount)
                 let s = Self.cellSpacing
                 let cellWidth  = floor((proxy.size.width - Self.gridPadding * 2 - s * (n - 1)) / n)
                 let cellHeight = floor(cellWidth * 16 / 9)
                 let gridColumns = Array(
                     repeating: GridItem(.fixed(cellWidth), spacing: s),
-                    count: Self.columnCount
+                    count: columnCount
                 )
 
                 let confirmedCounts = self.confirmedCounts

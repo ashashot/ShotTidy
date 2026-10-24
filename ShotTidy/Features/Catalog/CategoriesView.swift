@@ -23,7 +23,9 @@ struct CategoriesView: View {
     /// Cached hide-completed flags; refreshed on appear so count badges stay in sync.
     @State private var hideCompleted: [String: Bool] = [:]
 
-    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
+    /// Adaptive so the grid follows the available width: 2 columns on regular
+    /// iPhones, more when unfolded on iPhone Duo, on iPad or in landscape.
+    private let columns = [GridItem(.adaptive(minimum: 160))]
 
     /// Built-in categories first, then custom ones — each with its visible item count.
     /// Counts are aggregated in a single pass over the items instead of
